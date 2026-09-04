@@ -1,0 +1,107 @@
+# ==============================================================================
+# Python & FastAPI Base (Backend)
+# ==============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+ENV_DIR/
+
+# FastAPI / Python logs
+*.log
+pip-log.txt
+poetry.lock
+Pipfile.lock
+
+# Test and coverage tracking
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+htmlcov/
+
+# Build and distribution files
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+
+# ==============================================================================
+# React & Node.js (Frontend)
+# ==============================================================================
+# Dependencies
+node_modules/
+/jspm_packages/
+
+# Production builds
+/build/
+/dist/
+/out/
+
+# Front-end logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite / Next.js / React caches
+.eslintcache
+.stylelintcache
+.next/
+.nuxt/
+.turbo/
+
+# ==============================================================================
+# Environment Variables & Secrets (CRITICAL)
+# ==============================================================================
+# Never commit your private API keys or secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env.*
+config.py
+secrets.json
+
+# ==============================================================================
+# Databases (If using SQLite locally)
+# ==============================================================================
+*.db
+*.sqlite
+*.sqlite3
+
+# ==============================================================================
+# IDEs, Editors & System Files
+# ==============================================================================
+# JetBrains (PyCharm, WebStorm)
+.idea/
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Operating System specific files
+.DS_Store
+Thumbs.db
