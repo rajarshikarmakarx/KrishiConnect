@@ -3,14 +3,30 @@ KrishiFlow Centres Router
 """
 from datetime import date
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from app.database import get_db
-from app.models import ProcurementCentre, CentreCounter, TimeSlot, QueueEntry, QueueStatus
+from app.models import ProcurementCentre, CentreCounter, TimeSlot, QueueEntry, QueueStatus, User
 from app.schemas import CentreOut, CentreDetailOut, SlotOut, CounterOut
+from app.auth import decode_token
 
 router = APIRouter(prefix="/centres", tags=["centres"])
+
+
+async def get_current_user_optional(authorization: str = Header(None), db: AsyncSession = Depends(get_db)) -> Optional[User]:
+    """Get current user if authenticated, else None"""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.split(" ", 1)[1]
+    payload = decode_token(token)
+    if not payload:
+        return None
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        return None
+    result = await db.execute(select(User).where(User.id == int(user_id_str)))
+    return result.scalar_one_or_none()
 
 
 async def compute_centre_stats(db: AsyncSession, centre: ProcurementCentre) -> dict:
@@ -77,14 +93,20 @@ async def compute_centre_stats(db: AsyncSession, centre: ProcurementCentre) -> d
     }
 
 
-def compute_recommendation_score(stats: dict, distance_km: float) -> tuple[float, list]:
+def compute_recommendation_score(stats: dict, distance_km: float, user_village: Optional[str] = None, centre_location: Optional[str] = None) -> tuple[float, list]:
     """
     Smart recommendation algorithm:
     Calculates total door-to-door farmer time (Roundtrip travel + Queue wait time)
     and distance cost penalties to recommend the optimal procurement centre.
+    Includes village-based matching bonus.
     """
     score = 100.0
     reasons = []
+
+    # Village matching bonus
+    if user_village and centre_location and user_village.lower() in centre_location.lower():
+        score += 50.0
+        reasons.append(f"Your village centre")
 
     # Roundtrip travel time at loaded farm transport speeds (~20 km/h -> 3 mins per km each way = 6 mins/km roundtrip)
     roundtrip_travel_mins = distance_km * 2 * 3.0
@@ -139,9 +161,14 @@ def compute_recommendation_score(stats: dict, distance_km: float) -> tuple[float
 
 
 @router.get("", response_model=List[CentreOut])
-async def list_centres(db: AsyncSession = Depends(get_db)):
+async def list_centres(
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db)
+):
     result = await db.execute(select(ProcurementCentre))
     centres = result.scalars().all()
+
+    user_village = current_user.village if current_user else None
 
     out = []
     best_score = -9999
@@ -149,7 +176,7 @@ async def list_centres(db: AsyncSession = Depends(get_db)):
 
     for i, centre in enumerate(centres):
         stats = await compute_centre_stats(db, centre)
-        score, reasons = compute_recommendation_score(stats, centre.distance_km)
+        score, reasons = compute_recommendation_score(stats, centre.distance_km, user_village, centre.location)
         if score > best_score:
             best_score = score
             best_idx = i
@@ -178,7 +205,11 @@ async def list_centres(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{centre_id}", response_model=CentreDetailOut)
-async def get_centre(centre_id: int, db: AsyncSession = Depends(get_db)):
+async def get_centre(
+    centre_id: int,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db)
+):
     result = await db.execute(
         select(ProcurementCentre).where(ProcurementCentre.id == centre_id)
     )
@@ -186,8 +217,9 @@ async def get_centre(centre_id: int, db: AsyncSession = Depends(get_db)):
     if not centre:
         raise HTTPException(status_code=404, detail="Centre not found")
 
+    user_village = current_user.village if current_user else None
     stats = await compute_centre_stats(db, centre)
-    score, reasons = compute_recommendation_score(stats, centre.distance_km)
+    score, reasons = compute_recommendation_score(stats, centre.distance_km, user_village, centre.location)
 
     # Get counters with current assignments
     result = await db.execute(

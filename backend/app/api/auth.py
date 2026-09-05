@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
 from app.models import User, UserRole
-from app.schemas import FarmerRegister, OperatorRegister, LoginRequest, TokenResponse, UserOut
+from app.schemas import FarmerRegister, OperatorRegister, LoginRequest, TokenResponse, UserOut, ProfileUpdateRequest
 from app.auth import verify_password, get_password_hash, create_access_token, decode_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -125,3 +125,39 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
 async def get_me(current_user: User = Depends(get_current_user)):
     """Return the currently authenticated user's profile."""
     return current_user
+
+
+@router.put("/profile", response_model=UserOut)
+async def update_profile(
+    data: ProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update the authenticated user's profile."""
+    # Check if mobile is being changed and if it's already taken
+    if data.mobile and data.mobile != current_user.mobile:
+        result = await db.execute(select(User).where(User.mobile == data.mobile))
+        if result.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Mobile number already in use")
+        current_user.mobile = data.mobile
+
+    if data.full_name:
+        current_user.full_name = data.full_name
+
+    if data.village:
+        current_user.village = data.village
+
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
+
+@router.delete("/profile")
+async def delete_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete the authenticated user's account."""
+    await db.delete(current_user)
+    await db.commit()
+    return {"message": "Account deleted successfully"}

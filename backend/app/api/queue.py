@@ -188,7 +188,7 @@ async def my_active_queue(current_user: User = Depends(get_current_user), db: As
     result = await db.execute(
         select(QueueEntry).where(
             QueueEntry.farmer_id == current_user.id,
-            QueueEntry.status.in_([QueueStatus.WAITING, QueueStatus.CALLED, QueueStatus.PROCESSING])
+            QueueEntry.status.in_([QueueStatus.WAITING, QueueStatus.CALLED, QueueStatus.PROCESSING, QueueStatus.COMPLETED])
         ).order_by(QueueEntry.booked_at.desc()).limit(1)
     )
     entry = result.scalar_one_or_none()
@@ -436,6 +436,34 @@ async def call_next_farmer(
     """Transactional: call the next waiting farmer at a centre"""
     if current_user.role not in [UserRole.OPERATOR, UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Only operators can call next farmer")
+
+    # Check if all counters are occupied
+    r = await db.execute(
+        select(CentreCounter).where(
+            CentreCounter.centre_id == centre_id,
+            CentreCounter.is_active == True
+        )
+    )
+    counters = r.scalars().all()
+
+    if not counters:
+        raise HTTPException(status_code=400, detail="No active counters available")
+
+    # Check if any counter is free
+    has_free_counter = False
+    for counter in counters:
+        r2 = await db.execute(
+            select(QueueEntry).where(
+                QueueEntry.counter_id == counter.id,
+                QueueEntry.status.in_([QueueStatus.CALLED, QueueStatus.PROCESSING])
+            )
+        )
+        if not r2.scalar_one_or_none():
+            has_free_counter = True
+            break
+
+    if not has_free_counter:
+        raise HTTPException(status_code=400, detail="All counters are currently occupied")
 
     # Use SELECT FOR UPDATE SKIP LOCKED to prevent double-call without double-beginning
     result = await db.execute(

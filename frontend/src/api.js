@@ -40,6 +40,8 @@ export const api = {
   // Auth
   register: (data) => request('POST', '/auth/register', data),
   login: (data) => request('POST', '/auth/login', data),
+  updateProfile: (data) => request('PUT', '/auth/profile', data),
+  deleteProfile: () => request('DELETE', '/auth/profile'),
 
   // Centres
   getCentres: () => request('GET', '/centres'),

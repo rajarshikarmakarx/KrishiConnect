@@ -336,7 +336,7 @@ async def seed(reset: bool = False):
             mobile="9876543210",
             hashed_password=get_password_hash("demo123"),
             role=UserRole.FARMER,
-            village="Amtala",
+            village="Haripur",
             district="Howrah",
             farmer_id="WB-HWH-DEMO"
         )

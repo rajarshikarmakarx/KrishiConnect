@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../AuthContext'
-import { Wheat, MapPin, Clock, Users, Star, ChevronRight, History, Bell, LogOut, X, CheckCircle, Ticket, User, ChevronDown } from 'lucide-react'
+import { Wheat, MapPin, Clock, Users, Star, ChevronRight, History, Bell, LogOut, X, CheckCircle, Ticket, User, ChevronDown, Settings } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
 import LiveQueueScreen from '../components/farmer/LiveQueueScreen'
@@ -8,6 +8,8 @@ import CentreList from '../components/farmer/CentreList'
 import SlotBookingModal from '../components/farmer/SlotBookingModal'
 import BookingToken from '../components/farmer/BookingToken'
 import ProcurementStatus from '../components/farmer/ProcurementStatus'
+import CompletionConfirmation from '../components/farmer/CompletionConfirmation'
+import ProfileEdit from '../components/farmer/ProfileEdit'
 import FarmerHistory from '../components/farmer/FarmerHistory'
 
 const TABS = [
@@ -16,7 +18,7 @@ const TABS = [
   { id: 'history', label: 'History', icon: History },
 ]
 
-function ProfileMenu({ user, logout }) {
+function ProfileMenu({ user, logout, onEditProfile }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -62,6 +64,13 @@ function ProfileMenu({ user, logout }) {
           </div>
           <div className="p-2">
             <button
+              onClick={() => { onEditProfile(); setOpen(false) }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors font-medium"
+            >
+              <Settings className="w-4 h-4" />
+              Edit Profile
+            </button>
+            <button
               id="btn-logout"
               onClick={() => { logout(); setOpen(false) }}
               className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium"
@@ -86,6 +95,7 @@ export default function FarmerApp() {
   const [selectedCentre, setSelectedCentre] = useState(null)
   const [showBooking, setShowBooking] = useState(false)
   const [newToken, setNewToken] = useState(null)
+  const [showProfileEdit, setShowProfileEdit] = useState(false)
 
   const loadCentres = useCallback(async () => {
     try {
@@ -134,7 +144,7 @@ export default function FarmerApp() {
                 <p className="text-green-300 text-xs">Smart Procurement</p>
               </div>
             </div>
-            <ProfileMenu user={user} logout={logout} />
+            <ProfileMenu user={user} logout={logout} onEditProfile={() => setShowProfileEdit(true)} />
           </div>
         </div>
       </header>
@@ -178,9 +188,15 @@ export default function FarmerApp() {
             </div>
           ) : activeQueue ? (
             <div className="space-y-4">
-              <LiveQueueScreen queueStatus={activeQueue} onRefresh={loadActiveQueue} />
-              {(activeQueue.queue_entry.status === 'COMPLETED' || activeQueue.queue_entry.status === 'PROCESSING') && (
-                <ProcurementStatus queueEntry={activeQueue.queue_entry} />
+              {activeQueue.queue_entry.status === 'COMPLETED' ? (
+                <CompletionConfirmation queueEntry={activeQueue.queue_entry} />
+              ) : (
+                <>
+                  <LiveQueueScreen queueStatus={activeQueue} onRefresh={loadActiveQueue} />
+                  {activeQueue.queue_entry.status === 'PROCESSING' && (
+                    <ProcurementStatus queueEntry={activeQueue.queue_entry} />
+                  )}
+                </>
               )}
             </div>
           ) : (
@@ -231,6 +247,11 @@ export default function FarmerApp() {
             setTab('queue')
           }}
         />
+      )}
+
+      {/* Profile Edit Modal */}
+      {showProfileEdit && (
+        <ProfileEdit onClose={() => setShowProfileEdit(false)} />
       )}
     </div>
   )
