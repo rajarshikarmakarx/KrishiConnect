@@ -1,5 +1,5 @@
 """
-KrishiFlow WebSocket Router
+KrishiConnect WebSocket Router
 """
 import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query

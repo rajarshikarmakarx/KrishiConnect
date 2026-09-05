@@ -1,5 +1,5 @@
 """
-KrishiFlow E2E Comprehensive Test Suite
+KrishiConnect E2E Comprehensive Test Suite
 Tests:
 - Authentication (Farmer, Operator, Admin login & profile management)
 - Procurement Centres & Time Slots
@@ -31,7 +31,7 @@ from sqlalchemy import select, func, text
 
 
 async def run_tests():
-    print("🌾 Running KrishiFlow End-to-End Test Suite...\n")
+    print("🌾 Running KrishiConnect End-to-End Test Suite...\n")
     async with AsyncSessionLocal() as db:
         # 1. Test Auth & User accounts
         print("1️⃣  Testing Authentication & Users...")
@@ -223,7 +223,7 @@ async def run_tests():
 
         print("   ✅ Counter occupancy guard & payment settlement tests passed.")
 
-    print("\n🎉 ALL E2E TESTS PASSED CLEANLY! KrishiFlow is fully operational.")
+    print("\n🎉 ALL E2E TESTS PASSED CLEANLY! KrishiConnect is fully operational.")
 
 
 if __name__ == "__main__":

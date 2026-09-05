@@ -1,4 +1,4 @@
-# 🌾 KrishiFlow (KrishiConnect)
+# 🌾 KrishiConnect
 > **AI-Powered Fair-Queueing & Transparent Direct Benefit Transfer (DBT) Procurement Platform**  
 > *Smart Agriculture Governance for Minimum Support Price (MSP) Centres · Govt of West Bengal*
 
@@ -23,7 +23,7 @@
 
 Traditional agricultural produce procurement at government mandis suffers from unpredictable wait times, severe physical congestion, lack of transparent MSP grading, and delays in payment disbursement.
 
-**KrishiFlow** replaces physical queues with a real-time, AI-assisted digital queueing and direct settlement platform:
+**KrishiConnect** replaces physical queues with a real-time, AI-assisted digital queueing and direct settlement platform:
 1. **Predictable Slot Allocation**: Farmers book verified time slots by crop and quantity.
 2. **AI-Driven Decision Engine**: 5-signal centre recommendation algorithm and 7-day Exponential Moving Average (EMA) wait-time forecasting.
 3. **Occupancy-Guarded Counter Workflow**: Prevents operator double-calling and phantom dequeuing.
@@ -35,7 +35,7 @@ Traditional agricultural produce procurement at government mandis suffers from u
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        KrishiFlow Architecture                         │
+│                        KrishiConnect Architecture                      │
 ├───────────────────────────────────┬────────────────────────────────────┤
 │           Farmer Portal           │         Officer / Admin Desk       │
 │        (React 18 + Vite)          │         (React 18 + Tailwind)      │
@@ -243,7 +243,7 @@ cd backend
 
 **Expected Test Output**:
 ```
-🌾 Running KrishiFlow End-to-End Test Suite...
+🌾 Running KrishiConnect End-to-End Test Suite...
 1️⃣  Testing Authentication & Users...                ✅ Auth & JWT tokens verified
 2️⃣  Testing Procurement Centres...                  ✅ Live metrics verified
 3️⃣  Testing Smart AI Recommender...                  ✅ Multi-signal scoring verified
@@ -253,7 +253,7 @@ cd backend
 7️⃣  Testing Impact Analytics & System Health...     ✅ Analytics verified
 8️⃣  Testing Counter Occupancy Guard & Payment...    ✅ Capacity enforcement & DBT settlement verified
 
-🎉 ALL E2E TESTS PASSED CLEANLY! KrishiFlow is fully operational.
+🎉 ALL E2E TESTS PASSED CLEANLY! KrishiConnect is fully operational.
 ```
 
 ---

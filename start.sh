@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# KrishiFlow startup script
+# KrishiConnect startup script
 set -e
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
-echo "🌾 Starting KrishiFlow Procurement Platform..."
+echo "🌾 Starting KrishiConnect Procurement Platform..."
 echo ""
 
 # ── Backend ──────────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ FRONTEND_PID=$!
 
 echo ""
 echo "=========================================================="
-echo "✅ KrishiFlow is up and running!"
+echo "✅ KrishiConnect is up and running!"
 echo "=========================================================="
 echo "   🌾 Farmer Portal:     http://localhost:5173/"
 echo "   🏢 Officer Portal:    http://localhost:5173/admin"
@@ -49,6 +49,6 @@ echo ""
 echo "Press Ctrl+C to stop all servers."
 
 # Wait and cleanup
-trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; echo 'Stopped KrishiFlow.'" EXIT
+trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; echo 'Stopped KrishiConnect.'" EXIT
 wait
 

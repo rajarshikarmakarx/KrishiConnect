@@ -1,5 +1,5 @@
 """
-KrishiFlow Seed Data
+KrishiConnect Seed Data
 Populates realistic demo data for hackathon demonstration
 """
 import asyncio
@@ -56,7 +56,7 @@ async def seed(reset: bool = False):
             print("Database already seeded. Skipping...")
             return
 
-        print("🌱 Seeding KrishiFlow database...")
+        print("🌱 Seeding KrishiConnect database...")
 
         # ── Admin User ────────────────────────────────────────────────────────
         admin = User(

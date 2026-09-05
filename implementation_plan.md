@@ -1,6 +1,6 @@
-# Implementation Plan — KrishiFlow
+# Implementation Plan — KrishiConnect
 
-**KrishiFlow** is a smart procurement and queue management platform designed for farmers, procurement centre operators, and district administrators. It reduces waiting times, physical congestion, and uncertainty at agricultural procurement centres through real-time queue tracking, smart centre recommendation, transactional counter management, and instant payment status updates.
+**KrishiConnect** is a smart procurement and queue management platform designed for farmers, procurement centre operators, and district administrators. It reduces waiting times, physical congestion, and uncertainty at agricultural procurement centres through real-time queue tracking, smart centre recommendation, transactional counter management, and instant payment status updates.
 
 ---
 

@@ -37,7 +37,7 @@ export default function AuthPage() {
     setLoading(true)
     try {
       await register(form)
-      toast.success('Registration successful! Welcome to KrishiFlow.')
+      toast.success('Registration successful! Welcome to KrishiConnect.')
     } catch (err) {
       toast.error(err.message || 'Registration failed')
     } finally {
@@ -61,7 +61,7 @@ export default function AuthPage() {
               <Wheat className="w-7 h-7 text-green-200" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">KrishiFlow</h1>
+              <h1 className="text-2xl font-bold text-white">KrishiConnect</h1>
               <p className="text-green-300 text-sm">Smart Farmer Procurement</p>
             </div>
           </div>
@@ -110,7 +110,7 @@ export default function AuthPage() {
               <Wheat className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">KrishiFlow</h1>
+              <h1 className="text-xl font-bold text-slate-900">KrishiConnect</h1>
               <p className="text-slate-500 text-sm">Smart Farmer Procurement</p>
             </div>
           </div>

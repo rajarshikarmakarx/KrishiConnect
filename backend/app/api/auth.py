@@ -1,5 +1,5 @@
 """
-KrishiFlow Auth Router
+KrishiConnect Auth Router
 """
 import os
 from datetime import timedelta

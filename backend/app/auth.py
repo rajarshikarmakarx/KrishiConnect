@@ -1,5 +1,5 @@
 """
-KrishiFlow Auth Utilities
+KrishiConnect Auth Utilities
 """
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "krishiflow-dev-secret-key-change-in-production-2026")
+SECRET_KEY = os.getenv("SECRET_KEY", "krishiconnect-dev-secret-key-change-in-production-2026")
 
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))

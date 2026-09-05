@@ -1,5 +1,5 @@
 """
-KrishiFlow Payments & Analytics Routers
+KrishiConnect Payments & Analytics Routers
 """
 from datetime import date, datetime, timedelta, timezone
 from typing import List

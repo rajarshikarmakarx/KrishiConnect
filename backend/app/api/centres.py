@@ -1,5 +1,5 @@
 """
-KrishiFlow Centres Router
+KrishiConnect Centres Router
 """
 from datetime import date
 from typing import List, Optional

@@ -37,7 +37,7 @@ export default function AdminAuthPage() {
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between py-2 border-b border-slate-800">
         <div className="flex items-center gap-2">
           <Building2 className="w-6 h-6 text-green-400" />
-          <span className="font-bold text-lg text-white">KrishiFlow Official</span>
+          <span className="font-bold text-lg text-white">KrishiConnect Official</span>
         </div>
         <Link to="/" className="text-slate-400 hover:text-white text-xs sm:text-sm flex items-center gap-1 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Go to Farmer Portal
@@ -107,7 +107,7 @@ export default function AdminAuthPage() {
 
       {/* Footer */}
       <div className="max-w-4xl mx-auto w-full text-center py-2 text-xs text-slate-500 border-t border-slate-800">
-        KrishiFlow Public Infrastructure Platform · Department of Agriculture
+        KrishiConnect Public Infrastructure Platform · Department of Agriculture
       </div>
     </div>
   )

@@ -1,5 +1,5 @@
 """
-KrishiFlow Queue Router — Core queue management with transactional locking
+KrishiConnect Queue Router — Core queue management with transactional locking
 """
 import random
 import string

@@ -1,5 +1,5 @@
 """
-KrishiFlow AI Layer
+KrishiConnect AI Layer
 ─────────────────────────────────────────────────────────────────────────────
 Answers the evaluator's hardest question: "What does AI actually do here
 that a simpler rule-based system could not?"
@@ -345,7 +345,7 @@ async def msp_rates():
         "disclaimer": (
             "These rates are the government-mandated floor price for farmers. "
             "Procurement centres must pay at or above MSP. "
-            "In KrishiFlow, operators see these rates inline to prevent underpayment."
+            "In KrishiConnect, operators see these rates inline to prevent underpayment."
         )
     }
 
@@ -374,7 +374,7 @@ async def data_info(db: AsyncSession = Depends(get_db)):
     return {
         "data_origin": "synthetic",
         "summary": (
-            "KrishiFlow uses a synthetic dataset modelled on West Bengal "
+            "KrishiConnect uses a synthetic dataset modelled on West Bengal "
             "Agricultural Marketing Board (WBAMB) operational patterns. "
             "Real Heritage-domain data was not available under the hackathon "
             "timeline; this dataset was hand-crafted to reflect authentic "

@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // KrishiFlow Government/Fintech palette
+        // KrishiConnect Government/Fintech palette
         primary: {
           50: '#f0fdf4',
           100: '#dcfce7',

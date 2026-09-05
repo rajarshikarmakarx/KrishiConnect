@@ -1,5 +1,5 @@
 """
-KrishiFlow Pydantic Schemas — Pydantic v1 compatible
+KrishiConnect Pydantic Schemas — Pydantic v1 compatible
 """
 from datetime import datetime, date
 from typing import Optional, List, Any

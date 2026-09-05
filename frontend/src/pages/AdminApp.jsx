@@ -187,7 +187,7 @@ export default function AdminApp() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Wheat className="w-5 h-5 text-green-300" />
-              <h1 className="font-bold text-lg">KrishiFlow District Admin Portal</h1>
+              <h1 className="font-bold text-lg">KrishiConnect District Admin Portal</h1>
               <span className="bg-green-700/80 text-green-200 text-xs px-2.5 py-0.5 rounded-full border border-green-500/40">
                 Howrah District
               </span>
@@ -389,7 +389,7 @@ export default function AdminApp() {
               <h2 className="text-2xl font-bold mb-2">Measurable Farmer Time & Congestion Reduction</h2>
               <p className="text-green-100 text-sm max-w-3xl leading-relaxed">
                 Evaluated against the published SIH baseline (90-minute paper queue wait).
-                KrishiFlow delivers an auditable <strong>{impactData?.current_performance?.wait_reduction_percent || 70}% reduction in farmer waiting time</strong>,
+                KrishiConnect delivers an auditable <strong>{impactData?.current_performance?.wait_reduction_percent || 70}% reduction in farmer waiting time</strong>,
                 saving over <strong>{impactData?.current_performance?.farmer_hours_saved || 1600} farmer hours</strong> across 30 days of operation.
               </p>
             </div>
@@ -450,7 +450,7 @@ export default function AdminApp() {
                     <tr className="border-b border-slate-200 text-slate-500 text-xs uppercase bg-slate-50/50">
                       <th className="py-3 px-4">Evaluation Dimension</th>
                       <th className="py-3 px-4 text-red-700">Traditional Physical Queue (Paper)</th>
-                      <th className="py-3 px-4 text-green-700">KrishiFlow Digital Platform</th>
+                      <th className="py-3 px-4 text-green-700">KrishiConnect Digital Platform</th>
                       <th className="py-3 px-4 text-right">Advantage</th>
                     </tr>
                   </thead>
@@ -555,7 +555,7 @@ export default function AdminApp() {
               <div className="flex items-center gap-2 mb-4">
                 <Cpu className="w-6 h-6 text-green-700" />
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">KrishiFlow AI & Machine Intelligence Architecture</h2>
+                  <h2 className="text-lg font-bold text-slate-900">KrishiConnect AI & Machine Intelligence Architecture</h2>
                   <p className="text-xs text-slate-500">Auditable statistical models designed specifically for public agricultural procurement</p>
                 </div>
               </div>
@@ -595,7 +595,7 @@ export default function AdminApp() {
 
               <p className="text-xs text-slate-600 leading-relaxed">
                 {aiDataInfo?.summary || (
-                  "KrishiFlow uses a synthetic dataset modelled on West Bengal Agricultural Marketing Board (WBAMB) operational patterns, authentic Kharif 2025-26 MSP rates, and Howrah district geography."
+                  "KrishiConnect uses a synthetic dataset modelled on West Bengal Agricultural Marketing Board (WBAMB) operational patterns, authentic Kharif 2025-26 MSP rates, and Howrah district geography."
                 )}
               </p>
 
@@ -650,7 +650,7 @@ export default function AdminApp() {
                       <th className="py-3 px-4">Commodity / Crop</th>
                       <th className="py-3 px-4">Common Grade (₹ / Quintal)</th>
                       <th className="py-3 px-4">Grade A (₹ / Quintal)</th>
-                      <th className="py-3 px-4 font-bold text-green-700">KrishiFlow Rate (₹ / kg)</th>
+                      <th className="py-3 px-4 font-bold text-green-700">KrishiConnect Rate (₹ / kg)</th>
                       <th className="py-3 px-4">Procurement Status</th>
                     </tr>
                   </thead>
@@ -687,7 +687,7 @@ export default function AdminApp() {
                 </p>
                 <p>
                   Procurement centres are legally mandated to disburse at or above the official MSP rate.
-                  KrishiFlow enforces these rates directly in the Operator procurement modal to prevent underpayment of farmers.
+                  KrishiConnect enforces these rates directly in the Operator procurement modal to prevent underpayment of farmers.
                 </p>
               </div>
             </div>

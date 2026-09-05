@@ -1,5 +1,5 @@
 """
-KrishiFlow Real-time Broadcast Engine
+KrishiConnect Real-time Broadcast Engine
 Uses WebSocket connections for live queue updates
 """
 import json

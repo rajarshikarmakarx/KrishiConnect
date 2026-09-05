@@ -1,5 +1,5 @@
 """
-KrishiFlow Database Models
+KrishiConnect Database Models
 """
 import enum
 from datetime import datetime, date

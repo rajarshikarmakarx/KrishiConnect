@@ -1,5 +1,5 @@
 """
-KrishiFlow FastAPI Main Application
+KrishiConnect FastAPI Main Application
 """
 import os
 from fastapi import FastAPI
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="KrishiFlow API",
+    title="KrishiConnect API",
     description="Smart Procurement & Queue Management for Farmers",
     version="1.0.0",
     lifespan=lifespan
@@ -55,7 +55,7 @@ app.include_router(ws_router)
 @app.get("/")
 async def root():
     return {
-        "service": "KrishiFlow API",
+        "service": "KrishiConnect API",
         "version": "1.0.0",
         "status": "running",
         "docs": "/docs"

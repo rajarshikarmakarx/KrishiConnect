@@ -190,7 +190,7 @@ export default function FarmerApp() {
                 <Wheat className="w-5 h-5 text-green-200" />
               </div>
               <div>
-                <h1 className="text-lg font-bold leading-tight">KrishiFlow</h1>
+                <h1 className="text-lg font-bold leading-tight">KrishiConnect</h1>
                 <p className="text-green-300 text-xs">Smart Agricultural Procurement</p>
               </div>
             </div>

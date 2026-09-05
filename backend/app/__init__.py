@@ -1,1 +1,1 @@
-# KrishiFlow App Package
+# KrishiConnect App Package

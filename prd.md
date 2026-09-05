@@ -1,12 +1,12 @@
-# KrishiFlow — Product Requirements Document (PRD)
+# KrishiConnect — Product Requirements Document (PRD)
 
 ## 1. Product Overview
 
-**Product Name:** KrishiFlow
+**Product Name:** KrishiConnect
 
 **Tagline:** Smart Procurement & Queue Management for Farmers
 
-KrishiFlow is a digital platform designed to reduce waiting times, congestion, uncertainty, and lack of transparency at agricultural procurement centres.
+KrishiConnect is a digital platform designed to reduce waiting times, congestion, uncertainty, and lack of transparency at agricultural procurement centres.
 
 Farmers can register, choose a procurement centre, book a procurement slot, receive a queue token, monitor their live queue position, receive notifications when their turn approaches, track procurement progress, and monitor payment status.
 
@@ -29,7 +29,7 @@ Farmers often face:
 * Lack of visibility into centre workload
 * Poor coordination between farmers and procurement-centre staff
 
-KrishiFlow solves this by digitising the complete procurement journey:
+KrishiConnect solves this by digitising the complete procurement journey:
 
 ```text
 Farmer Registration
@@ -233,7 +233,7 @@ Haripur Procurement Centre
 
 # 8. Queue System
 
-The queue is the core feature of KrishiFlow.
+The queue is the core feature of KrishiConnect.
 
 Queue states:
 
@@ -1175,7 +1175,7 @@ Do NOT sacrifice P0/P1 functionality to implement P2/P3 features.
 
 # 35. Final Product Principle
 
-KrishiFlow should answer four questions for a farmer:
+KrishiConnect should answer four questions for a farmer:
 
 > **Where should I go?**
 
