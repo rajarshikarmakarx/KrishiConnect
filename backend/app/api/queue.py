@@ -152,7 +152,7 @@ async def book_slot(
         slot_id=data.slot_id,
         status=QueueStatus.WAITING,
         crop=data.crop,
-        expected_quantity_kg=data.expected_quantity_kg,
+        expected_quantity_kg=round(data.expected_quantity_kg, 1),
         booked_at=datetime.now(timezone.utc)
     )
     slot.booked_count += 1

@@ -212,7 +212,7 @@ async def seed(reset: bool = False):
             farmer = farmers[i]
             slot = today_slots[0]
             crop = random.choice(CROPS[:3])
-            qty_kg = random.uniform(150, 400)
+            qty_kg = round(random.uniform(150, 400), 1)
 
             entry = QueueEntry(
                 token=f"A{token_num}",
@@ -232,7 +232,7 @@ async def seed(reset: bool = False):
             queue_entries.append(entry)
             await db.flush()
 
-            accepted = qty_kg * random.uniform(0.92, 0.99)
+            accepted = round(qty_kg * random.uniform(0.92, 0.99), 1)
             rate = CROP_RATES[crop]
             total = round(accepted * rate, 2)
 
@@ -240,7 +240,7 @@ async def seed(reset: bool = False):
                 queue_entry_id=entry.id,
                 crop=crop,
                 expected_quantity_kg=qty_kg,
-                accepted_quantity_kg=round(accepted, 2),
+                accepted_quantity_kg=accepted,
                 rate_per_kg=rate,
                 total_amount=total,
                 created_at=entry.processing_started_at,
@@ -264,7 +264,7 @@ async def seed(reset: bool = False):
             farmer = farmers[5 + i]
             slot = today_slots[1]
             crop = random.choice(CROPS[:3])
-            qty_kg = random.uniform(200, 350)
+            qty_kg = round(random.uniform(200, 350), 1)
 
             entry = QueueEntry(
                 token=f"A{token_num}",
@@ -298,7 +298,7 @@ async def seed(reset: bool = False):
             farmer = farmers[7 + i]
             slot = today_slots[2] if i < 7 else today_slots[3]
             crop = random.choice(CROPS)
-            qty_kg = random.uniform(100, 500)
+            qty_kg = round(random.uniform(100, 500), 1)
 
             entry = QueueEntry(
                 token=f"A{token_num}",
@@ -365,7 +365,7 @@ async def seed(reset: bool = False):
                     break
                 farmer = farmers[22 + j % 10]
                 crop = random.choice(CROPS)
-                qty = random.uniform(100, 400)
+                qty = round(random.uniform(100, 400), 1)
                 entry = QueueEntry(
                     token=f"B{c_token}",
                     farmer_id=farmer.id,
@@ -390,7 +390,7 @@ async def seed(reset: bool = False):
                     slot_id=c_slots[1].id if len(c_slots) > 1 else c_slots[0].id,
                     status=QueueStatus.WAITING,
                     crop=random.choice(CROPS),
-                    expected_quantity_kg=random.uniform(100, 400),
+                    expected_quantity_kg=round(random.uniform(100, 400), 1),
                     booked_at=datetime.utcnow() - timedelta(minutes=random.randint(10, 120)),
                 )
                 db.add(entry)

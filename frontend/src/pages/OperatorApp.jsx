@@ -96,7 +96,7 @@ function CounterCard({ counter, onComplete, onStart }) {
           <p className="text-xs text-slate-600 mb-1 truncate font-medium">{counter.current_farmer_name}</p>
           {counter.current_crop && (
             <p className="text-[11px] text-slate-500 mb-3">
-              {counter.current_crop} · {counter.current_expected_qty} kg expected
+              {counter.current_crop} · {counter.current_expected_qty != null ? (Math.round(Number(counter.current_expected_qty) * 10) / 10) : ''} kg expected
             </p>
           )}
           <div className="flex gap-2">
@@ -127,7 +127,8 @@ function CounterCard({ counter, onComplete, onStart }) {
 
 function CompleteModal({ queueId, token, crop, expectedQty, onClose, onSuccess }) {
   const mspRate = crop && MSP_RATES[crop] ? MSP_RATES[crop] : (MSP_RATES['Paddy'] || 23.00)
-  const [acceptedQty, setAcceptedQty] = useState(expectedQty ? String(expectedQty) : '')
+  const formattedQty = expectedQty != null ? String(Math.round(Number(expectedQty) * 10) / 10) : ''
+  const [acceptedQty, setAcceptedQty] = useState(formattedQty)
   const [rate, setRate] = useState(String(mspRate))
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
@@ -271,7 +272,7 @@ function CancelConfirmModal({ entry, onClose, onConfirm, loading }) {
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-500 font-medium">Crop & Quantity</span>
-              <span className="text-slate-700 font-medium">{entry.crop} · {entry.expected_quantity_kg} kg</span>
+              <span className="text-slate-700 font-medium">{entry.crop} · {entry.expected_quantity_kg != null ? (Math.round(Number(entry.expected_quantity_kg) * 10) / 10) : ''} kg</span>
             </div>
           </div>
 
@@ -533,7 +534,7 @@ export default function OperatorApp() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-slate-500 text-xs font-medium bg-slate-100 px-2 py-0.5 rounded">{entry.crop}</span>
-                    <span className="text-slate-500 text-xs">{entry.expected_quantity_kg} kg</span>
+                    <span className="text-slate-500 text-xs">{entry.expected_quantity_kg != null ? (Math.round(Number(entry.expected_quantity_kg) * 10) / 10) : ''} kg</span>
                     <button
                       id={`btn-call-${entry.id}`}
                       onClick={() => handleCallSpecific(entry)}
