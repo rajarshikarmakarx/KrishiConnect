@@ -13,6 +13,7 @@ from app.api.queue import router as queue_router
 from app.api.analytics import payments_router, analytics_router
 from app.api.ai import ai_router
 from app.api.websocket import ws_router
+from app.api.locations import router as locations_router
 
 
 @asynccontextmanager
@@ -50,6 +51,7 @@ app.include_router(payments_router)
 app.include_router(analytics_router)
 app.include_router(ai_router)
 app.include_router(ws_router)
+app.include_router(locations_router)
 
 
 @app.get("/")

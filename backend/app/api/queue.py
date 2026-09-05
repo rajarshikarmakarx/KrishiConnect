@@ -606,14 +606,20 @@ async def complete_procurement(
         db.add(proc)
         await db.flush()
 
-    # Create payment record
-    payment = Payment(
-        procurement_id=proc.id,
-        amount=total,
-        status=PaymentStatus.PROCESSING,
-        created_at=datetime.now(timezone.utc)
-    )
-    db.add(payment)
+    # Idempotent Payment handling: update existing draft record or insert new
+    r_pay = await db.execute(select(Payment).where(Payment.procurement_id == proc.id))
+    payment = r_pay.scalar_one_or_none()
+    if payment:
+        payment.amount = total
+        payment.status = PaymentStatus.PROCESSING
+    else:
+        payment = Payment(
+            procurement_id=proc.id,
+            amount=total,
+            status=PaymentStatus.PROCESSING,
+            created_at=datetime.now(timezone.utc)
+        )
+        db.add(payment)
     await db.commit()
 
     await manager.broadcast_queue_changed(entry.centre_id, "complete")

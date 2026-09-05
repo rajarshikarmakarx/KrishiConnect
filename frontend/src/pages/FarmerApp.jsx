@@ -107,16 +107,17 @@ export default function FarmerApp() {
   const [showProfileEdit, setShowProfileEdit] = useState(false)
   const [showMspModal, setShowMspModal] = useState(false)
 
-  const loadCentres = useCallback(async () => {
+  const loadCentres = useCallback(async (overrideUser) => {
+    const activeUser = overrideUser || user
     try {
-      const data = await api.getCentres()
+      const data = await api.getCentres(activeUser?.village, activeUser?.district)
       setCentres(data)
     } catch (e) {
       toast.error('Could not load centres')
     } finally {
       setLoadingCentres(false)
     }
-  }, [])
+  }, [user])
 
   const loadActiveQueue = useCallback(async () => {
     try {
@@ -239,6 +240,7 @@ export default function FarmerApp() {
             centres={centres}
             loading={loadingCentres}
             onSelect={(c) => { setSelectedCentre(c); setShowBooking(true) }}
+            userLocation={user ? `${user.village || ''}${user.village && user.district ? ', ' : ''}${user.district || ''}` : null}
           />
         )}
         {tab === 'queue' && (
@@ -316,7 +318,10 @@ export default function FarmerApp() {
 
       {/* Profile Edit Modal */}
       {showProfileEdit && (
-        <ProfileEdit onClose={() => setShowProfileEdit(false)} />
+        <ProfileEdit
+          onClose={() => setShowProfileEdit(false)}
+          onProfileUpdated={(updated) => loadCentres(updated)}
+        />
       )}
 
       {/* MSP Rates Modal */}

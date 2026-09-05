@@ -1,8 +1,10 @@
 """
 KrishiConnect Database Models
+PostgreSQL compatible schema with native_enum=False, UTC timezone-aware datetimes,
+and robust foreign key relationships.
 """
 import enum
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 from sqlalchemy import (
     Column, Integer, String, Float, DateTime, Date, Time,
@@ -11,6 +13,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 class UserRole(str, enum.Enum):
@@ -45,9 +51,9 @@ class User(Base):
     full_name = Column(String(200), nullable=False)
     mobile = Column(String(15), unique=True, nullable=False, index=True)
     hashed_password = Column(String(256), nullable=False)
-    role = Column(SAEnum(UserRole), nullable=False, default=UserRole.FARMER)
+    role = Column(SAEnum(UserRole, native_enum=False), nullable=False, default=UserRole.FARMER)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
 
     # Farmer-specific fields
     village = Column(String(200))
@@ -68,13 +74,13 @@ class ProcurementCentre(Base):
     name = Column(String(300), nullable=False)
     location = Column(String(300), nullable=False)
     district = Column(String(200), nullable=False)
-    latitude = Column(Float, default=22.5726)
-    longitude = Column(Float, default=88.3639)
-    distance_km = Column(Float, default=0.0)  # From a reference point
-    status = Column(SAEnum(CentreStatus), default=CentreStatus.OPEN)
+    latitude = Column(Float, default=22.5833)
+    longitude = Column(Float, default=88.3333)
+    distance_km = Column(Float, default=0.0)  # Reference distance
+    status = Column(SAEnum(CentreStatus, native_enum=False), default=CentreStatus.OPEN)
     max_daily_capacity = Column(Integer, default=100)
     avg_processing_minutes = Column(Float, default=7.0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
 
     counters = relationship("CentreCounter", back_populates="centre")
     slots = relationship("TimeSlot", back_populates="centre")
@@ -121,15 +127,15 @@ class QueueEntry(Base):
     slot_id = Column(Integer, ForeignKey("time_slots.id"), nullable=True)
     counter_id = Column(Integer, ForeignKey("centre_counters.id"), nullable=True)
 
-    status = Column(SAEnum(QueueStatus), default=QueueStatus.WAITING, nullable=False)
+    status = Column(SAEnum(QueueStatus, native_enum=False), default=QueueStatus.WAITING, nullable=False)
     crop = Column(String(100), nullable=False)
     expected_quantity_kg = Column(Float, nullable=False)
 
-    booked_at = Column(DateTime, default=datetime.utcnow)
-    called_at = Column(DateTime, nullable=True)
-    processing_started_at = Column(DateTime, nullable=True)
-    completed_at = Column(DateTime, nullable=True)
-    cancelled_at = Column(DateTime, nullable=True)
+    booked_at = Column(DateTime(timezone=True), default=utc_now)
+    called_at = Column(DateTime(timezone=True), nullable=True)
+    processing_started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
 
     farmer = relationship("User", back_populates="queue_entries", foreign_keys=[farmer_id])
     centre = relationship("ProcurementCentre", back_populates="queue_entries")
@@ -149,8 +155,8 @@ class Procurement(Base):
     rate_per_kg = Column(Float, nullable=True)
     total_amount = Column(Float, nullable=True)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
 
     queue_entry = relationship("QueueEntry", back_populates="procurement")
     payment = relationship("Payment", back_populates="procurement", uselist=False)
@@ -162,9 +168,9 @@ class Payment(Base):
     id = Column(Integer, primary_key=True, index=True)
     procurement_id = Column(Integer, ForeignKey("procurements.id"), unique=True, nullable=False)
     amount = Column(Float, nullable=False)
-    status = Column(SAEnum(PaymentStatus), default=PaymentStatus.PROCESSING, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    paid_at = Column(DateTime, nullable=True)
+    status = Column(SAEnum(PaymentStatus, native_enum=False), default=PaymentStatus.PROCESSING, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+    paid_at = Column(DateTime(timezone=True), nullable=True)
 
     procurement = relationship("Procurement", back_populates="payment")
 
@@ -177,6 +183,6 @@ class Notification(Base):
     message = Column(Text, nullable=False)
     notification_type = Column(String(50), default="INFO")  # INFO, APPROACHING, CALLED, PAYMENT
     is_read = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
 
     farmer = relationship("User", back_populates="notifications")

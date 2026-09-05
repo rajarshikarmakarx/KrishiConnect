@@ -44,9 +44,21 @@ export const api = {
   deleteProfile: () => request('DELETE', '/auth/profile'),
 
   // Centres
-  getCentres: () => request('GET', '/centres'),
+  getCentres: (village, district) => {
+    const params = new URLSearchParams()
+    if (village) params.append('village', village)
+    if (district) params.append('district', district)
+    const qs = params.toString()
+    return request('GET', `/centres${qs ? `?${qs}` : ''}`)
+  },
   getCentre: (id) => request('GET', `/centres/${id}`),
   getSlots: (centreId, date) => request('GET', `/centres/${centreId}/slots${date ? `?slot_date=${date}` : ''}`),
+
+  // Locations
+  getDistricts: () => request('GET', '/locations/districts'),
+  getVillages: (district) => request('GET', `/locations/villages${district ? `?district=${encodeURIComponent(district)}` : ''}`),
+  getCoordinates: (village, district) => request('GET', `/locations/coordinates?village=${encodeURIComponent(village)}${district ? `&district=${encodeURIComponent(district)}` : ''}`),
+  getAllLocations: () => request('GET', '/locations'),
 
   // Queue
   bookSlot: (data) => request('POST', '/queue/book', data),

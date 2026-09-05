@@ -1,15 +1,18 @@
 """
 KrishiConnect Centres Router
+Dynamic geographic distance calculation and intelligent centre recommendations.
 """
 from datetime import date
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from app.database import get_db
 from app.models import ProcurementCentre, CentreCounter, TimeSlot, QueueEntry, QueueStatus, User
 from app.schemas import CentreOut, CentreDetailOut, SlotOut, CounterOut
 from app.auth import decode_token
+from app.locations_data import find_village_coordinates
+from app.distance import calculate_distance_and_duration
 
 router = APIRouter(prefix="/centres", tags=["centres"])
 
@@ -106,7 +109,7 @@ def compute_recommendation_score(stats: dict, distance_km: float, user_village: 
     # Village matching bonus
     if user_village and centre_location and user_village.lower() in centre_location.lower():
         score += 50.0
-        reasons.append(f"Your village centre")
+        reasons.append("Your village centre")
 
     # Roundtrip travel time at loaded farm transport speeds (~20 km/h -> 3 mins per km each way = 6 mins/km roundtrip)
     roundtrip_travel_mins = distance_km * 2 * 3.0
@@ -119,9 +122,16 @@ def compute_recommendation_score(stats: dict, distance_km: float, user_village: 
     elif distance_km <= 10.0:
         score += 25.0
         reasons.append(f"Nearby centre ({distance_km:.1f} km)")
+    elif distance_km <= 30.0:
+        score += 5.0
+        reasons.append(f"District centre ({distance_km:.1f} km)")
+    elif distance_km <= 50.0:
+        score -= distance_km * 2.0
+        reasons.append(f"Regional transit ({distance_km:.1f} km)")
     else:
         # Distance penalty for long travel (fuel + effort)
         score -= distance_km * 4.0
+        reasons.append(f"Long-distance transit ({distance_km:.1f} km)")
 
     # 2. Total Door-to-Door Time Weight (Travel + Wait)
     if total_trip_mins <= 45:
@@ -162,13 +172,19 @@ def compute_recommendation_score(stats: dict, distance_km: float, user_village: 
 
 @router.get("", response_model=List[CentreOut])
 async def list_centres(
+    village: Optional[str] = None,
+    district: Optional[str] = None,
     current_user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(ProcurementCentre))
     centres = result.scalars().all()
 
-    user_village = current_user.village if current_user else None
+    user_village = village if isinstance(village, str) else (current_user.village if current_user else None)
+    user_district = district if isinstance(district, str) else (current_user.district if current_user else None)
+
+    # Look up farmer coordinates if village or district is available
+    farmer_coords = find_village_coordinates(user_village, user_district) if (user_village or user_district) else None
 
     out = []
     best_score = -9999
@@ -176,7 +192,20 @@ async def list_centres(
 
     for i, centre in enumerate(centres):
         stats = await compute_centre_stats(db, centre)
-        score, reasons = compute_recommendation_score(stats, centre.distance_km, user_village, centre.location)
+
+        # Dynamic distance calculation if coordinates available
+        if farmer_coords:
+            route_info = await calculate_distance_and_duration(
+                farmer_coords["latitude"],
+                farmer_coords["longitude"],
+                centre.latitude,
+                centre.longitude
+            )
+            eff_distance_km = route_info["distance_km"]
+        else:
+            eff_distance_km = centre.distance_km
+
+        score, reasons = compute_recommendation_score(stats, eff_distance_km, user_village, centre.location)
         if score > best_score:
             best_score = score
             best_idx = i
@@ -188,7 +217,7 @@ async def list_centres(
             district=centre.district,
             latitude=centre.latitude,
             longitude=centre.longitude,
-            distance_km=centre.distance_km,
+            distance_km=eff_distance_km,
             status=centre.status,
             avg_processing_minutes=centre.avg_processing_minutes,
             recommendation_score=score,
@@ -207,6 +236,8 @@ async def list_centres(
 @router.get("/{centre_id}", response_model=CentreDetailOut)
 async def get_centre(
     centre_id: int,
+    village: Optional[str] = None,
+    district: Optional[str] = None,
     current_user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db)
 ):
@@ -217,9 +248,24 @@ async def get_centre(
     if not centre:
         raise HTTPException(status_code=404, detail="Centre not found")
 
-    user_village = current_user.village if current_user else None
+    user_village = village if isinstance(village, str) else (current_user.village if current_user else None)
+    user_district = district if isinstance(district, str) else (current_user.district if current_user else None)
+
+    farmer_coords = find_village_coordinates(user_village, user_district) if user_village else None
+
+    if farmer_coords:
+        route_info = await calculate_distance_and_duration(
+            farmer_coords["latitude"],
+            farmer_coords["longitude"],
+            centre.latitude,
+            centre.longitude
+        )
+        eff_distance_km = route_info["distance_km"]
+    else:
+        eff_distance_km = centre.distance_km
+
     stats = await compute_centre_stats(db, centre)
-    score, reasons = compute_recommendation_score(stats, centre.distance_km, user_village, centre.location)
+    score, reasons = compute_recommendation_score(stats, eff_distance_km, user_village, centre.location)
 
     # Get counters with current assignments
     result = await db.execute(
@@ -229,7 +275,6 @@ async def get_centre(
 
     counters_out = []
     for counter in counters:
-        # Find current processing entry
         r = await db.execute(
             select(QueueEntry).where(
                 QueueEntry.counter_id == counter.id,
@@ -240,7 +285,6 @@ async def get_centre(
 
         farmer_name = None
         if current_entry:
-            from app.models import User
             r2 = await db.execute(select(User).where(User.id == current_entry.farmer_id))
             farmer = r2.scalar_one_or_none()
             farmer_name = farmer.full_name if farmer else None
@@ -263,7 +307,7 @@ async def get_centre(
         district=centre.district,
         latitude=centre.latitude,
         longitude=centre.longitude,
-        distance_km=centre.distance_km,
+        distance_km=eff_distance_km,
         status=centre.status,
         avg_processing_minutes=centre.avg_processing_minutes,
         recommendation_score=score,

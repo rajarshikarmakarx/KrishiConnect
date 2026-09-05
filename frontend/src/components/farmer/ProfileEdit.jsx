@@ -1,22 +1,86 @@
-import { useState } from 'react'
-import { User, Phone, MapPin, Save, Trash2, AlertCircle, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { User, Phone, MapPin, Save, Trash2, AlertCircle, X, Building2 } from 'lucide-react'
 import api from '../../api'
 import { useAuth } from '../../AuthContext'
 
-export default function ProfileEdit({ onClose }) {
+const DEFAULT_DISTRICTS = [
+  'Howrah',
+  'Hooghly',
+  'Purba Bardhaman',
+  'Nadia',
+  'North 24 Parganas',
+  'South 24 Parganas'
+]
+
+const FALLBACK_VILLAGES = {
+  'Howrah': ['Haripur', 'Bagnan', 'Uluberia', 'Amta', 'Shyampur', 'Domjur', 'Panchla', 'Jagatballavpur', 'Sankrail', 'Bally'],
+  'Hooghly': ['Singur', 'Tarakeswar', 'Pandua', 'Polba', 'Arambagh', 'Chinsurah', 'Chandannagar', 'Serampore', 'Haripal', 'Balagarh'],
+  'Purba Bardhaman': ['Memari', 'Kalna', 'Katwa', 'Galsi', 'Jamalpur', 'Raina', 'Bardhaman Sadar', 'Monteswar', 'Bhatar'],
+  'Nadia': ['Krishnanagar', 'Ranaghat', 'Shantipur', 'Chakdaha', 'Nakashipara', 'Tehatta', 'Kalyani', 'Chapra', 'Karimpur'],
+  'North 24 Parganas': ['Barasat', 'Basirhat', 'Habra', 'Bongaon', 'Deganga', 'Amdanga', 'Gaighata', 'Swarupnagar', 'Baduria'],
+  'South 24 Parganas': ['Baruipur', 'Diamond Harbour', 'Canning', 'Kakdwip', 'Joynagar', 'Gosaba', 'Sonarpur', 'Amtala', 'Kulpi']
+}
+
+export default function ProfileEdit({ onClose, onProfileUpdated }) {
   const { user, setUser, logout } = useAuth()
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     mobile: user?.mobile || '',
-    village: user?.village || ''
+    district: user?.district || 'Howrah',
+    village: user?.village || 'Haripur'
   })
+  const [districts, setDistricts] = useState(DEFAULT_DISTRICTS)
+  const [villages, setVillages] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+  // Fetch districts on mount
+  useEffect(() => {
+    async function loadDistricts() {
+      try {
+        const dList = await api.getDistricts()
+        if (Array.isArray(dList) && dList.length > 0) {
+          setDistricts(dList)
+        }
+      } catch (err) {
+        setDistricts(DEFAULT_DISTRICTS)
+      }
+    }
+    loadDistricts()
+  }, [])
+
+  // Update village options whenever district changes
+  useEffect(() => {
+    async function loadVillages() {
+      if (!formData.district) return
+      try {
+        const vData = await api.getVillages(formData.district)
+        if (Array.isArray(vData) && vData.length > 0) {
+          const names = vData.map(v => typeof v === 'string' ? v : v.village)
+          setVillages(names)
+          // If current village not in new district's village list, pick first
+          if (!names.includes(formData.village)) {
+            setFormData(prev => ({ ...prev, village: names[0] || '' }))
+          }
+          return
+        }
+      } catch (e) {}
+
+      // Fallback if API unavailable
+      const fallbackList = FALLBACK_VILLAGES[formData.district] || []
+      setVillages(fallbackList)
+      if (fallbackList.length > 0 && !fallbackList.includes(formData.village)) {
+        setFormData(prev => ({ ...prev, village: fallbackList[0] }))
+      }
+    }
+    loadVillages()
+  }, [formData.district])
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
     setError(null)
     setSuccess(false)
   }
@@ -29,13 +93,18 @@ export default function ProfileEdit({ onClose }) {
 
     try {
       const updated = await api.updateProfile(formData)
-      setUser(updated)
+      const mergedUser = { ...user, ...updated }
+      setUser(mergedUser)
+      localStorage.setItem('krishi_user', JSON.stringify(mergedUser))
       setSuccess(true)
+      if (onProfileUpdated) {
+        onProfileUpdated(mergedUser)
+      }
       setTimeout(() => {
         onClose()
-      }, 1500)
+      }, 1000)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to update profile')
+      setError(err.response?.data?.detail || err.message || 'Failed to update profile')
     } finally {
       setLoading(false)
     }
@@ -50,7 +119,7 @@ export default function ProfileEdit({ onClose }) {
       logout()
       onClose()
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to delete account')
+      setError(err.response?.data?.detail || err.message || 'Failed to delete account')
       setLoading(false)
     }
   }
@@ -60,7 +129,7 @@ export default function ProfileEdit({ onClose }) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Edit Profile</h2>
+          <h2 className="text-xl font-bold text-white">Edit Profile & Location</h2>
           <button
             onClick={onClose}
             className="text-white/90 hover:text-white transition-colors"
@@ -76,7 +145,7 @@ export default function ProfileEdit({ onClose }) {
               <div className="bg-green-100 rounded-full p-1">
                 <Save className="w-4 h-4 text-green-600" />
               </div>
-              <p className="text-sm text-green-700 font-medium">Profile updated successfully!</p>
+              <p className="text-sm text-green-700 font-medium">Profile & location updated successfully!</p>
             </div>
           )}
 
@@ -102,7 +171,7 @@ export default function ProfileEdit({ onClose }) {
                   name="full_name"
                   value={formData.full_name}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
                   placeholder="Enter your full name"
                   required
                 />
@@ -121,7 +190,7 @@ export default function ProfileEdit({ onClose }) {
                   name="mobile"
                   value={formData.mobile}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
                   placeholder="10-digit mobile number"
                   pattern="[0-9]{10}"
                   required
@@ -129,23 +198,61 @@ export default function ProfileEdit({ onClose }) {
               </div>
             </div>
 
-            {/* Village */}
+            {/* District Selector */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Village
+                District (West Bengal)
               </label>
               <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  name="village"
-                  value={formData.village}
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                <select
+                  name="district"
+                  value={formData.district}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                  placeholder="Enter your village"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm bg-white cursor-pointer"
                   required
-                />
+                >
+                  {districts.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
               </div>
+            </div>
+
+            {/* Village / Block Selector */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Village / Block
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                {villages.length > 0 ? (
+                  <select
+                    name="village"
+                    value={formData.village}
+                    onChange={handleChange}
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm bg-white cursor-pointer"
+                    required
+                  >
+                    {villages.map(v => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    name="village"
+                    value={formData.village}
+                    onChange={handleChange}
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+                    placeholder="Enter village name"
+                    required
+                  />
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Route distances and centre ETA will dynamically calculate from this location.
+              </p>
             </div>
 
             {/* Action Buttons */}
@@ -153,52 +260,52 @@ export default function ProfileEdit({ onClose }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors text-sm"
                 disabled={loading}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 disabled={loading}
               >
-                <Save className="w-5 h-5" />
+                <Save className="w-4 h-4" />
                 {loading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </form>
 
           {/* Delete Account Section */}
-          <div className="mt-6 pt-6 border-t border-slate-200">
+          <div className="mt-6 pt-5 border-t border-slate-200">
             {!showDeleteConfirm ? (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="w-full text-red-600 hover:text-red-700 font-medium text-sm py-2 flex items-center justify-center gap-2 transition-colors"
+                className="w-full text-red-600 hover:text-red-700 font-medium text-xs py-1.5 flex items-center justify-center gap-1.5 transition-colors"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
                 Delete Account
               </button>
             ) : (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start gap-2 mb-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="flex items-start gap-2 mb-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-red-900 mb-1">Delete Account?</p>
-                    <p className="text-xs text-red-700">This action cannot be undone. All your data will be permanently deleted.</p>
+                    <p className="text-xs font-semibold text-red-900">Delete Account?</p>
+                    <p className="text-[11px] text-red-700">This action cannot be undone. All your data will be permanently deleted.</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="flex-1 px-3 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                    className="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors"
                     disabled={loading}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                    className="flex-1 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
                     disabled={loading}
                   >
                     {loading ? 'Deleting...' : 'Yes, Delete'}

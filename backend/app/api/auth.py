@@ -141,11 +141,14 @@ async def update_profile(
             raise HTTPException(status_code=400, detail="Mobile number already in use")
         current_user.mobile = data.mobile
 
-    if data.full_name:
+    if data.full_name is not None:
         current_user.full_name = data.full_name
 
-    if data.village:
+    if data.village is not None:
         current_user.village = data.village
+
+    if data.district is not None:
+        current_user.district = data.district
 
     await db.commit()
     await db.refresh(current_user)

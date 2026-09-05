@@ -1,28 +1,57 @@
 """
 KrishiConnect Database Connection
+Configures Supabase PostgreSQL with asyncpg and connection pooling,
+with automatic dialect conversion from standard postgresql:// URLs.
 """
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
 import os
+import ssl
 from pathlib import Path
 from dotenv import load_dotenv
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+
 if not DATABASE_URL:
     db_path = BASE_DIR / "krishiconnect.db"
     DATABASE_URL = f"sqlite+aiosqlite:///{db_path}"
-elif DATABASE_URL.startswith("sqlite+aiosqlite:///."):
-    rel_path = DATABASE_URL[len("sqlite+aiosqlite:///."):]
-    abs_path = (BASE_DIR / rel_path.lstrip("/")).resolve()
-    DATABASE_URL = f"sqlite+aiosqlite:///{abs_path}"
+else:
+    # Convert postgres:// or postgresql:// to postgresql+asyncpg://
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = "postgresql+asyncpg://" + DATABASE_URL[len("postgres://"):]
+    elif DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = "postgresql+asyncpg://" + DATABASE_URL[len("postgresql://"):]
+    elif DATABASE_URL.startswith("sqlite+aiosqlite:///."):
+        rel_path = DATABASE_URL[len("sqlite+aiosqlite:///."):]
+        abs_path = (BASE_DIR / rel_path.lstrip("/")).resolve()
+        DATABASE_URL = f"sqlite+aiosqlite:///{abs_path}"
+
+# Engine options
+engine_kwargs = {
+    "echo": False,
+}
+
+if "postgresql" in DATABASE_URL or "asyncpg" in DATABASE_URL:
+    engine_kwargs.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    })
+    # Remove sslmode query param from asyncpg URL if present to avoid driver confusion
+    if "?" in DATABASE_URL:
+        base_url, query_params = DATABASE_URL.split("?", 1)
+        params = [p for p in query_params.split("&") if not p.startswith("sslmode=")]
+        DATABASE_URL = base_url + ("?" + "&".join(params) if params else "")
+elif "sqlite" in DATABASE_URL:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
 
 engine = create_async_engine(
     DATABASE_URL,
-    echo=False,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+    **engine_kwargs
 )
 
 AsyncSessionLocal = async_sessionmaker(

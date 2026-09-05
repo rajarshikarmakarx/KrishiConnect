@@ -14,8 +14,8 @@ AI Components
   1. EMA Wait-Time Predictor
      Rather than the fixed formula (waiting * avg_processing / counters),
      we run an Exponential Moving Average over the last 7 days of actual
-     measured wait times, weighted by recency (α = 0.35).  The live queue
-     load feeds into the prediction only as an adjustment delta.  This
+     measured wait times, weighted by recency (α = 0.35). The live queue
+     load feeds into the prediction only as an adjustment delta. This
      learns from real throughput variance across shifts and crops — something
      a static formula cannot do.
 
@@ -25,7 +25,7 @@ AI Components
        b. Queue pressure index  (live load / counter capacity)
        c. Slot scarcity         (available / total slots today)
        d. Historical throughput (7-day avg farmers served / hour)
-       e. Village proximity     (soft match on location string)
+       e. Village proximity     (dynamic road distance & village match)
      Weights are tuned to SIH scoring rubric (impact on farmer time).
 
   3. MSP Rate Oracle
@@ -35,7 +35,7 @@ AI Components
 
 from datetime import date, datetime, timedelta
 from typing import Optional, List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.database import get_db
@@ -43,6 +43,8 @@ from app.models import (
     ProcurementCentre, CentreCounter, QueueEntry, TimeSlot,
     QueueStatus, Procurement
 )
+from app.locations_data import find_village_coordinates
+from app.distance import calculate_distance_and_duration
 
 ai_router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -221,14 +223,21 @@ async def ai_eta(centre_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @ai_router.get("/recommend")
-async def ai_recommend(village: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+async def ai_recommend(
+    village: Optional[str] = None,
+    district: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
     """
     Multi-signal centre recommender.
     Returns all centres ranked by a weighted composite score,
     with per-signal breakdowns so the evaluator can inspect the AI's reasoning.
+    Dynamically computes road distance and travel time from the farmer's village.
     """
     r = await db.execute(select(ProcurementCentre))
     centres = r.scalars().all()
+
+    farmer_coords = find_village_coordinates(village, district) if (village or district) else None
 
     results = []
     for centre in centres:
@@ -237,11 +246,23 @@ async def ai_recommend(village: Optional[str] = None, db: AsyncSession = Depends
         throughput = await _historical_throughput(db, centre.id)
         ema_wait = await _ema_wait_minutes(db, centre.id)
 
+        # Dynamic distance calculation
+        if farmer_coords:
+            route_info = await calculate_distance_and_duration(
+                farmer_coords["latitude"],
+                farmer_coords["longitude"],
+                centre.latitude,
+                centre.longitude
+            )
+            eff_distance_km = route_info["distance_km"]
+        else:
+            eff_distance_km = centre.distance_km
+
         # --- Signal a: door-to-door time (lower → better) ---
-        roundtrip_mins = centre.distance_km * 2 * 3.0  # 20 km/h farm transport
+        roundtrip_mins = eff_distance_km * 2 * 3.0  # 20 km/h farm transport
         total_time = roundtrip_mins + ema_wait
-        # Normalise: 0 min → 1.0 score, 120 min → 0.0
-        s_time = max(0.0, 1.0 - total_time / 120.0)
+        # Smooth continuous decay normalization
+        s_time = round(60.0 / (60.0 + total_time), 3)
 
         # --- Signal b: queue pressure (lower → better) ---
         queue_pressure = (pressure["waiting"] + pressure["processing"]) / max(pressure["counters"] * 10, 1)
@@ -255,8 +276,14 @@ async def ai_recommend(village: Optional[str] = None, db: AsyncSession = Depends
 
         # --- Signal e: village proximity ---
         s_prox = 0.0
-        if village and centre.location and village.lower() in centre.location.lower():
+        if (village and centre.location and village.lower() in centre.location.lower()) or (district and centre.location and district.lower() in centre.location.lower()):
             s_prox = 1.0
+        elif eff_distance_km <= 5.0:
+            s_prox = 0.9
+        elif eff_distance_km <= 15.0:
+            s_prox = max(0.0, round(1.0 - eff_distance_km / 25.0, 3))
+        else:
+            s_prox = max(0.0, round(10.0 / (10.0 + eff_distance_km), 3))
 
         # --- Zero-out if no slots available ---
         if avail == 0:
@@ -274,7 +301,7 @@ async def ai_recommend(village: Optional[str] = None, db: AsyncSession = Depends
             "centre_id": centre.id,
             "centre_name": centre.name,
             "location": centre.location,
-            "distance_km": centre.distance_km,
+            "distance_km": eff_distance_km,
             "composite_score": round(composite, 4),
             "signals": {
                 "door_to_door_score": round(s_time, 3),

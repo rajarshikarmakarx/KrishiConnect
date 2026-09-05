@@ -36,6 +36,7 @@ class ProfileUpdateRequest(BaseModel):
     full_name: Optional[str] = None
     mobile: Optional[str] = None
     village: Optional[str] = None
+    district: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str
