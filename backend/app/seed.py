@@ -396,9 +396,124 @@ async def seed(reset: bool = False):
                 db.add(entry)
                 c_token += 1
 
+        # ── 30 days of historical data (powers EMA predictor) ─────────────────
+        print("📅 Seeding 30-day historical queue data for AI model…")
+        await _seed_history(db, centres, farmers)
+
         await db.commit()
         print("✅ Seed complete! Initial users and procurement centres created.")
         print("ℹ️  Seed credentials are for development use only — check seed.py for details.")
+
+
+async def _seed_history(db, centres, farmers):
+    """
+    Backfill 30 days of completed QueueEntry + Procurement + Payment rows.
+    Each day gets a realistic volume (10–35 per centre) with normally-distributed
+    wait times so the EMA predictor has enough signal to show meaningful variance.
+    """
+    from sqlalchemy import select as sa_select
+    today = date.today()
+
+    token_counter = 3000  # avoid clash with live seed tokens
+
+    for day_offset in range(30, 0, -1):  # 30 days ago … yesterday
+        hist_date = today - timedelta(days=day_offset)
+        # Realistic daily load: lower on weekends
+        is_weekend = hist_date.weekday() >= 5
+        base_volume = random.randint(4, 10) if is_weekend else random.randint(10, 22)
+
+        for centre in centres:
+            volume = max(1, int(base_volume * random.uniform(0.7, 1.3)))
+
+            # Ensure a slot exists for this historical date
+            result = await db.execute(
+                sa_select(TimeSlot).where(
+                    TimeSlot.centre_id == centre.id,
+                    TimeSlot.date == hist_date
+                ).limit(1)
+            )
+            hist_slot = result.scalar_one_or_none()
+            if not hist_slot:
+                hist_slot = TimeSlot(
+                    centre_id=centre.id,
+                    date=hist_date,
+                    start_time="09:00",
+                    end_time="17:00",
+                    total_capacity=50,
+                    booked_count=min(volume, 50),
+                    is_active=True,
+                )
+                db.add(hist_slot)
+                await db.flush()
+
+            # Compute a realistic avg wait for this centre on this day
+            # (mean varies ±30 % around centre baseline)
+            centre_baseline = centre.avg_processing_minutes * random.uniform(0.7, 1.5)
+
+            for j in range(volume):
+                farmer = farmers[(token_counter + j) % len(farmers)]
+                crop = random.choice(CROPS)
+                qty_kg = round(random.uniform(80, 500), 1)
+
+                booked_at = datetime.combine(
+                    hist_date,
+                    datetime.min.time()
+                ) + timedelta(hours=9) + timedelta(minutes=j * random.randint(8, 18))
+
+                # Wait time: log-normal so occasional outliers exist
+                wait_min = max(3.0, random.gauss(centre_baseline * 3, centre_baseline))
+                proc_start = booked_at + timedelta(minutes=wait_min)
+                proc_duration = max(4.0, random.gauss(centre.avg_processing_minutes, 2.0))
+                completed_at = proc_start + timedelta(minutes=proc_duration)
+
+                accepted = qty_kg * random.uniform(0.88, 0.99)
+                rate = CROP_RATES.get(crop, 20.0) * random.uniform(0.97, 1.03)
+                total_amount = round(accepted * rate, 2)
+
+                entry = QueueEntry(
+                    token=f"H{token_counter}",
+                    farmer_id=farmer.id,
+                    centre_id=centre.id,
+                    slot_id=hist_slot.id,
+                    status=QueueStatus.COMPLETED,
+                    crop=crop,
+                    expected_quantity_kg=qty_kg,
+                    booked_at=booked_at,
+                    called_at=booked_at + timedelta(minutes=wait_min - 2),
+                    processing_started_at=proc_start,
+                    completed_at=completed_at,
+                )
+                db.add(entry)
+                await db.flush()
+
+                proc = Procurement(
+                    queue_entry_id=entry.id,
+                    crop=crop,
+                    expected_quantity_kg=qty_kg,
+                    accepted_quantity_kg=round(accepted, 2),
+                    rate_per_kg=round(rate, 2),
+                    total_amount=total_amount,
+                    created_at=proc_start,
+                    completed_at=completed_at,
+                )
+                db.add(proc)
+                await db.flush()
+
+                pay_status = PaymentStatus.PAID
+                payment = Payment(
+                    procurement_id=proc.id,
+                    amount=total_amount,
+                    status=pay_status,
+                    created_at=completed_at,
+                    paid_at=completed_at + timedelta(hours=random.randint(1, 6)),
+                )
+                db.add(payment)
+                token_counter += 1
+
+            # Batch flush per centre-day to keep memory manageable
+            await db.flush()
+
+    print(f"  ✓ Historical data: {token_counter - 3000} records across 30 days")
 
 
 if __name__ == "__main__":

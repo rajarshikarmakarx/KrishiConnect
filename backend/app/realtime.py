@@ -5,6 +5,7 @@ Uses WebSocket connections for live queue updates
 import json
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Dict, List, Set
 from fastapi import WebSocket
 
@@ -100,7 +101,7 @@ class ConnectionManager:
             "type": "QUEUE_CHANGED",
             "centre_id": centre_id,
             "triggered_by": triggered_by,
-            "timestamp": __import__("datetime").datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         await self.broadcast_centre_update(centre_id, event)
         await self.broadcast_admin_update(event)

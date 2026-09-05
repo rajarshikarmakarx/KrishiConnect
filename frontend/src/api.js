@@ -64,11 +64,20 @@ export const api = {
 
   // Payments
   getPayment: (paymentId) => request('GET', `/payments/${paymentId}`),
+  getPendingPayments: (centreId) => request('GET', `/payments/centre/${centreId}/pending`),
   markPaid: (paymentId) => request('POST', `/payments/${paymentId}/pay`),
 
-  // Analytics
+  // Analytics & Impact
   getCentreAnalytics: (centreId) => request('GET', `/analytics/centre/${centreId}`),
   getDistrictAnalytics: () => request('GET', '/analytics/district'),
+  getSystemHealth: () => request('GET', '/analytics/system-health'),
+  getImpactMetrics: () => request('GET', '/analytics/impact'),
+
+  // AI & Transparency Layer
+  getAiEta: (centreId) => request('GET', `/ai/eta/${centreId}`),
+  getAiRecommendation: (village) => request('GET', `/ai/recommend${village ? `?village=${encodeURIComponent(village)}` : ''}`),
+  getMspRates: () => request('GET', '/ai/msp-rates'),
+  getAiDataInfo: () => request('GET', '/ai/data-info'),
 }
 
 export default api

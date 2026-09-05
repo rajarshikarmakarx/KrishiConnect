@@ -11,6 +11,7 @@ from app.api.auth import router as auth_router
 from app.api.centres import router as centres_router
 from app.api.queue import router as queue_router
 from app.api.analytics import payments_router, analytics_router
+from app.api.ai import ai_router
 from app.api.websocket import ws_router
 
 
@@ -47,6 +48,7 @@ app.include_router(centres_router)
 app.include_router(queue_router)
 app.include_router(payments_router)
 app.include_router(analytics_router)
+app.include_router(ai_router)
 app.include_router(ws_router)
 
 

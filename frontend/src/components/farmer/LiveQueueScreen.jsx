@@ -1,30 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Ticket, Clock, Users, Wifi, WifiOff, Bell } from 'lucide-react'
+import { Ticket, Clock, Users, Wifi, WifiOff, Bell, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api'
 import { useCentreQueue } from '../../hooks/useRealtimeQueue'
-
-function QueueRow({ entry, isYou, isCurrent }) {
-  return (
-    <div className={`flex items-center justify-between py-2.5 px-3 rounded-xl transition-all ${
-      isYou ? 'bg-green-50 border border-green-200' :
-      isCurrent ? 'bg-orange-50 border border-orange-200' :
-      'hover:bg-slate-50'
-    }`}>
-      <div className="flex items-center gap-3">
-        <span className={`token-display font-bold text-sm ${isYou ? 'text-green-700' : isCurrent ? 'text-orange-700' : 'text-slate-600'}`}>
-          {entry.token}
-        </span>
-        {isYou && <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full font-semibold">YOU</span>}
-        {isCurrent && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-semibold">NOW</span>}
-      </div>
-      <span className={`text-xs font-medium ${
-        entry.status === 'PROCESSING' ? 'text-orange-600' :
-        entry.status === 'CALLED' ? 'text-blue-600' : 'text-slate-400'
-      }`}>{entry.status}</span>
-    </div>
-  )
-}
 
 export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh }) {
   const [status, setStatus] = useState(initialStatus)
@@ -63,10 +41,6 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
 
   const { queue_entry: entry, farmers_ahead, estimated_wait_minutes, currently_serving_token } = status
   const eta = Math.round(estimated_wait_minutes)
-  const isActive = ['WAITING', 'CALLED', 'PROCESSING'].includes(entry.status)
-
-  // Get surrounding queue entries for display
-  const centreEntries = []
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -124,10 +98,15 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
                   <p className="text-xs text-slate-500">farmers ahead</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl">
+              <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl border border-amber-100/60">
                 <Clock className="w-5 h-5 text-amber-600" />
                 <div>
-                  <p className="text-xl font-bold text-amber-700">~{eta} min</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xl font-bold text-amber-700">~{eta} min</p>
+                    <span className="text-[9px] bg-amber-200/70 text-amber-900 font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <Sparkles className="w-2.5 h-2.5" /> AI EMA
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-500">estimated wait</p>
                 </div>
               </div>
@@ -135,16 +114,16 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
           )}
 
           {entry.status === 'CALLED' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-center">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-center animate-pulse">
               <p className="text-blue-800 font-bold text-lg">🔔 Your turn!</p>
-              <p className="text-blue-600 text-sm mt-1">Please proceed to {entry.counter_label || 'the counter'}</p>
+              <p className="text-blue-600 text-sm mt-1">Please proceed immediately to <strong>{entry.counter_label || 'the counter'}</strong></p>
             </div>
           )}
 
           {entry.status === 'PROCESSING' && (
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4 text-center">
               <p className="text-orange-800 font-bold text-lg">⚙️ Processing your procurement</p>
-              <p className="text-orange-600 text-sm mt-1">Please wait at {entry.counter_label || 'the counter'}</p>
+              <p className="text-orange-600 text-sm mt-1">Weighing and grading in progress at <strong>{entry.counter_label || 'the counter'}</strong></p>
             </div>
           )}
 
@@ -152,10 +131,10 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
             id="btn-refresh-queue"
             onClick={refresh}
             disabled={loading}
-            className="w-full py-2 text-sm text-slate-500 hover:text-green-700 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2 text-sm text-slate-500 hover:text-green-700 transition-colors flex items-center justify-center gap-2 font-medium"
           >
             {loading ? <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" /> : null}
-            {connected ? '🟢 Queue updates automatically' : '🟡 Reconnecting...'}
+            {connected ? '🟢 Live queue auto-updating' : '🟡 Reconnecting...'}
           </button>
         </div>
       </div>

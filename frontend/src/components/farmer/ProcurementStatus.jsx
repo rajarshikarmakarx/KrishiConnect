@@ -1,15 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { CheckCircle, Clock, IndianRupee } from 'lucide-react'
 import api from '../../api'
+import { useCentreQueue } from '../../hooks/useRealtimeQueue'
 
 export default function ProcurementStatus({ queueEntry }) {
   const [proc, setProc] = useState(null)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (queueEntry?.id) {
       api.getProcurement(queueEntry.id).then(setProc).catch(() => {})
     }
   }, [queueEntry?.id])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  useCentreQueue(queueEntry?.centre_id, load)
 
   if (!proc) return null
 

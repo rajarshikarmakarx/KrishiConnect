@@ -4,11 +4,20 @@ KrishiFlow Database Connection
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./krishiflow.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    db_path = BASE_DIR / "krishiflow.db"
+    DATABASE_URL = f"sqlite+aiosqlite:///{db_path}"
+elif DATABASE_URL.startswith("sqlite+aiosqlite:///."):
+    rel_path = DATABASE_URL[len("sqlite+aiosqlite:///."):]
+    abs_path = (BASE_DIR / rel_path.lstrip("/")).resolve()
+    DATABASE_URL = f"sqlite+aiosqlite:///{abs_path}"
 
 engine = create_async_engine(
     DATABASE_URL,

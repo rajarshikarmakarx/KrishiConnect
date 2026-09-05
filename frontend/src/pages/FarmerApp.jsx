@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../AuthContext'
-import { Wheat, MapPin, Clock, Users, Star, ChevronRight, History, Bell, LogOut, X, CheckCircle, Ticket, User, ChevronDown, Settings } from 'lucide-react'
+import { Wheat, MapPin, Clock, Users, Star, ChevronRight, History, Bell, LogOut, X, CheckCircle, Ticket, User, ChevronDown, Settings, Scale } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
 import LiveQueueScreen from '../components/farmer/LiveQueueScreen'
@@ -11,6 +11,8 @@ import ProcurementStatus from '../components/farmer/ProcurementStatus'
 import CompletionConfirmation from '../components/farmer/CompletionConfirmation'
 import ProfileEdit from '../components/farmer/ProfileEdit'
 import FarmerHistory from '../components/farmer/FarmerHistory'
+import MspRatesModal from '../components/farmer/MspRatesModal'
+import { useFarmerNotifications, useCentreQueue } from '../hooks/useRealtimeQueue'
 
 const TABS = [
   { id: 'centres', label: 'Centres', icon: MapPin },
@@ -18,7 +20,7 @@ const TABS = [
   { id: 'history', label: 'History', icon: History },
 ]
 
-function ProfileMenu({ user, logout, onEditProfile }) {
+function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -43,7 +45,7 @@ function ProfileMenu({ user, logout, onEditProfile }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-fade-in">
           <div className="bg-gradient-to-br from-green-700 to-green-800 p-4">
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
               <User className="w-5 h-5 text-white" />
@@ -62,18 +64,25 @@ function ProfileMenu({ user, logout, onEditProfile }) {
               <div className="px-2 py-1 text-xs text-slate-400 font-mono">ID: {user.farmer_id}</div>
             )}
           </div>
-          <div className="p-2">
+          <div className="p-2 space-y-1">
+            <button
+              onClick={() => { onOpenMsp(); setOpen(false) }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-green-800 hover:bg-green-50 rounded-xl transition-colors font-medium"
+            >
+              <Scale className="w-4 h-4 text-green-700" />
+              Govt MSP Rates
+            </button>
             <button
               onClick={() => { onEditProfile(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors font-medium"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors font-medium"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-4 h-4 text-slate-500" />
               Edit Profile
             </button>
             <button
               id="btn-logout"
               onClick={() => { logout(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium"
             >
               <LogOut className="w-4 h-4" />
               Sign Out
@@ -96,6 +105,7 @@ export default function FarmerApp() {
   const [showBooking, setShowBooking] = useState(false)
   const [newToken, setNewToken] = useState(null)
   const [showProfileEdit, setShowProfileEdit] = useState(false)
+  const [showMspModal, setShowMspModal] = useState(false)
 
   const loadCentres = useCallback(async () => {
     try {
@@ -120,6 +130,46 @@ export default function FarmerApp() {
 
   useEffect(() => { loadCentres(); loadActiveQueue() }, [])
 
+  // Top-level farmer notification listener
+  const token = localStorage.getItem('krishi_token')
+  useFarmerNotifications(
+    user?.id,
+    token,
+    useCallback((data) => {
+      if (data.type === 'PAYMENT_PAID') {
+        toast.success(data.message || '🎉 Direct Benefit Transfer credited to your bank account!', {
+          id: 'farmer-payment-paid',
+          duration: 8000,
+          icon: '💰'
+        })
+        loadActiveQueue()
+      } else if (data.type === 'COMPLETED') {
+        toast.success(data.message || '✅ Procurement completed! Generating invoice...', {
+          id: 'farmer-proc-completed',
+          duration: 6000
+        })
+        loadActiveQueue()
+      } else if (data.type === 'CALLED') {
+        toast(data.message || '🔔 Your turn! Please proceed to the counter.', {
+          id: 'farmer-called',
+          duration: 8000,
+          icon: '🔔'
+        })
+        loadActiveQueue()
+      } else if (data.type === 'PROCESSING') {
+        toast(data.message || '⚙️ Procurement is being processed at the counter.', {
+          id: 'farmer-processing',
+          duration: 5000,
+          icon: '⚙️'
+        })
+        loadActiveQueue()
+      }
+    }, [loadActiveQueue])
+  )
+
+  // Listen to centre queue changes when active queue is present
+  useCentreQueue(activeQueue?.queue_entry?.centre_id, loadActiveQueue)
+
   const handleBookingSuccess = (entry) => {
     setNewToken(entry)
     setShowBooking(false)
@@ -132,26 +182,41 @@ export default function FarmerApp() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
-      <header className="gov-header text-white px-4 py-4 safe-bottom">
+      <header className="gov-header text-white px-4 py-4 safe-bottom sticky top-0 z-30 shadow-md">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
+              <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 shadow-sm">
                 <Wheat className="w-5 h-5 text-green-200" />
               </div>
               <div>
-                <h1 className="text-lg font-bold">KrishiFlow</h1>
-                <p className="text-green-300 text-xs">Smart Procurement</p>
+                <h1 className="text-lg font-bold leading-tight">KrishiFlow</h1>
+                <p className="text-green-300 text-xs">Smart Agricultural Procurement</p>
               </div>
             </div>
-            <ProfileMenu user={user} logout={logout} onEditProfile={() => setShowProfileEdit(true)} />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowMspModal(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-semibold border border-amber-400/30 transition-colors"
+                title="View Government MSP Floor Prices"
+              >
+                <Scale className="w-3.5 h-3.5 text-amber-300" />
+                <span className="hidden sm:inline">Govt</span> MSP Rates
+              </button>
+              <ProfileMenu
+                user={user}
+                logout={logout}
+                onEditProfile={() => setShowProfileEdit(true)}
+                onOpenMsp={() => setShowMspModal(true)}
+              />
+            </div>
           </div>
         </div>
       </header>
 
       {/* Active queue banner */}
       {activeQueue && (
-        <div className="bg-green-700 text-white px-4 py-3 border-b border-green-600">
+        <div className="bg-green-700 text-white px-4 py-3 border-b border-green-600 shadow-inner">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="live-dot" />
@@ -160,7 +225,7 @@ export default function FarmerApp() {
                 <span className="text-green-200 text-sm ml-2">· {activeQueue.farmers_ahead} ahead · ~{Math.round(activeQueue.estimated_wait_minutes)} min</span>
               </div>
             </div>
-            <button onClick={() => setTab('queue')} className="text-green-200 hover:text-white text-sm flex items-center gap-1">
+            <button onClick={() => setTab('queue')} className="text-green-200 hover:text-white text-sm font-semibold flex items-center gap-1">
               View <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -214,7 +279,7 @@ export default function FarmerApp() {
       </main>
 
       {/* Bottom Nav */}
-      <nav className="bg-white border-t border-slate-200 px-4 py-2 safe-bottom sticky bottom-0">
+      <nav className="bg-white border-t border-slate-200 px-4 py-2 safe-bottom sticky bottom-0 z-20 shadow-lg">
         <div className="max-w-2xl mx-auto flex">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
@@ -222,11 +287,11 @@ export default function FarmerApp() {
               id={`tab-${id}`}
               onClick={() => setTab(id)}
               className={`flex-1 flex flex-col items-center gap-1 py-2 transition-colors ${
-                tab === id ? 'text-green-700' : 'text-slate-400'
+                tab === id ? 'text-green-700 font-bold' : 'text-slate-400 font-medium'
               }`}
             >
               <Icon className="w-5 h-5" />
-              <span className="text-xs font-medium">{label}</span>
+              <span className="text-xs">{label}</span>
               {id === 'queue' && activeQueue && (
                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
               )}
@@ -252,6 +317,11 @@ export default function FarmerApp() {
       {/* Profile Edit Modal */}
       {showProfileEdit && (
         <ProfileEdit onClose={() => setShowProfileEdit(false)} />
+      )}
+
+      {/* MSP Rates Modal */}
+      {showMspModal && (
+        <MspRatesModal onClose={() => setShowMspModal(false)} />
       )}
     </div>
   )

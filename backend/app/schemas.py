@@ -149,7 +149,7 @@ class QueueEntryOut(SchemaModel):
 class QueueStatusOut(BaseModel):
     centre_id: int
     centre_name: str
-    currently_serving: Optional[str]
+    currently_serving: Optional[str] = None
     waiting_count: int
     processing_count: int
     completed_count: int
@@ -162,10 +162,10 @@ class QueueStatusOut(BaseModel):
 
 class MyQueueStatus(BaseModel):
     queue_entry: QueueEntryOut
-    currently_serving_token: Optional[str]
+    currently_serving_token: Optional[str] = None
     farmers_ahead: int
     estimated_wait_minutes: float
-    notification: Optional[str]
+    notification: Optional[str] = None
 
 
 # ─── Operator Actions ─────────────────────────────────────────────────────────
@@ -184,7 +184,7 @@ class PaymentOut(SchemaModel):
     amount: float
     status: str
     created_at: datetime
-    paid_at: Optional[datetime]
+    paid_at: Optional[datetime] = None
 
 
 class ProcurementOut(SchemaModel):
@@ -192,13 +192,13 @@ class ProcurementOut(SchemaModel):
     queue_entry_id: int
     crop: str
     expected_quantity_kg: float
-    accepted_quantity_kg: Optional[float]
-    rate_per_kg: Optional[float]
-    total_amount: Optional[float]
-    notes: Optional[str]
+    accepted_quantity_kg: Optional[float] = None
+    rate_per_kg: Optional[float] = None
+    total_amount: Optional[float] = None
+    notes: Optional[str] = None
     created_at: datetime
-    completed_at: Optional[datetime]
-    payment: Optional[PaymentOut]
+    completed_at: Optional[datetime] = None
+    payment: Optional[PaymentOut] = None
 
 
 # ─── Analytics Schemas ────────────────────────────────────────────────────────
