@@ -143,10 +143,19 @@ export function useFarmerNotifications(farmerId, token, onNotification) {
         } catch {}
       }
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         clearInterval(pingTimer.current)
         if (!mountedRef.current) return
         setConnected(false)
+
+        // Close code 4001, 4003 or 1008 indicates authentication failure (e.g. invalid or expired token)
+        if (event.code === 4001 || event.code === 4003 || event.code === 1008) {
+          window.dispatchEvent(new CustomEvent('krishi:auth-expired', {
+            detail: { reason: 'ws_auth_rejected', code: event.code }
+          }))
+          return // Stop reconnect attempts on invalid credentials
+        }
+
         reconnectTimer.current = setTimeout(() => {
           if (mountedRef.current) connect()
         }, 2500)

@@ -381,5 +381,6 @@ export default {
     processing_toast: 'Procurement is being processed at the counter.',
     sun_drying_toast: 'Sun-drying grace granted. Please dry your produce in the mandi yard.',
     rejected_toast: 'Produce lot did not meet mandatory mandi quality standards.',
+    session_expired: 'Your session has expired. Please log in again.',
   }
 }

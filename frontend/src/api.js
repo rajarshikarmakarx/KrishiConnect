@@ -1,3 +1,5 @@
+import toast from 'react-hot-toast'
+
 // API client for KrishiConnect backend
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -9,6 +11,33 @@ function authHeaders() {
   const token = getToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
+
+/**
+ * Purge stored credentials and notify subscribers (AuthContext, UI)
+ * Deduplicated toast notification via fixed id prevents notification stacking.
+ */
+export function clearSession(detail = 'Session expired') {
+  const hadSession = !!localStorage.getItem('krishi_token') || !!localStorage.getItem('krishi_user')
+  localStorage.removeItem('krishi_token')
+  localStorage.removeItem('krishi_user')
+
+  if (hadSession) {
+    window.dispatchEvent(new CustomEvent('krishi:auth-expired', { detail: { message: detail } }))
+    toast.error('Your session has expired. Please log in again.', {
+      id: 'session-expired-toast',
+      duration: 4500,
+    })
+  }
+}
+
+// Routes where 401 is an expected credential error on login/verification, NOT an expired session
+const AUTH_CREDENTIAL_ENDPOINTS = [
+  '/auth/login',
+  '/auth/verify-otp',
+  '/auth/register',
+  '/auth/send-otp',
+  '/auth/register-operator',
+]
 
 async function request(method, path, body = null, customHeaders = {}) {
   const headers = {
@@ -23,8 +52,19 @@ async function request(method, path, body = null, customHeaders = {}) {
   try {
     const res = await fetch(`${BASE_URL}${path}`, options)
     if (res.status === 204) return null
-    const data = await res.json()
+
+    let data
+    try {
+      data = await res.json()
+    } catch {
+      data = {}
+    }
+
     if (!res.ok) {
+      // If 401 Unauthorized occurs on an authenticated route
+      if (res.status === 401 && !AUTH_CREDENTIAL_ENDPOINTS.some(endpoint => path.startsWith(endpoint))) {
+        clearSession(data.detail || 'Session expired')
+      }
       throw new Error(data.detail || `Error ${res.status}`)
     }
     return data
@@ -42,6 +82,8 @@ export const api = {
   login: (data) => request('POST', '/auth/login', data),
   sendOtp: (mobile) => request('POST', '/auth/send-otp', { mobile }),
   verifyOtp: (mobile, otp) => request('POST', '/auth/verify-otp', { mobile, otp }),
+  getMe: () => request('GET', '/auth/me'),
+  getProfile: () => request('GET', '/auth/me'),
   updateProfile: (data) => request('PUT', '/auth/profile', data),
   deleteProfile: () => request('DELETE', '/auth/profile'),
 
