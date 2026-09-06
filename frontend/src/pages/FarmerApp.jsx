@@ -164,6 +164,20 @@ export default function FarmerApp() {
           icon: '⚙️'
         })
         loadActiveQueue()
+      } else if (data.type === 'QUALITY_DECISION') {
+        if (data.status === 'DEFERRED_SUN_DRYING') {
+          toast(data.message || '🌾 Sun-drying grace granted. Please dry your produce in the mandi yard.', {
+            id: 'farmer-sun-drying',
+            duration: 8000,
+            icon: '☀️'
+          })
+        } else if (data.status === 'REJECTED') {
+          toast.error(data.message || '⚠️ Produce lot did not meet mandatory mandi quality standards.', {
+            id: 'farmer-rejected',
+            duration: 8000,
+          })
+        }
+        loadActiveQueue()
       }
     }, [loadActiveQueue])
   )

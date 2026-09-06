@@ -78,8 +78,11 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
               <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-bold ${
                 entry.status === 'WAITING' ? 'bg-yellow-100 text-yellow-700' :
                 entry.status === 'CALLED' ? 'bg-blue-100 text-blue-700' :
-                'bg-orange-100 text-orange-700'
-              }`}>{entry.status}</span>
+                entry.status === 'PROCESSING' ? 'bg-orange-100 text-orange-700' :
+                entry.status === 'DEFERRED_SUN_DRYING' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                entry.status === 'REJECTED' ? 'bg-red-100 text-red-700 border border-red-300' :
+                'bg-slate-100 text-slate-700'
+              }`}>{entry.status === 'DEFERRED_SUN_DRYING' ? 'SUN-DRYING GRACE' : entry.status}</span>
             </div>
             <div className="text-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Serving Now</p>
@@ -124,6 +127,30 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4 text-center">
               <p className="text-orange-800 font-bold text-lg">⚙️ Processing your procurement</p>
               <p className="text-orange-600 text-sm mt-1">Weighing and grading in progress at <strong>{entry.counter_label || 'the counter'}</strong></p>
+            </div>
+          )}
+
+          {entry.status === 'DEFERRED_SUN_DRYING' && (
+            <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 mb-4">
+              <div className="flex items-center gap-2 text-amber-800 font-bold text-base mb-1">
+                <span>☀️ Mandi Sun-Drying Grace Active (2.5 Hours)</span>
+              </div>
+              <p className="text-amber-900 text-xs sm:text-sm">
+                Your produce sample showed high moisture content ({entry.assay_record?.moisture_percentage ?? '18+'}%).
+                Please spread your grain across the mandi sun-drying courtyard.
+                You can return to the intake counter after drying without losing your queue registration.
+              </p>
+            </div>
+          )}
+
+          {entry.status === 'REJECTED' && (
+            <div className="bg-red-50 border border-red-300 rounded-2xl p-4 mb-4">
+              <div className="flex items-center gap-2 text-red-800 font-bold text-base mb-1">
+                <span>⚠️ Produce Lot Not Accepted</span>
+              </div>
+              <p className="text-red-900 text-xs sm:text-sm">
+                {entry.assay_record?.rejection_reason || 'Moisture level or foreign matter exceeded mandatory government mandi safety thresholds.'}
+              </p>
             </div>
           )}
 

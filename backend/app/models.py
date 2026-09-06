@@ -22,6 +22,7 @@ def utc_now():
 class UserRole(str, enum.Enum):
     FARMER = "farmer"
     OPERATOR = "operator"
+    ASSAYER = "assayer"
     ADMIN = "admin"
 
 
@@ -30,6 +31,8 @@ class QueueStatus(str, enum.Enum):
     CALLED = "CALLED"
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
+    DEFERRED_SUN_DRYING = "DEFERRED_SUN_DRYING"
+    REJECTED = "REJECTED"
     CANCELLED = "CANCELLED"
 
 
@@ -142,6 +145,30 @@ class QueueEntry(Base):
     slot = relationship("TimeSlot", back_populates="queue_entries")
     counter = relationship("CentreCounter", back_populates="queue_entries")
     procurement = relationship("Procurement", back_populates="queue_entry", uselist=False)
+    assay_record = relationship("AssayRecord", back_populates="queue_entry", uselist=False)
+
+
+class AssayRecord(Base):
+    __tablename__ = "assay_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    queue_entry_id = Column(Integer, ForeignKey("queue_entries.id"), unique=True, nullable=False)
+    assayer_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    crop = Column(String(100), nullable=False)
+    moisture_percentage = Column(Float, nullable=False)
+    chaff_percentage = Column(Float, default=0.0)
+    damaged_grains_percentage = Column(Float, default=0.0)
+    grade = Column(String(20), nullable=False)  # "Grade A", "Grade B", "Grade C", "Rejected"
+    decision = Column(String(50), nullable=False)  # "APPROVED", "DEFERRED_SUN_DRYING", "REJECTED"
+    suggested_rate_per_kg = Column(Float, nullable=False)
+    rejection_reason = Column(String(300), nullable=True)
+    sun_drying_grace_hours = Column(Float, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now)
+
+    queue_entry = relationship("QueueEntry", back_populates="assay_record")
+    assayer = relationship("User", foreign_keys=[assayer_id])
+    procurement = relationship("Procurement", back_populates="assay_record", uselist=False)
 
 
 class Procurement(Base):
@@ -149,7 +176,9 @@ class Procurement(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     queue_entry_id = Column(Integer, ForeignKey("queue_entries.id"), unique=True, nullable=False)
+    assay_record_id = Column(Integer, ForeignKey("assay_records.id"), nullable=True)
     crop = Column(String(100), nullable=False)
+    grade = Column(String(20), nullable=True)
     expected_quantity_kg = Column(Float, nullable=False)
     accepted_quantity_kg = Column(Float, nullable=True)
     rate_per_kg = Column(Float, nullable=True)
@@ -159,6 +188,7 @@ class Procurement(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
 
     queue_entry = relationship("QueueEntry", back_populates="procurement")
+    assay_record = relationship("AssayRecord", back_populates="procurement")
     payment = relationship("Payment", back_populates="procurement", uselist=False)
 
 

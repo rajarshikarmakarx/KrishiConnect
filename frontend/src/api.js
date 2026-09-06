@@ -66,12 +66,13 @@ export const api = {
   getMyActiveQueue: () => request('GET', '/queue/my/active'),
   getCentreQueue: (centreId) => request('GET', `/queue/${centreId}`),
 
-  // Queue operations (operator)
+  // Queue operations (operator & assayer)
   cancelBooking: (queueId) => request('POST', `/queue/${queueId}/cancel`),
   callNext: (centreId) => request('POST', `/queue/centre/${centreId}/call-next`),
   callSpecific: (queueId) => request('POST', `/queue/${queueId}/call`),
   startProcessing: (queueId) => request('POST', `/queue/${queueId}/start`),
   completeProcurement: (queueId, data) => request('POST', `/queue/${queueId}/complete`, data),
+  recordQualityAction: (queueId, data) => request('POST', `/queue/${queueId}/quality-action`, data),
   getProcurement: (queueId) => request('GET', `/queue/${queueId}/procurement`),
 
   // Payments

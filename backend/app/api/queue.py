@@ -12,12 +12,13 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models import (
     User, ProcurementCentre, CentreCounter, TimeSlot,
-    QueueEntry, Procurement, Payment,
+    QueueEntry, Procurement, Payment, AssayRecord,
     QueueStatus, PaymentStatus, UserRole
 )
 from app.schemas import (
     BookSlotRequest, QueueEntryOut, QueueStatusOut,
-    MyQueueStatus, CompleteQueueRequest, ProcurementOut, PaymentOut
+    MyQueueStatus, CompleteQueueRequest, QualityActionRequest,
+    ProcurementOut, PaymentOut, AssayRecordOut
 )
 from app.auth import decode_token
 from app.realtime import manager
@@ -43,6 +44,34 @@ async def get_current_user(authorization: str = Header(None), db: AsyncSession =
 
 def generate_token(prefix: str = "A") -> str:
     return prefix + str(random.randint(100, 999))
+
+
+def compute_quality_grade(crop: str, moisture: float, chaff: float = 0.0, damaged: float = 0.0) -> tuple:
+    """
+    Computes (grade, decision, suggested_multiplier, reason) based on Govt Mandi & FAQ Quality Norms:
+    - Grade A (FAQ Standard): Moisture <= 14.0%, Chaff <= 1.5%, Damaged <= 2.0% -> 100% MSP rate
+    - Grade B (Permissible Standard): Moisture <= 17.0%, Chaff <= 3.0%, Damaged <= 4.0% -> Standard rate
+    - Grade C (Marginal / Sun-Drying Needed): Moisture 17.1% - 19.9% -> Deferral for sun-drying recommended
+    - Rejected: Moisture >= 20.0% -> Fungal aflatoxin & spoilage hazard
+    """
+    if moisture >= 20.0:
+        return (
+            "Rejected",
+            "REJECTED",
+            0.0,
+            f"Excessive moisture ({moisture:.1f}% >= 20.0%) presents high risk of fungal aflatoxin and silo rot. Produce must be rejected or sun-dried."
+        )
+    elif moisture > 17.0:
+        return (
+            "Grade C",
+            "DEFERRED_SUN_DRYING",
+            0.90,
+            f"Moisture ({moisture:.1f}%) exceeds FAQ gate standard (17.0%). Mandi yard sun-drying grace recommended."
+        )
+    elif moisture > 14.0 or chaff > 1.5 or damaged > 2.0:
+        return ("Grade B", "APPROVED", 0.98, None)
+    else:
+        return ("Grade A", "APPROVED", 1.0, None)
 
 
 async def enrich_entry(entry: QueueEntry, db: AsyncSession, centre_name: str = None,
@@ -77,6 +106,13 @@ async def enrich_entry(entry: QueueEntry, db: AsyncSession, centre_name: str = N
             slot_end = sl.end_time
             slot_date = sl.date
 
+    # Load AssayRecord if present
+    r_assay = await db.execute(select(AssayRecord).where(AssayRecord.queue_entry_id == entry.id))
+    assay = r_assay.scalar_one_or_none()
+    assay_out = None
+    if assay:
+        assay_out = AssayRecordOut.model_validate(assay) if hasattr(AssayRecordOut, 'model_validate') else AssayRecordOut.from_orm(assay)
+
     return QueueEntryOut(
         id=entry.id,
         token=entry.token,
@@ -97,7 +133,8 @@ async def enrich_entry(entry: QueueEntry, db: AsyncSession, centre_name: str = N
         cancelled_at=entry.cancelled_at,
         slot_start_time=slot_start,
         slot_end_time=slot_end,
-        slot_date=slot_date
+        slot_date=slot_date,
+        assay_record=assay_out
     )
 
 
@@ -567,8 +604,8 @@ async def complete_procurement(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    if current_user.role not in [UserRole.OPERATOR, UserRole.ADMIN]:
-        raise HTTPException(status_code=403, detail="Only operators can complete entries")
+    if current_user.role not in [UserRole.OPERATOR, UserRole.ASSAYER, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Only operators or assayers can complete entries")
 
     result = await db.execute(select(QueueEntry).where(QueueEntry.id == queue_id))
     entry = result.scalar_one_or_none()
@@ -578,6 +615,19 @@ async def complete_procurement(
     if entry.status not in [QueueStatus.CALLED, QueueStatus.PROCESSING]:
         raise HTTPException(status_code=400, detail="Entry must be in CALLED or PROCESSING status to complete")
 
+    moisture = data.moisture_percentage if data.moisture_percentage is not None else 13.5
+    chaff = data.chaff_percentage if data.chaff_percentage is not None else 0.5
+    damaged = data.damaged_grains_percentage if data.damaged_grains_percentage is not None else 0.0
+
+    # Moisture safety guard
+    if moisture >= 20.0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Safety Hazard: Moisture level ({moisture:.1f}%) exceeds safety threshold (20.0%). Cannot procure spoiled produce with fungal rot risk. Use 'Reject Lot' or grant sun-drying grace."
+        )
+
+    grade, decision, _, reason = compute_quality_grade(entry.crop, moisture, chaff, damaged)
+
     if not entry.processing_started_at:
         entry.processing_started_at = datetime.now(timezone.utc)
 
@@ -586,10 +636,41 @@ async def complete_procurement(
     entry.status = QueueStatus.COMPLETED
     entry.completed_at = datetime.now(timezone.utc)
 
+    # Upsert AssayRecord
+    r_assay = await db.execute(select(AssayRecord).where(AssayRecord.queue_entry_id == entry.id))
+    assay = r_assay.scalar_one_or_none()
+    if not assay:
+        assay = AssayRecord(
+            queue_entry_id=entry.id,
+            assayer_id=current_user.id,
+            crop=entry.crop,
+            moisture_percentage=moisture,
+            chaff_percentage=chaff,
+            damaged_grains_percentage=damaged,
+            grade=grade,
+            decision="APPROVED",
+            suggested_rate_per_kg=data.rate_per_kg,
+            notes=data.notes,
+            created_at=datetime.now(timezone.utc)
+        )
+        db.add(assay)
+        await db.flush()
+    else:
+        assay.assayer_id = current_user.id
+        assay.moisture_percentage = moisture
+        assay.chaff_percentage = chaff
+        assay.damaged_grains_percentage = damaged
+        assay.grade = grade
+        assay.decision = "APPROVED"
+        assay.suggested_rate_per_kg = data.rate_per_kg
+        assay.notes = data.notes
+
     # Update procurement record
     r = await db.execute(select(Procurement).where(Procurement.queue_entry_id == entry.id))
     proc = r.scalar_one_or_none()
     if proc:
+        proc.assay_record_id = assay.id
+        proc.grade = grade
         proc.accepted_quantity_kg = data.accepted_quantity_kg
         proc.rate_per_kg = data.rate_per_kg
         proc.total_amount = total
@@ -598,7 +679,9 @@ async def complete_procurement(
     else:
         proc = Procurement(
             queue_entry_id=entry.id,
+            assay_record_id=assay.id,
             crop=entry.crop,
+            grade=grade,
             expected_quantity_kg=entry.expected_quantity_kg,
             accepted_quantity_kg=data.accepted_quantity_kg,
             rate_per_kg=data.rate_per_kg,
@@ -631,10 +714,114 @@ async def complete_procurement(
         "type": "COMPLETED",
         "token": entry.token,
         "amount": total,
-        "message": f"✅ Procurement complete! Total: ₹{total:,.0f}. Payment processing."
+        "grade": grade,
+        "moisture": moisture,
+        "message": f"✅ Procurement complete! Quality: {grade} ({moisture}% moisture). Total: ₹{total:,.0f}. Payment processing."
     })
 
-    return {"message": "Procurement completed", "token": entry.token, "total_amount": total}
+    return {
+        "message": "Procurement completed",
+        "token": entry.token,
+        "total_amount": total,
+        "grade": grade,
+        "moisture_percentage": moisture
+    }
+
+
+@router.post("/{queue_id}/quality-action")
+async def record_quality_action(
+    queue_id: int,
+    data: QualityActionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Records explicit produce quality decisions:
+    - REJECT: Produce rejected (excessive moisture >= 20% or severe contamination).
+    - SUN_DRYING_DEFERRAL: Grants 2.5 hr sun drying grace period for marginal moisture (17.1% - 19.9%).
+    """
+    if current_user.role not in [UserRole.OPERATOR, UserRole.ASSAYER, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Only operators or assayers can record quality decisions")
+
+    result = await db.execute(select(QueueEntry).where(QueueEntry.id == queue_id))
+    entry = result.scalar_one_or_none()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Queue entry not found")
+
+    if entry.status not in [QueueStatus.WAITING, QueueStatus.CALLED, QueueStatus.PROCESSING]:
+        raise HTTPException(status_code=400, detail="Cannot update quality for completed or cancelled entries")
+
+    now = datetime.now(timezone.utc)
+    action = data.action.upper()
+
+    if action == "REJECT":
+        entry.status = QueueStatus.REJECTED
+        decision = "REJECTED"
+        grade = "Rejected"
+        reason = data.reason or f"Moisture level ({data.moisture_percentage:.1f}%) exceeds safety threshold (20.0%). Fungal rot risk."
+        grace = None
+        farmer_msg = f"❌ Produce Rejected: {reason}"
+    elif action in ["SUN_DRYING_DEFERRAL", "DEFER"]:
+        entry.status = QueueStatus.DEFERRED_SUN_DRYING
+        decision = "DEFERRED_SUN_DRYING"
+        grade = "Grade C"
+        reason = data.reason or f"Moisture level ({data.moisture_percentage:.1f}%) is marginal (17-20%). Granted 2.5 hr sun-drying grace."
+        grace = 2.5
+        farmer_msg = f"☀️ Sun-Drying Grace Granted (2.5 hrs). Please dry crop in mandi yard before re-testing."
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid action '{data.action}'. Must be 'REJECT' or 'SUN_DRYING_DEFERRAL'.")
+
+    # Upsert AssayRecord
+    r_assay = await db.execute(select(AssayRecord).where(AssayRecord.queue_entry_id == entry.id))
+    assay = r_assay.scalar_one_or_none()
+    if not assay:
+        assay = AssayRecord(
+            queue_entry_id=entry.id,
+            assayer_id=current_user.id,
+            crop=entry.crop,
+            moisture_percentage=data.moisture_percentage,
+            chaff_percentage=data.chaff_percentage or 0.0,
+            damaged_grains_percentage=data.damaged_grains_percentage or 0.0,
+            grade=grade,
+            decision=decision,
+            suggested_rate_per_kg=0.0,
+            rejection_reason=reason if decision == "REJECTED" else None,
+            sun_drying_grace_hours=grace,
+            notes=data.notes,
+            created_at=now
+        )
+        db.add(assay)
+    else:
+        assay.assayer_id = current_user.id
+        assay.moisture_percentage = data.moisture_percentage
+        assay.chaff_percentage = data.chaff_percentage or 0.0
+        assay.damaged_grains_percentage = data.damaged_grains_percentage or 0.0
+        assay.grade = grade
+        assay.decision = decision
+        assay.rejection_reason = reason if decision == "REJECTED" else None
+        assay.sun_drying_grace_hours = grace
+        assay.notes = data.notes
+
+    await db.commit()
+
+    await manager.broadcast_queue_changed(entry.centre_id, "quality-action")
+    await manager.broadcast_farmer_update(entry.farmer_id, {
+        "type": "QUALITY_DECISION",
+        "token": entry.token,
+        "status": entry.status.value if hasattr(entry.status, 'value') else str(entry.status),
+        "decision": decision,
+        "moisture": data.moisture_percentage,
+        "message": farmer_msg
+    })
+
+    return {
+        "message": f"Quality action '{decision}' recorded successfully",
+        "token": entry.token,
+        "status": entry.status.value if hasattr(entry.status, 'value') else str(entry.status),
+        "decision": decision,
+        "grade": grade,
+        "moisture_percentage": data.moisture_percentage
+    }
 
 
 MSP_FALLBACK_RATES = {
@@ -674,6 +861,7 @@ async def get_procurement(
         proc = Procurement(
             queue_entry_id=entry.id,
             crop=entry.crop,
+            grade="Grade A",
             expected_quantity_kg=qty,
             accepted_quantity_kg=qty,
             rate_per_kg=rate,
@@ -717,10 +905,24 @@ async def get_procurement(
             paid_at=payment.paid_at
         )
 
+    # Load AssayRecord if attached to procurement or queue entry
+    assay_out = None
+    if proc.assay_record_id:
+        r_assay = await db.execute(select(AssayRecord).where(AssayRecord.id == proc.assay_record_id))
+        assay = r_assay.scalar_one_or_none()
+        if assay:
+            assay_out = AssayRecordOut.model_validate(assay) if hasattr(AssayRecordOut, 'model_validate') else AssayRecordOut.from_orm(assay)
+    else:
+        r_assay = await db.execute(select(AssayRecord).where(AssayRecord.queue_entry_id == entry.id))
+        assay = r_assay.scalar_one_or_none()
+        if assay:
+            assay_out = AssayRecordOut.model_validate(assay) if hasattr(AssayRecordOut, 'model_validate') else AssayRecordOut.from_orm(assay)
+
     return ProcurementOut(
         id=proc.id,
         queue_entry_id=proc.queue_entry_id,
         crop=proc.crop,
+        grade=proc.grade,
         expected_quantity_kg=proc.expected_quantity_kg,
         accepted_quantity_kg=proc.accepted_quantity_kg,
         rate_per_kg=proc.rate_per_kg,
@@ -728,5 +930,6 @@ async def get_procurement(
         notes=proc.notes,
         created_at=proc.created_at,
         completed_at=proc.completed_at,
-        payment=payment_out
+        payment=payment_out,
+        assay_record=assay_out
     )

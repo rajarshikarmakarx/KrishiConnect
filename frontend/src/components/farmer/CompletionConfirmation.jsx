@@ -159,6 +159,46 @@ export default function CompletionConfirmation({ queueEntry }) {
           </div>
         </div>
 
+        {/* Quality Assay Certificate */}
+        {(proc?.assay_record || queueEntry?.assay_record || proc?.grade) && (
+          <div className="bg-white rounded-2xl p-5 border border-emerald-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <span>🔬 Quality Assay & Agmark Standards Certificate</span>
+              </h3>
+              <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                {proc?.assay_record?.grade || proc?.grade || queueEntry?.assay_record?.grade || 'Grade A (FAQ)'}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5 text-center pt-1">
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Moisture</p>
+                <p className="text-base font-bold text-slate-800 mt-0.5">
+                  {proc?.assay_record?.moisture_percentage ?? queueEntry?.assay_record?.moisture_percentage ?? 13.5}%
+                </p>
+                <p className="text-[9px] text-slate-400">Max 17.0% FAQ</p>
+              </div>
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Foreign Chaff</p>
+                <p className="text-base font-bold text-slate-800 mt-0.5">
+                  {proc?.assay_record?.chaff_percentage ?? queueEntry?.assay_record?.chaff_percentage ?? 0.5}%
+                </p>
+                <p className="text-[9px] text-slate-400">Max 1.5% Standard</p>
+              </div>
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Damaged Grain</p>
+                <p className="text-base font-bold text-slate-800 mt-0.5">
+                  {proc?.assay_record?.damaged_grains_percentage ?? queueEntry?.assay_record?.damaged_grains_percentage ?? 0.0}%
+                </p>
+                <p className="text-[9px] text-slate-400">Max 2.0% Standard</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-2.5 text-center">
+              ✓ Complies with Statutory Mandi Procurement Quality Standards & Moisture Safe Storage Rules.
+            </p>
+          </div>
+        )}
+
         {/* Payment Status & Govt DBT Confirmation Card */}
         <div className={`rounded-2xl p-5 border-2 shadow-sm transition-all duration-500 ${
           isPaid

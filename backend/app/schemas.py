@@ -122,6 +122,34 @@ class BookSlotRequest(BaseModel):
     expected_quantity_kg: float
 
 
+# ─── Assay & Quality Schemas ──────────────────────────────────────────────────
+
+class AssayRecordOut(SchemaModel):
+    id: int
+    queue_entry_id: int
+    assayer_id: Optional[int] = None
+    crop: str
+    moisture_percentage: float
+    chaff_percentage: float = 0.0
+    damaged_grains_percentage: float = 0.0
+    grade: str
+    decision: str
+    suggested_rate_per_kg: float
+    rejection_reason: Optional[str] = None
+    sun_drying_grace_hours: Optional[float] = None
+    notes: Optional[str] = None
+    created_at: datetime
+
+
+class QualityActionRequest(BaseModel):
+    action: str  # "REJECT" or "SUN_DRYING_DEFERRAL"
+    moisture_percentage: float
+    chaff_percentage: Optional[float] = 0.0
+    damaged_grains_percentage: Optional[float] = 0.0
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+
+
 class QueueEntryOut(SchemaModel):
     id: int
     token: str
@@ -145,6 +173,7 @@ class QueueEntryOut(SchemaModel):
     slot_start_time: Optional[str] = None
     slot_end_time: Optional[str] = None
     slot_date: Optional[date] = None
+    assay_record: Optional[AssayRecordOut] = None
 
 
 class QueueStatusOut(BaseModel):
@@ -174,6 +203,9 @@ class MyQueueStatus(BaseModel):
 class CompleteQueueRequest(BaseModel):
     accepted_quantity_kg: float
     rate_per_kg: float
+    moisture_percentage: Optional[float] = 13.5
+    chaff_percentage: Optional[float] = 0.5
+    damaged_grains_percentage: Optional[float] = 0.0
     notes: Optional[str] = None
 
 
@@ -192,6 +224,7 @@ class ProcurementOut(SchemaModel):
     id: int
     queue_entry_id: int
     crop: str
+    grade: Optional[str] = None
     expected_quantity_kg: float
     accepted_quantity_kg: Optional[float] = None
     rate_per_kg: Optional[float] = None
@@ -200,6 +233,7 @@ class ProcurementOut(SchemaModel):
     created_at: datetime
     completed_at: Optional[datetime] = None
     payment: Optional[PaymentOut] = None
+    assay_record: Optional[AssayRecordOut] = None
 
 
 # ─── Analytics Schemas ────────────────────────────────────────────────────────

@@ -108,6 +108,7 @@ async def test_district_analytics():
                 if p_ids:
                     await db.execute(text("DELETE FROM payments WHERE procurement_id = ANY(:pids)").bindparams(pids=p_ids))
                     await db.execute(text("DELETE FROM procurements WHERE id = ANY(:pids)").bindparams(pids=p_ids))
+                await db.execute(text("DELETE FROM assay_records WHERE queue_entry_id = ANY(:qids)").bindparams(qids=q_ids))
                 await db.execute(text("DELETE FROM queue_entries WHERE id = ANY(:qids)").bindparams(qids=q_ids))
                 await db.commit()
 

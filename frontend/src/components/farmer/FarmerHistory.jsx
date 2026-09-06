@@ -8,7 +8,7 @@ export default function FarmerHistory() {
 
   useEffect(() => {
     api.getMyQueue().then(data => {
-      setEntries(data.filter(e => ['COMPLETED', 'CANCELLED'].includes(e.status)))
+      setEntries(data.filter(e => ['COMPLETED', 'CANCELLED', 'REJECTED', 'DEFERRED_SUN_DRYING'].includes(e.status)))
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
@@ -35,8 +35,10 @@ export default function FarmerHistory() {
               <div className="flex items-center gap-2 mb-1">
                 <span className="token-display font-bold text-slate-700">{entry.token}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                  entry.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
-                }`}>{entry.status}</span>
+                  entry.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                  entry.status === 'DEFERRED_SUN_DRYING' ? 'bg-amber-100 text-amber-800' :
+                  'bg-red-100 text-red-600'
+                }`}>{entry.status === 'DEFERRED_SUN_DRYING' ? 'SUN-DRYING' : entry.status}</span>
               </div>
               <div className="flex items-center gap-1 text-slate-500 text-sm">
                 <MapPin className="w-3.5 h-3.5" />
@@ -48,7 +50,14 @@ export default function FarmerHistory() {
             </div>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-600">{entry.crop} · {entry.expected_quantity_kg} kg</span>
+            <div className="flex items-center gap-2">
+              <span className="text-slate-600 font-medium">{entry.crop} · {entry.expected_quantity_kg} kg</span>
+              {entry.assay_record && (
+                <span className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">
+                  🔬 {entry.assay_record.grade} ({entry.assay_record.moisture_percentage}%)
+                </span>
+              )}
+            </div>
             {entry.status === 'COMPLETED' && (
               <CheckCircle className="w-4 h-4 text-green-600" />
             )}

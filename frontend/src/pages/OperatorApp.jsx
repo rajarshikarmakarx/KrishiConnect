@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../AuthContext'
-import { Wheat, Users, CheckCircle, Clock, X, Wifi, WifiOff, IndianRupee, User, LogOut, Building2, ChevronDown, Scale, Sparkles, AlertCircle, ShieldCheck } from 'lucide-react'
+import { Wheat, Users, CheckCircle, Clock, X, Wifi, WifiOff, IndianRupee, User, LogOut, Building2, ChevronDown, Scale, Sparkles, AlertCircle, ShieldCheck, Droplets, Sun, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
 import { useCentreQueue } from '../hooks/useRealtimeQueue'
@@ -95,11 +95,19 @@ function CounterCard({ counter, onComplete, onStart }) {
           <div className="token-display text-3xl font-bold text-orange-800 mb-1">{counter.current_token}</div>
           <p className="text-xs text-slate-600 mb-1 truncate font-medium">{counter.current_farmer_name}</p>
           {counter.current_crop && (
-            <p className="text-[11px] text-slate-500 mb-3">
+            <p className="text-[11px] text-slate-500 mb-2">
               {counter.current_crop} · {counter.current_expected_qty != null ? (Math.round(Number(counter.current_expected_qty) * 10) / 10) : ''} kg expected
             </p>
           )}
-          <div className="flex gap-2">
+          {counter.current_assay && (
+            <div className="mb-3 text-[10px] font-bold bg-white px-2 py-1 rounded-lg border border-slate-200 flex items-center justify-between text-slate-700 shadow-xs">
+              <span className="flex items-center gap-1 text-emerald-700 font-extrabold">
+                <ShieldCheck className="w-3 h-3" /> {counter.current_assay.grade}
+              </span>
+              <span className="text-blue-700 font-semibold">{counter.current_assay.moisture_percentage}% moisture</span>
+            </div>
+          )}
+          <div className="flex gap-2 mt-1">
             {counter.current_entry_status === 'CALLED' && (
               <button
                 id={`btn-start-${counter.id}`}
@@ -111,10 +119,17 @@ function CounterCard({ counter, onComplete, onStart }) {
             )}
             <button
               id={`btn-complete-${counter.id}`}
-              onClick={() => onComplete(counter.current_queue_entry_id, counter.current_token, counter.current_crop, counter.current_expected_qty)}
+              onClick={() => onComplete(
+                counter.current_queue_entry_id,
+                counter.current_token,
+                counter.current_crop,
+                counter.current_expected_qty,
+                counter.current_farmer_name,
+                counter.current_assay
+              )}
               className="flex-1 text-xs bg-green-600 hover:bg-green-700 text-white py-1.5 px-3 rounded-lg font-semibold transition-colors"
             >
-              Complete ✓
+              Intake & Complete ✓
             </button>
           </div>
         </div>
@@ -125,114 +140,331 @@ function CounterCard({ counter, onComplete, onStart }) {
   )
 }
 
-function CompleteModal({ queueId, token, crop, expectedQty, onClose, onSuccess }) {
+function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialAssay, onClose, onSuccess }) {
   const mspRate = crop && MSP_RATES[crop] ? MSP_RATES[crop] : (MSP_RATES['Paddy'] || 23.00)
   const formattedQty = expectedQty != null ? String(Math.round(Number(expectedQty) * 10) / 10) : ''
   const [acceptedQty, setAcceptedQty] = useState(formattedQty)
   const [rate, setRate] = useState(String(mspRate))
-  const [notes, setNotes] = useState('')
+  const [moisture, setMoisture] = useState(initialAssay?.moisture_percentage ?? 13.5)
+  const [chaff, setChaff] = useState(initialAssay?.chaff_percentage ?? 0.5)
+  const [damaged, setDamaged] = useState(initialAssay?.damaged_grains_percentage ?? 0.0)
+  const [notes, setNotes] = useState(initialAssay?.notes || '')
   const [loading, setLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
 
-  const total = acceptedQty && rate ? (parseFloat(acceptedQty) * parseFloat(rate)).toFixed(2) : null
+  const numMoisture = parseFloat(moisture) || 0
+  const isSpoiled = numMoisture >= 20.0
+  const isMarginal = numMoisture > 17.0 && numMoisture < 20.0
+  const isGradeB = (numMoisture > 14.0 && numMoisture <= 17.0) || chaff > 1.5 || damaged > 2.0
+  const isGradeA = numMoisture <= 14.0 && chaff <= 1.5 && damaged <= 2.0
+
+  let gradeLabel = 'Grade A (FAQ Standard)'
+  let gradeBadgeColor = 'bg-emerald-50 text-emerald-900 border-emerald-300'
+  let suggestedRate = mspRate
+
+  if (isSpoiled) {
+    gradeLabel = 'Rejected · Silo Spoilage Hazard (≥20% Moisture)'
+    gradeBadgeColor = 'bg-red-50 text-red-900 border-red-300'
+    suggestedRate = 0
+  } else if (isMarginal) {
+    gradeLabel = 'Grade C / High Moisture (17.1-19.9%) · Sun-Drying Needed'
+    gradeBadgeColor = 'bg-amber-50 text-amber-900 border-amber-300'
+    suggestedRate = Math.round(mspRate * 0.90 * 100) / 100
+  } else if (isGradeB) {
+    gradeLabel = 'Grade B · Permissible Standard'
+    gradeBadgeColor = 'bg-blue-50 text-blue-900 border-blue-300'
+    suggestedRate = Math.round(mspRate * 0.98 * 100) / 100
+  }
+
+  const total = acceptedQty && rate && !isSpoiled ? (parseFloat(acceptedQty) * parseFloat(rate)).toFixed(2) : null
 
   const handleSubmit = async () => {
-    if (!acceptedQty || !rate) return toast.error('Enter quantity and rate')
+    if (isSpoiled) {
+      return toast.error('Intake Prohibited: Produce moisture exceeds 20.0% safety threshold. Please reject or grant sun-drying grace.')
+    }
+    if (!acceptedQty || !rate) return toast.error('Enter accepted quantity and rate')
     setLoading(true)
     try {
       await api.completeProcurement(queueId, {
         accepted_quantity_kg: parseFloat(acceptedQty),
         rate_per_kg: parseFloat(rate),
-        notes
+        moisture_percentage: numMoisture,
+        chaff_percentage: parseFloat(chaff) || 0,
+        damaged_grains_percentage: parseFloat(damaged) || 0,
+        notes: notes || undefined
       })
-      toast.success(`✅ Token ${token} completed. Payment initiated.`)
+      toast.success(`✅ Token ${token} verified (${gradeLabel.split('·')[0].trim()}) & completed! Payment initiated.`, { duration: 5000 })
       onSuccess()
     } catch (e) {
-      toast.error(e.message || 'Failed')
+      toast.error(e.message || 'Failed to complete procurement')
     } finally {
       setLoading(false)
     }
   }
 
+  const handleQualityAction = async (actionType) => {
+    setActionLoading(true)
+    try {
+      await api.recordQualityAction(queueId, {
+        action: actionType,
+        moisture_percentage: numMoisture,
+        chaff_percentage: parseFloat(chaff) || 0,
+        damaged_grains_percentage: parseFloat(damaged) || 0,
+        notes: notes || undefined
+      })
+      if (actionType === 'REJECT') {
+        toast.error(`❌ Token ${token} produce rejected (${numMoisture.toFixed(1)}% moisture). Farmer notified.`, { duration: 6000 })
+      } else {
+        toast.success(`☀️ Token ${token} granted 2.5h sun-drying grace. Farmer notified.`, { duration: 6000 })
+      }
+      onSuccess()
+    } catch (e) {
+      toast.error(e.message || 'Failed to record quality decision')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm animate-fade-in">
-        <div className="flex items-center justify-between p-5 border-b border-slate-100">
-          <div>
-            <h3 className="font-bold text-slate-900">Complete Procurement</h3>
-            {crop && <p className="text-xs text-slate-500">{crop} Procurement</p>}
-          </div>
-          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg text-slate-400"><X className="w-4 h-4" /></button>
-        </div>
-        <div className="p-5 space-y-4">
-          <div className="text-center">
-            <span className="token-display text-3xl font-bold text-green-800 bg-green-50 px-4 py-2 rounded-xl inline-block">{token}</span>
-          </div>
-
-          {/* MSP Rate Helper Notice */}
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5 text-emerald-800">
-              <Scale className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Govt MSP ({crop || 'Crop'}): <strong>₹{mspRate.toFixed(2)}/kg</strong></span>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fade-in border border-slate-100">
+        {/* Modal Header */}
+        <div className="sticky top-0 bg-white/95 backdrop-blur-md px-5 py-4 border-b border-slate-100 flex items-center justify-between z-10">
+          <div className="flex items-center gap-3">
+            <div className="token-display text-2xl font-black text-green-800 bg-green-50 px-3 py-1 rounded-xl border border-green-200">
+              {token}
             </div>
-            <button
-              type="button"
-              onClick={() => setRate(String(mspRate))}
-              className="text-emerald-700 bg-emerald-100/80 hover:bg-emerald-200 px-2 py-0.5 rounded font-bold transition-colors"
-            >
-              Apply MSP
-            </button>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Accepted Quantity (kg) *</label>
-            <input
-              id="accepted-qty"
-              type="number"
-              step="0.1"
-              placeholder="e.g. 242"
-              value={acceptedQty}
-              onChange={e => setAcceptedQty(e.target.value)}
-              className="input-field"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Rate per kg (₹) *</label>
-            <input
-              id="rate-per-kg"
-              type="number"
-              step="0.01"
-              placeholder="e.g. 23"
-              value={rate}
-              onChange={e => setRate(e.target.value)}
-              className="input-field"
-            />
-          </div>
-          {total && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total Payout Amount</p>
-              <p className="text-2xl font-bold text-green-700">₹{parseFloat(total).toLocaleString('en-IN')}</p>
+            <div>
+              <h3 className="font-bold text-slate-900 text-sm">{crop || 'Produce'} Intake & Quality Assay</h3>
+              <p className="text-xs text-slate-500">{farmerName ? `Farmer: ${farmerName}` : 'Counter Inspection & Weighbridge'}</p>
             </div>
-          )}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Notes (optional)</label>
-            <input
-              id="proc-notes"
-              type="text"
-              placeholder="Grade, moisture, or weighing notes"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              className="input-field"
-            />
           </div>
-          <button
-            id="btn-confirm-complete"
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full btn-primary flex items-center justify-center gap-2 py-3"
-          >
-            {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : '✅ Complete & Generate Payment'}
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
+            <X className="w-4 h-4" />
           </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Section 1: Gate Quality & Digital Moisture Assay */}
+          <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Droplets className="w-4 h-4 text-blue-600" /> 1. Digital Moisture & Quality Assay
+              </span>
+              <span className="text-[11px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+                Agmark / Mandi Norms
+              </span>
+            </div>
+
+            {/* Moisture Slider & Inputs */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="moisture-val" className="text-xs font-medium text-slate-700">
+                  Moisture Content Percentage:
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    id="moisture-val"
+                    type="number"
+                    step="0.1"
+                    min="5"
+                    max="30"
+                    value={moisture}
+                    onChange={e => setMoisture(parseFloat(e.target.value) || 0)}
+                    className="w-16 text-center text-sm font-extrabold text-blue-900 bg-white border border-blue-300 rounded-lg py-0.5"
+                  />
+                  <span className="text-xs font-bold text-slate-500">%</span>
+                </div>
+              </div>
+              <input
+                id="moisture-slider"
+                type="range"
+                min="8.0"
+                max="25.0"
+                step="0.1"
+                value={moisture}
+                onChange={e => setMoisture(parseFloat(e.target.value))}
+                className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+              />
+              <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-mono">
+                <span>8% Dry</span>
+                <span className="text-emerald-600 font-semibold">14% Max FAQ</span>
+                <span className="text-amber-600 font-semibold">17% Max Grade B</span>
+                <span className="text-red-600 font-semibold">20%+ Spoilage Risk</span>
+              </div>
+            </div>
+
+            {/* Impurities & Foreign Matter Inputs */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="block text-xs text-slate-600 font-medium mb-1">Foreign Chaff / Insoluble (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  value={chaff}
+                  onChange={e => setChaff(parseFloat(e.target.value) || 0)}
+                  className="input-field text-xs py-1.5"
+                  placeholder="e.g. 0.5"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 font-medium mb-1">Damaged / Discolored (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  value={damaged}
+                  onChange={e => setDamaged(parseFloat(e.target.value) || 0)}
+                  className="input-field text-xs py-1.5"
+                  placeholder="e.g. 0.0"
+                />
+              </div>
+            </div>
+
+            {/* Live Assayer Grade Status Banner */}
+            <div className={`rounded-xl p-3 border text-xs flex items-start gap-2.5 transition-all ${gradeBadgeColor}`}>
+              <div className="mt-0.5">
+                {isSpoiled ? <AlertCircle className="w-4 h-4 text-red-600" /> : isMarginal ? <Sun className="w-4 h-4 text-amber-600" /> : <ShieldCheck className="w-4 h-4 text-emerald-600" />}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <p className="font-extrabold text-sm">{gradeLabel}</p>
+                </div>
+                <p className="text-[11px] opacity-90 mt-0.5">
+                  {isSpoiled
+                    ? "⚠️ Severe Spoilage Risk: Moisture (≥20.0%) exceeds safety threshold. Direct silo procurement blocked to prevent fungal aflatoxin."
+                    : isMarginal
+                    ? "Moisture is slightly above FAQ limit (17-20%). Granting 2.5h yard drying grace or Grade C valuation is recommended."
+                    : isGradeB
+                    ? "Moisture within permissible limit (14-17%). Approved for intake at standard rate."
+                    : "Excellent produce quality! Meets Govt Fair Average Quality (FAQ) norms for full statutory MSP."}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Action Buttons for High Moisture / Rejection */}
+            {(isMarginal || isSpoiled) && (
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleQualityAction('SUN_DRYING_DEFERRAL')}
+                  disabled={actionLoading}
+                  className="flex-1 text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-3 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm shadow-amber-200"
+                >
+                  <Sun className="w-3.5 h-3.5" />
+                  Grant 2.5h Yard Drying
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQualityAction('REJECT')}
+                  disabled={actionLoading}
+                  className="flex-1 text-xs bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm shadow-red-200"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Reject Produce Lot
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: Weighbridge & Payment Settlement */}
+          <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Scale className="w-4 h-4 text-emerald-600" /> 2. Weighbridge & Payout Disbursal
+              </span>
+              <span className="text-[11px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
+                Govt MSP: ₹{mspRate.toFixed(2)}/kg
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Accepted Weight (kg) *</label>
+                <input
+                  id="accepted-qty"
+                  type="number"
+                  step="0.1"
+                  placeholder="e.g. 242.5"
+                  value={acceptedQty}
+                  onChange={e => setAcceptedQty(e.target.value)}
+                  className="input-field font-semibold"
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700">Rate (₹/kg) *</label>
+                  <button
+                    type="button"
+                    onClick={() => setRate(String(suggestedRate > 0 ? suggestedRate : mspRate))}
+                    className="text-[10px] text-emerald-700 hover:underline font-bold"
+                  >
+                    Sync Rate
+                  </button>
+                </div>
+                <input
+                  id="rate-per-kg"
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 23.00"
+                  value={rate}
+                  onChange={e => setRate(e.target.value)}
+                  className="input-field font-semibold"
+                />
+              </div>
+            </div>
+
+            {total && !isSpoiled && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] text-emerald-800 uppercase tracking-wider font-extrabold">Total Direct Benefit Transfer (DBT)</p>
+                  <p className="text-2xl font-black text-emerald-700">₹{parseFloat(total).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                </div>
+                <div className="text-right text-[11px] text-emerald-700 font-medium">
+                  <p>{acceptedQty} kg @ ₹{parseFloat(rate).toFixed(2)}</p>
+                  <p className="text-[10px] text-emerald-600 font-bold">Direct to Bank A/C</p>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Assayer / Inspection Remarks</label>
+              <input
+                id="proc-notes"
+                type="text"
+                placeholder="e.g. FAQ standard passed, clean sample"
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                className="input-field text-xs"
+              />
+            </div>
+          </div>
+
+          {/* Complete Submission Button */}
+          <div>
+            {isSpoiled ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center text-xs text-red-800 font-bold">
+                🚫 Procurement blocked: Moisture ({numMoisture.toFixed(1)}%) is above the 20% safe storage limit. Please reject the lot or send for sun-drying.
+              </div>
+            ) : (
+              <button
+                id="btn-confirm-complete"
+                onClick={handleSubmit}
+                disabled={loading || actionLoading || !acceptedQty || !rate}
+                className="w-full btn-primary flex items-center justify-center gap-2 py-3.5 text-sm font-bold shadow-lg shadow-green-700/20 disabled:opacity-50"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  '✅ Approve Produce & Disburse Payment'
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

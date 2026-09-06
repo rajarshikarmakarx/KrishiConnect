@@ -69,5 +69,13 @@ async def get_db():
 
 async def init_db():
     from app.models import Base
+    from sqlalchemy import text
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        if "postgresql" in DATABASE_URL or "asyncpg" in DATABASE_URL:
+            try:
+                await conn.execute(text("ALTER TABLE queue_entries ALTER COLUMN status TYPE VARCHAR(50);"))
+                await conn.execute(text("ALTER TABLE procurements ADD COLUMN IF NOT EXISTS assay_record_id INTEGER REFERENCES assay_records(id);"))
+                await conn.execute(text("ALTER TABLE procurements ADD COLUMN IF NOT EXISTS grade VARCHAR(50);"))
+            except Exception as e:
+                pass
