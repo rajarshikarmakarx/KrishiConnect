@@ -252,9 +252,6 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
                   />
                 )}
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">
-                {t('profile.village_hint')}
-              </p>
             </div>
 
             {/* Action Buttons */}
