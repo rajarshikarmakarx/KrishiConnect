@@ -40,14 +40,19 @@ if [ ! -d "venv" ]; then
   python3 -m venv venv
 fi
 
-# Determine python and pip executables
-PYTHON_BIN="$ROOT/backend/venv/bin/python"
-PIP_BIN="$ROOT/backend/venv/bin/pip"
-
-if [ ! -f "$PYTHON_BIN" ]; then
-  # Fallback for Windows/Git Bash
+# Determine python and pip executables (handles Linux, macOS, Git Bash / WSL on Windows)
+if [ -f "$ROOT/backend/venv/bin/python" ]; then
+  PYTHON_BIN="$ROOT/backend/venv/bin/python"
+  PIP_BIN="$ROOT/backend/venv/bin/pip"
+elif [ -f "$ROOT/backend/venv/Scripts/python.exe" ]; then
+  PYTHON_BIN="$ROOT/backend/venv/Scripts/python.exe"
+  PIP_BIN="$ROOT/backend/venv/Scripts/pip.exe"
+elif [ -f "$ROOT/backend/venv/Scripts/python" ]; then
   PYTHON_BIN="$ROOT/backend/venv/Scripts/python"
   PIP_BIN="$ROOT/backend/venv/Scripts/pip"
+else
+  PYTHON_BIN="python3"
+  PIP_BIN="pip3"
 fi
 
 # Check if essential packages are installed, else install requirements.txt
