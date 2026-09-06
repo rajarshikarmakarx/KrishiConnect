@@ -294,20 +294,13 @@ export default function CompletionConfirmation({ queueEntry }) {
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 print:hidden">
+        <div className="flex print:hidden">
           <button
             onClick={() => setShowInvoiceModal(true)}
-            className="flex-1 bg-green-700 hover:bg-green-800 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all text-sm shadow-md hover:shadow-lg cursor-pointer"
+            className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all text-sm shadow-md hover:shadow-lg cursor-pointer active:scale-[0.99]"
           >
             <FileText className="w-4 h-4" />
             <span>{t('invoice.view_invoice_btn')}</span>
-          </button>
-          <button
-            onClick={() => setShowInvoiceModal(true)}
-            className="bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm shadow-md cursor-pointer"
-          >
-            <Printer className="w-4 h-4" />
-            <span>{t('invoice.print_invoice_btn')}</span>
           </button>
         </div>
 

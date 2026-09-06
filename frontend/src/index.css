@@ -140,41 +140,53 @@ body {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 8mm;
   }
 
-  body {
+  html, body {
     background: #ffffff !important;
-    color: #000000 !important;
-    font-size: 11pt;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* Hide everything on the page except the printable invoice */
-  nav, header, footer, .print\:hidden, button, [role="tablist"], .fixed.bottom-0 {
+  /* When printing directly, hide the background navigation and action bars */
+  nav, header, footer, [role="tablist"], .fixed.bottom-0, .print\:hidden, button {
     display: none !important;
   }
 
-  /* Modal backdrop & container resets for printing */
+  /* Unclip modal wrappers in print */
   .fixed.inset-0 {
     position: static !important;
+    display: block !important;
     background: transparent !important;
     padding: 0 !important;
+    margin: 0 !important;
     overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    width: 100% !important;
   }
 
   .printable-official-invoice {
     display: block !important;
-    position: static !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     padding: 16px !important;
     border: 2px solid #000000 !important;
     box-shadow: none !important;
     background: #ffffff !important;
+    box-sizing: border-box !important;
     page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .printable-official-invoice * {
