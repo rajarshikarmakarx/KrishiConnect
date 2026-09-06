@@ -4,12 +4,23 @@ import toast from 'react-hot-toast'
 import api from '../../api'
 import { useTranslation } from '../../i18n'
 import { useCentreQueue } from '../../hooks/useRealtimeQueue'
+import CompletionConfirmation from './CompletionConfirmation'
 
 export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh }) {
   const { t, translateCrop } = useTranslation()
   const [status, setStatus] = useState(initialStatus)
   const [loading, setLoading] = useState(false)
   const [notification, setNotification] = useState(initialStatus?.notification)
+
+  // Sync prop updates into internal state
+  useEffect(() => {
+    if (initialStatus) {
+      setStatus(initialStatus)
+      if (initialStatus.notification && initialStatus.notification !== notification) {
+        setNotification(initialStatus.notification)
+      }
+    }
+  }, [initialStatus])
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -28,6 +39,17 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
     }
   }, [notification, onRefresh])
 
+  // Live polling heartbeat during active processing or called status
+  useEffect(() => {
+    const entryStatus = status?.queue_entry?.status
+    if (entryStatus === 'CALLED' || entryStatus === 'PROCESSING') {
+      const interval = setInterval(() => {
+        refresh()
+      }, 2500)
+      return () => clearInterval(interval)
+    }
+  }, [status?.queue_entry?.status, refresh])
+
   const { connected, reconnecting } = useCentreQueue(
     status?.queue_entry?.centre_id,
     useCallback(() => { refresh() }, [refresh])
@@ -40,6 +62,11 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
   }, [])
 
   if (!status) return null
+
+  // If completed, transition directly to completion confirmation
+  if (status.queue_entry?.status === 'COMPLETED') {
+    return <CompletionConfirmation queueEntry={status.queue_entry} />
+  }
 
   const { queue_entry: entry, farmers_ahead, estimated_wait_minutes, currently_serving_token } = status
   const eta = Math.round(estimated_wait_minutes)

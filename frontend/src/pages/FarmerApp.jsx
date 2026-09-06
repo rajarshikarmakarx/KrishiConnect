@@ -145,6 +145,7 @@ export default function FarmerApp() {
     token,
     useCallback((data) => {
       if (data.type === 'PAYMENT_PAID') {
+        setNewToken(null)
         toast.success(t('toasts.dbt_paid_toast'), {
           id: 'farmer-payment-paid',
           duration: 8000,
@@ -158,6 +159,7 @@ export default function FarmerApp() {
         })
         loadActiveQueue()
       } else if (data.type === 'COMPLETED') {
+        setNewToken(null)
         toast.success(t('toasts.proc_completed_toast'), {
           id: 'farmer-proc-completed',
           duration: 6000
@@ -225,6 +227,24 @@ export default function FarmerApp() {
     }, [loadActiveQueue, addNotification, t])
   )
 
+  // Clear newToken if activeQueue is already completed
+  useEffect(() => {
+    if (activeQueue?.queue_entry?.status === 'COMPLETED' && newToken) {
+      setNewToken(null)
+    }
+  }, [activeQueue?.queue_entry?.status, newToken])
+
+  // Active polling fallback when procurement is being actively serviced
+  useEffect(() => {
+    const st = activeQueue?.queue_entry?.status
+    if (st === 'CALLED' || st === 'PROCESSING') {
+      const timer = setInterval(() => {
+        loadActiveQueue()
+      }, 2500)
+      return () => clearInterval(timer)
+    }
+  }, [activeQueue?.queue_entry?.status, loadActiveQueue])
+
   // Listen to centre queue changes when active queue is present
   useCentreQueue(activeQueue?.queue_entry?.centre_id, loadActiveQueue)
 
@@ -285,7 +305,7 @@ export default function FarmerApp() {
       </header>
 
       {/* Active queue banner */}
-      {activeQueue && (
+      {activeQueue && activeQueue.queue_entry.status !== 'COMPLETED' && (
         <div className="bg-green-700 text-white px-4 py-3 border-b border-green-600 shadow-inner">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -319,6 +339,10 @@ export default function FarmerApp() {
             <div className="flex justify-center py-16">
               <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
             </div>
+          ) : activeQueue?.queue_entry?.status === 'COMPLETED' ? (
+            <div className="space-y-4">
+              <CompletionConfirmation queueEntry={activeQueue.queue_entry} />
+            </div>
           ) : newToken ? (
             <div className="space-y-4">
               <BookingToken entry={newToken} onContinue={() => setNewToken(null)} />
@@ -326,15 +350,9 @@ export default function FarmerApp() {
             </div>
           ) : activeQueue ? (
             <div className="space-y-4">
-              {activeQueue.queue_entry.status === 'COMPLETED' ? (
-                <CompletionConfirmation queueEntry={activeQueue.queue_entry} />
-              ) : (
-                <>
-                  <LiveQueueScreen queueStatus={activeQueue} onRefresh={loadActiveQueue} />
-                  {activeQueue.queue_entry.status === 'PROCESSING' && (
-                    <ProcurementStatus queueEntry={activeQueue.queue_entry} />
-                  )}
-                </>
+              <LiveQueueScreen queueStatus={activeQueue} onRefresh={loadActiveQueue} />
+              {activeQueue.queue_entry.status === 'PROCESSING' && (
+                <ProcurementStatus queueEntry={activeQueue.queue_entry} />
               )}
             </div>
           ) : (
