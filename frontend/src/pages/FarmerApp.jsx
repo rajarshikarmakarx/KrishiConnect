@@ -148,21 +148,20 @@ export default function FarmerApp() {
         setNewToken(null)
         toast.success(t('toasts.dbt_paid_toast'), {
           id: 'farmer-payment-paid',
-          duration: 8000,
-          icon: '💰'
+          duration: 4000,
         })
         addNotification({
           title: t('notifications.dbt_paid_title'),
           message: t('notifications.dbt_paid_msg'),
           type: 'payment',
-          eventKey: `payment-${data.payment_id || Date.now()}`
+          eventKey: `payment-${data.payment_id || data.token || Date.now()}`
         })
         loadActiveQueue()
       } else if (data.type === 'COMPLETED') {
         setNewToken(null)
         toast.success(t('toasts.proc_completed_toast'), {
           id: 'farmer-proc-completed',
-          duration: 6000
+          duration: 3500
         })
         addNotification({
           title: t('notifications.proc_completed_title'),
@@ -172,14 +171,15 @@ export default function FarmerApp() {
         })
         loadActiveQueue()
       } else if (data.type === 'CALLED') {
-        toast(t('toasts.turn_called_toast'), {
-          id: 'farmer-called',
-          duration: 8000,
+        const counterLabel = data.counter || t('queue.default_counter')
+        toast(t('toasts.turn_called_toast', { counter: counterLabel }), {
+          id: 'farmer-turn-called',
+          duration: 4500,
           icon: '🔔'
         })
         addNotification({
           title: t('notifications.turn_called_title'),
-          message: t('notifications.turn_called_msg'),
+          message: t('notifications.turn_called_msg', { counter: counterLabel }),
           type: 'queue',
           eventKey: `called-${data.queue_id || data.token || Date.now()}`
         })
@@ -187,7 +187,7 @@ export default function FarmerApp() {
       } else if (data.type === 'PROCESSING') {
         toast(t('toasts.processing_toast'), {
           id: 'farmer-processing',
-          duration: 5000,
+          duration: 3500,
           icon: '⚙️'
         })
         addNotification({
@@ -201,25 +201,25 @@ export default function FarmerApp() {
         if (data.status === 'DEFERRED_SUN_DRYING') {
           toast(t('toasts.sun_drying_toast'), {
             id: 'farmer-sun-drying',
-            duration: 8000,
+            duration: 4000,
             icon: '☀️'
           })
           addNotification({
             title: t('notifications.sun_drying_title'),
             message: t('notifications.sun_drying_msg'),
             type: 'assay',
-            eventKey: `deferral-${data.queue_id || Date.now()}`
+            eventKey: `deferral-${data.queue_id || data.token || Date.now()}`
           })
         } else if (data.status === 'REJECTED') {
           toast.error(t('toasts.rejected_toast'), {
             id: 'farmer-rejected',
-            duration: 8000,
+            duration: 4500,
           })
           addNotification({
             title: t('notifications.rejection_title'),
             message: t('notifications.rejection_msg'),
             type: 'alert',
-            eventKey: `rejected-${data.queue_id || Date.now()}`
+            eventKey: `rejected-${data.queue_id || data.token || Date.now()}`
           })
         }
         loadActiveQueue()

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import api from '../../api'
 import { useAuth } from '../../AuthContext'
 import { useTranslation } from '../../i18n'
-import { useCentreQueue, useFarmerNotifications } from '../../hooks/useRealtimeQueue'
+import { useCentreQueue } from '../../hooks/useRealtimeQueue'
 import PrintInvoiceModal from './PrintInvoiceModal'
 
 export default function CompletionConfirmation({ queueEntry }) {
@@ -14,6 +14,7 @@ export default function CompletionConfirmation({ queueEntry }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showInvoiceModal, setShowInvoiceModal] = useState(false)
+  const isFirstLoadRef = useRef(true)
   const prevPaidStatusRef = useRef(false)
 
   const loadProcurement = useCallback(async () => {
@@ -25,12 +26,14 @@ export default function CompletionConfirmation({ queueEntry }) {
       if (data) {
         setProc(data)
         const currentlyPaid = data.payment?.status === 'PAID'
-        if (currentlyPaid && !prevPaidStatusRef.current) {
+        if (isFirstLoadRef.current) {
+          isFirstLoadRef.current = false
+          prevPaidStatusRef.current = currentlyPaid
+        } else if (currentlyPaid && !prevPaidStatusRef.current) {
           prevPaidStatusRef.current = true
           toast.success(t('toasts.dbt_settled_toast', { token: queueEntry.token }), {
             id: `dbt-settled-${queueEntry.id}`,
-            duration: 8000,
-            icon: '💰'
+            duration: 4000,
           })
         }
       }
@@ -45,21 +48,8 @@ export default function CompletionConfirmation({ queueEntry }) {
     loadProcurement()
   }, [loadProcurement])
 
-  // 1. Real-time synchronization via Centre WebSocket channel
+  // Real-time synchronization via Centre WebSocket channel
   useCentreQueue(queueEntry?.centre_id, loadProcurement)
-
-  // 2. Real-time synchronization via Farmer personal WebSocket channel
-  const farmerId = user?.id || queueEntry?.farmer_id
-  const token = localStorage.getItem('krishi_token')
-  useFarmerNotifications(
-    farmerId,
-    token,
-    useCallback((data) => {
-      if (data.type === 'PAYMENT_PAID' || data.type === 'COMPLETED') {
-        loadProcurement()
-      }
-    }, [loadProcurement])
-  )
 
   // 3. Fallback polling every 2s until payment is confirmed PAID
   useEffect(() => {

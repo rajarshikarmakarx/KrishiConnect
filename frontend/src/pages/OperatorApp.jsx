@@ -195,7 +195,7 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
         damaged_grains_percentage: parseFloat(damaged) || 0,
         notes: notes || undefined
       })
-      toast.success(`✅ Token ${token} verified (${gradeLabel.split('·')[0].trim()}) & completed! Payment initiated.`, { duration: 5000 })
+      toast.success(`Token ${token} verified (${gradeLabel.split('·')[0].trim()}) & completed! Payment initiated.`, { duration: 3500 })
       onSuccess()
     } catch (e) {
       toast.error(e.message || 'Failed to complete procurement')
@@ -215,9 +215,9 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
         notes: notes || undefined
       })
       if (actionType === 'REJECT') {
-        toast.error(`❌ Token ${token} produce rejected (${numMoisture.toFixed(1)}% moisture). Farmer notified.`, { duration: 6000 })
+        toast.error(`Token ${token} produce rejected (${numMoisture.toFixed(1)}% moisture). Farmer notified.`, { duration: 4000 })
       } else {
-        toast.success(`☀️ Token ${token} granted 2.5h sun-drying grace. Farmer notified.`, { duration: 6000 })
+        toast.success(`Token ${token} granted 2.5h sun-drying grace. Farmer notified.`, { duration: 4000, icon: '☀️' })
       }
       onSuccess()
     } catch (e) {
@@ -665,9 +665,8 @@ export default function OperatorApp() {
     setPayingId(paymentId)
     try {
       await api.markPaid(paymentId)
-      toast.success(`🏛️ Govt Payment of ₹${amount?.toLocaleString('en-IN')} for ${token} completed & disbursed!`, {
-        duration: 6000,
-        icon: '✅'
+      toast.success(`Govt Payment of ₹${amount?.toLocaleString('en-IN')} for ${token} completed & disbursed!`, {
+        duration: 3800,
       })
       addNotification({
         title: 'DBT Payment Disbursed',

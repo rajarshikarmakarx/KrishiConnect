@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
+import { Toaster, ToastBar, toast } from 'react-hot-toast'
+import { X } from 'lucide-react'
 import { LanguageProvider, useTranslation } from './i18n'
 import { AuthProvider, useAuth } from './AuthContext'
 import { NotificationProvider } from './NotificationContext'
@@ -95,25 +96,61 @@ export default function App() {
             </Routes>
             <Toaster
               position="top-right"
+              containerStyle={{
+                top: 16,
+                right: 16,
+              }}
               toastOptions={{
-                duration: 5000,
+                duration: 3800,
                 style: {
-                  background: '#fff',
+                  background: '#ffffff',
                   color: '#0f172a',
                   border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  fontSize: '14px',
+                  borderRadius: '16px',
+                  padding: '10px 14px',
+                  fontSize: '13.5px',
+                  fontWeight: '500',
                   fontFamily: 'Inter, sans-serif',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.06)',
+                  maxWidth: '420px',
                 },
                 success: {
-                  iconTheme: { primary: '#15803d', secondary: '#fff' }
+                  duration: 3500,
+                  iconTheme: { primary: '#16a34a', secondary: '#ffffff' },
                 },
                 error: {
-                  iconTheme: { primary: '#dc2626', secondary: '#fff' }
-                }
+                  duration: 4500,
+                  iconTheme: { primary: '#dc2626', secondary: '#ffffff' },
+                },
               }}
-            />
+            >
+              {(t) => (
+                <ToastBar toast={t}>
+                  {({ icon, message }) => (
+                    <div className="flex items-center gap-2.5 w-full">
+                      {icon}
+                      <div className="flex-1 text-xs sm:text-sm font-medium text-slate-800 leading-snug">
+                        {message}
+                      </div>
+                      {t.type !== 'loading' && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toast.dismiss(t.id)
+                          }}
+                          className="p-1 -mr-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                          title="Close"
+                          aria-label="Close notification"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </ToastBar>
+              )}
+            </Toaster>
           </NotificationProvider>
         </AuthProvider>
       </LanguageProvider>

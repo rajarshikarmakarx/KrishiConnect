@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Ticket, Clock, Users, Wifi, WifiOff, Bell, Sparkles } from 'lucide-react'
-import toast from 'react-hot-toast'
 import api from '../../api'
 import { useTranslation } from '../../i18n'
 import { useCentreQueue } from '../../hooks/useRealtimeQueue'
@@ -20,7 +19,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
         setNotification(initialStatus.notification)
       }
     }
-  }, [initialStatus])
+  }, [initialStatus, notification])
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -30,7 +29,6 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
         setStatus(data)
         if (data.notification && data.notification !== notification) {
           setNotification(data.notification)
-          toast(data.notification, { duration: 8000, icon: '🔔' })
         }
       }
       if (onRefresh) onRefresh()
@@ -54,12 +52,6 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
     status?.queue_entry?.centre_id,
     useCallback(() => { refresh() }, [refresh])
   )
-
-  useEffect(() => {
-    if (initialStatus?.notification) {
-      toast(initialStatus.notification, { duration: 8000, icon: '🔔' })
-    }
-  }, [])
 
   if (!status) return null
 
