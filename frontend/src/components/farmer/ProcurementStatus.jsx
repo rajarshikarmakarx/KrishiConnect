@@ -48,7 +48,7 @@ export default function ProcurementStatus({ queueEntry }) {
               {i < steps.length - 1 && (
                 <div className={`absolute h-0.5 w-full ${step.done ? 'bg-green-600' : 'bg-slate-200'}`} style={{display:'none'}} />
               )}
-              <p className="text-xs text-slate-500 mt-1 text-center">{step.label}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 mt-1 text-center leading-tight">{step.label}</p>
             </div>
           ))}
         </div>

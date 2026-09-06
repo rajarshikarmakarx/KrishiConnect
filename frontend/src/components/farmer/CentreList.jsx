@@ -77,23 +77,23 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
           <StatusBadge status={centre.status} />
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="text-center p-3 bg-slate-50 rounded-xl">
-            <div className="text-2xl font-bold text-slate-800">{centre.waiting_count}</div>
-            <div className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
-              <Users className="w-3 h-3" />{t('common.waiting')}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+          <div className="text-center p-2 sm:p-3 bg-slate-50 rounded-xl">
+            <div className="text-xl sm:text-2xl font-bold text-slate-800">{centre.waiting_count}</div>
+            <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
+              <Users className="w-3 h-3 shrink-0" /><span>{t('common.waiting')}</span>
             </div>
           </div>
-          <div className="text-center p-3 bg-slate-50 rounded-xl">
-            <div className="text-2xl font-bold text-green-700">{centre.active_counters}</div>
-            <div className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
-              <Building2 className="w-3 h-3" />{t('common.counters')}
+          <div className="text-center p-2 sm:p-3 bg-slate-50 rounded-xl">
+            <div className="text-xl sm:text-2xl font-bold text-green-700">{centre.active_counters}</div>
+            <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
+              <Building2 className="w-3 h-3 shrink-0" /><span>{t('common.counters')}</span>
             </div>
           </div>
-          <div className="text-center p-3 bg-amber-50 rounded-xl">
-            <div className="text-2xl font-bold text-amber-700">~{eta}{t('common.min')}</div>
-            <div className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
-              <Clock className="w-3 h-3" />{t('common.est_wait')}
+          <div className="text-center p-2 sm:p-3 bg-amber-50 rounded-xl">
+            <div className="text-xl sm:text-2xl font-bold text-amber-700">~{eta}{t('common.min')}</div>
+            <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
+              <Clock className="w-3 h-3 shrink-0" /><span>{t('common.est_wait')}</span>
             </div>
           </div>
         </div>

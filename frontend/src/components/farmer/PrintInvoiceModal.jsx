@@ -284,51 +284,53 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
               <h4 className="font-extrabold text-[11px] uppercase tracking-wider text-slate-700 mb-1.5">
                 3. {t('invoice.financial_title')}
               </h4>
-              <table className="w-full border-collapse border border-slate-300 text-xs">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
-                    <th className="p-1.5 border-r border-slate-300 text-center w-10">{t('invoice.sno')}</th>
-                    <th className="p-1.5 border-r border-slate-300 text-left">{t('invoice.item_description')}</th>
-                    <th className="p-1.5 border-r border-slate-300 text-right w-24">{t('invoice.expected_qty')}</th>
-                    <th className="p-1.5 border-r border-slate-300 text-right w-28">{t('invoice.accepted_weight')}</th>
-                    <th className="p-1.5 border-r border-slate-300 text-right w-28">{t('invoice.statutory_rate')}</th>
-                    <th className="p-1.5 text-right w-28">{t('invoice.total_amount')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-slate-200 font-medium">
-                    <td className="p-1.5 border-r border-slate-300 text-center">1</td>
-                    <td className="p-1.5 border-r border-slate-300">
-                      <span className="font-bold text-slate-900">{translateCrop(displayCrop)}</span>
-                      <span className="text-[10px] text-slate-500 block">Kharif Season 2025-26 · {grade}</span>
-                    </td>
-                    <td className="p-1.5 border-r border-slate-300 text-right text-slate-600">
-                      {displayExpectedQty} {t('invoice.unit_kg')}
-                    </td>
-                    <td className="p-1.5 border-r border-slate-300 text-right font-bold text-slate-900">
-                      {displayAcceptedQty} {t('invoice.unit_kg')}
-                      <span className="text-[10px] text-slate-500 block font-normal">({acceptedQuintals} {t('invoice.unit_quintal')})</span>
-                    </td>
-                    <td className="p-1.5 border-r border-slate-300 text-right text-slate-900 font-semibold">
-                      ₹{displayRate.toFixed(2)}/kg
-                      <span className="text-[10px] text-slate-500 block font-normal">₹{ratePerQuintal}/qtl</span>
-                    </td>
-                    <td className="p-1.5 text-right font-black text-slate-900 text-sm">
-                      ₹{displayTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                </tbody>
-                <tfoot>
-                  <tr className="bg-slate-50 font-bold border-t border-slate-300">
-                    <td colSpan={5} className="p-1.5 text-right border-r border-slate-300 font-extrabold text-slate-800">
-                      {t('invoice.total_amount')} (INR):
-                    </td>
-                    <td className="p-1.5 text-right font-black text-green-900 text-base">
-                      ₹{displayTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+              <div className="w-full overflow-x-auto">
+                <table className="w-full min-w-[500px] border-collapse border border-slate-300 text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
+                      <th className="p-1.5 border-r border-slate-300 text-center w-10">{t('invoice.sno')}</th>
+                      <th className="p-1.5 border-r border-slate-300 text-left">{t('invoice.item_description')}</th>
+                      <th className="p-1.5 border-r border-slate-300 text-right w-24">{t('invoice.expected_qty')}</th>
+                      <th className="p-1.5 border-r border-slate-300 text-right w-28">{t('invoice.accepted_weight')}</th>
+                      <th className="p-1.5 border-r border-slate-300 text-right w-28">{t('invoice.statutory_rate')}</th>
+                      <th className="p-1.5 text-right w-28">{t('invoice.total_amount')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-slate-200 font-medium">
+                      <td className="p-1.5 border-r border-slate-300 text-center">1</td>
+                      <td className="p-1.5 border-r border-slate-300">
+                        <span className="font-bold text-slate-900">{translateCrop(displayCrop)}</span>
+                        <span className="text-[10px] text-slate-500 block">Kharif Season 2025-26 · {grade}</span>
+                      </td>
+                      <td className="p-1.5 border-r border-slate-300 text-right text-slate-600">
+                        {displayExpectedQty} {t('invoice.unit_kg')}
+                      </td>
+                      <td className="p-1.5 border-r border-slate-300 text-right font-bold text-slate-900">
+                        {displayAcceptedQty} {t('invoice.unit_kg')}
+                        <span className="text-[10px] text-slate-500 block font-normal">({acceptedQuintals} {t('invoice.unit_quintal')})</span>
+                      </td>
+                      <td className="p-1.5 border-r border-slate-300 text-right text-slate-900 font-semibold">
+                        ₹{displayRate.toFixed(2)}/kg
+                        <span className="text-[10px] text-slate-500 block font-normal">₹{ratePerQuintal}/qtl</span>
+                      </td>
+                      <td className="p-1.5 text-right font-black text-slate-900 text-sm">
+                        ₹{displayTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-50 font-bold border-t border-slate-300">
+                      <td colSpan={5} className="p-1.5 text-right border-r border-slate-300 font-extrabold text-slate-800">
+                        {t('invoice.total_amount')} (INR):
+                      </td>
+                      <td className="p-1.5 text-right font-black text-green-900 text-base">
+                        ₹{displayTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
 
               {/* Amount in Words */}
               <div className="mt-1.5 p-1.5 bg-slate-50 rounded border border-slate-200 text-xs flex items-start gap-2">

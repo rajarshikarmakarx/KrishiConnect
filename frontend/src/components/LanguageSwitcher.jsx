@@ -2,6 +2,12 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Globe, Check, ChevronDown } from 'lucide-react'
 import { useTranslation, LANGUAGES } from '../i18n'
 
+const SHORT_CODES = {
+  en: 'EN',
+  bn: 'বাং',
+  hi: 'हिं'
+}
+
 export default function LanguageSwitcher({
   variant = 'dropdown', // 'dropdown' | 'pills' | 'header'
   className = '',
@@ -64,20 +70,21 @@ export default function LanguageSwitcher({
         type="button"
         onClick={() => setOpen(!open)}
         aria-label="Change Language"
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+        className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
           isHeader
             ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-xs'
             : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs'
         } ${open ? (isHeader ? 'bg-white/25 ring-2 ring-white/30' : 'bg-slate-50 ring-2 ring-emerald-500/20') : ''}`}
       >
-        <Globe className={`w-3.5 h-3.5 ${isHeader ? 'text-green-200' : 'text-slate-500'}`} />
-        <span>{currentLangObj.native}</span>
-        <ChevronDown className={`w-3 h-3 transition-transform ${isHeader ? 'text-white/70' : 'text-slate-400'} ${open ? 'rotate-180' : ''}`} />
+        <Globe className={`w-3.5 h-3.5 shrink-0 ${isHeader ? 'text-green-200' : 'text-slate-500'}`} />
+        <span className="sm:hidden font-bold">{SHORT_CODES[language] || currentLangObj.code.toUpperCase()}</span>
+        <span className="hidden sm:inline">{currentLangObj.native}</span>
+        <ChevronDown className={`w-3 h-3 shrink-0 transition-transform ${isHeader ? 'text-white/70' : 'text-slate-400'} ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
         <div
-          className="absolute right-0 mt-2 w-44 rounded-2xl bg-white text-slate-900 shadow-xl border border-slate-100 z-50 overflow-hidden py-1 animate-fade-in origin-top-right"
+          className="absolute right-0 mt-2 w-44 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white text-slate-900 shadow-xl border border-slate-100 z-50 overflow-hidden py-1 animate-fade-in origin-top-right"
         >
           <div className="px-3 py-1.5 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Select Language / ভাষা

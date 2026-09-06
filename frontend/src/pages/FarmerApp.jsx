@@ -30,21 +30,22 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
   }, [])
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative shrink-0" ref={ref}>
       <button
         id="btn-profile-menu"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors border border-white/20 cursor-pointer"
+        aria-label="User Profile"
+        className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors border border-white/20 cursor-pointer shrink-0"
       >
-        <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
-          <User className="w-4 h-4 text-white" />
+        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+          <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
         </div>
-        <span className="text-sm font-medium text-white max-w-[120px] truncate">{user.full_name}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-white/70 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <span className="hidden sm:inline text-sm font-medium text-white max-w-[120px] truncate">{user.full_name}</span>
+        <ChevronDown className={`hidden sm:inline w-3.5 h-3.5 text-white/70 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-fade-in">
+        <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-fade-in origin-top-right">
           <div className="bg-gradient-to-br from-green-700 to-green-800 p-4">
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
               <User className="w-5 h-5 text-white" />
@@ -55,12 +56,12 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
           <div className="p-3 space-y-1 border-b border-slate-100">
             {user.village && (
               <div className="flex items-center gap-2 px-2 py-1 text-xs text-slate-500">
-                <MapPin className="w-3.5 h-3.5" />
-                <span>{user.village}, {user.district}</span>
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{user.village}, {user.district}</span>
               </div>
             )}
             {user.farmer_id && (
-              <div className="px-2 py-1 text-xs text-slate-400 font-mono">{t('nav.id_prefix')} {user.farmer_id}</div>
+              <div className="px-2 py-1 text-xs text-slate-400 font-mono truncate">{t('nav.id_prefix')} {user.farmer_id}</div>
             )}
           </div>
           <div className="p-2 space-y-1">
@@ -68,14 +69,14 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
               onClick={() => { onOpenMsp(); setOpen(false) }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-green-800 hover:bg-green-50 rounded-xl transition-colors font-medium cursor-pointer"
             >
-              <Scale className="w-4 h-4 text-green-700" />
+              <Scale className="w-4 h-4 text-green-700 shrink-0" />
               {t('nav.govt_msp_rates')}
             </button>
             <button
               onClick={() => { onEditProfile(); setOpen(false) }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors font-medium cursor-pointer"
             >
-              <Settings className="w-4 h-4 text-slate-500" />
+              <Settings className="w-4 h-4 text-slate-500 shrink-0" />
               {t('nav.edit_profile')}
             </button>
             <button
@@ -83,7 +84,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
               onClick={() => { logout(); setOpen(false) }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium cursor-pointer"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4 shrink-0" />
               {t('nav.sign_out')}
             </button>
           </div>
@@ -267,30 +268,30 @@ export default function FarmerApp() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <header className="gov-header text-white px-4 py-4 safe-bottom sticky top-0 z-30 shadow-md">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 shadow-sm">
-                <Wheat className="w-5 h-5 text-green-200" />
+      <header className="gov-header text-white px-3 sm:px-4 py-3 sm:py-4 safe-bottom sticky top-0 z-30 shadow-md w-full">
+        <div className="max-w-2xl mx-auto w-full">
+          <div className="flex items-center justify-between gap-1.5 sm:gap-3 w-full min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 shadow-sm shrink-0">
+                <Wheat className="w-4 h-4 sm:w-5 sm:h-5 text-green-200" />
               </div>
-              <div>
-                <h1 className="text-lg font-bold leading-tight">{t('common.app_name')}</h1>
-                <p className="text-green-300 text-xs">{t('common.app_tagline')}</p>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-lg font-bold leading-tight truncate">{t('common.app_name')}</h1>
+                <p className="hidden sm:block text-green-300 text-xs truncate">{t('common.app_tagline')}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <LanguageSwitcher dark={true} />
               <button
                 onClick={() => setShowMspModal(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-semibold border border-amber-400/30 transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-semibold border border-amber-400/30 transition-colors cursor-pointer shrink-0"
                 title={t('msp.title')}
               >
-                <Scale className="w-3.5 h-3.5 text-amber-300" />
+                <Scale className="w-3.5 h-3.5 text-amber-300 shrink-0" />
                 <span className="hidden sm:inline">{t('nav.govt_msp_rates')}</span>
-                <span className="sm:hidden">MSP</span>
+                <span className="sm:hidden font-bold">MSP</span>
               </button>
               <NotificationCenter dark={true} />
               <ProfileMenu

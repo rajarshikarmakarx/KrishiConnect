@@ -92,7 +92,7 @@ export default function NotificationCenter({ className = '', dark = false, heade
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notifications"
-        className={`relative p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 cursor-pointer ${
+        className={`relative p-1.5 sm:p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 cursor-pointer shrink-0 ${
           isDarkHeader
             ? 'text-white/85 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 bg-white'
@@ -110,7 +110,7 @@ export default function NotificationCenter({ className = '', dark = false, heade
       {/* Popover Dropdown Panel - Clean Light Theme */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-sm sm:w-96 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200/90 bg-white text-slate-900 z-50 overflow-hidden transform transition-all animate-fade-in origin-top-right"
+          className="absolute right-0 mt-2 w-[calc(100vw-1.5rem)] max-w-sm sm:w-96 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200/90 bg-white text-slate-900 z-50 overflow-hidden transform transition-all animate-fade-in origin-top-right"
         >
           {/* Header */}
           <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/90 flex items-center justify-between">

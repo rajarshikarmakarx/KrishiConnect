@@ -113,11 +113,11 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
 
         <div className="p-5">
           {/* Token display */}
-          <div className="grid grid-cols-2 gap-4 mb-5">
-            <div className="text-center p-4 bg-green-50 rounded-2xl border border-green-100">
-              <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t('queue.your_token')}</p>
-              <p className="token-display text-4xl font-bold text-green-800">{entry.token}</p>
-              <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5">
+            <div className="text-center p-3 sm:p-4 bg-green-50 rounded-2xl border border-green-100">
+              <p className="text-[11px] sm:text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t('queue.your_token')}</p>
+              <p className="token-display text-2xl sm:text-4xl font-bold text-green-800 truncate">{entry.token}</p>
+              <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-bold ${
                 entry.status === 'WAITING' ? 'bg-yellow-100 text-yellow-700' :
                 entry.status === 'CALLED' ? 'bg-blue-100 text-blue-700' :
                 entry.status === 'PROCESSING' ? 'bg-orange-100 text-orange-700' :
@@ -126,10 +126,10 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
                 'bg-slate-100 text-slate-700'
               }`}>{getStatusBadgeText(entry.status)}</span>
             </div>
-            <div className="text-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('queue.serving_now')}</p>
-              <p className="token-display text-4xl font-bold text-slate-700">{currently_serving_token || '—'}</p>
-              <p className="text-xs text-slate-400 mt-1">{t('queue.at_counter')}</p>
+            <div className="text-center p-3 sm:p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('queue.serving_now')}</p>
+              <p className="token-display text-2xl sm:text-4xl font-bold text-slate-700 truncate">{currently_serving_token || '—'}</p>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-1">{t('queue.at_counter')}</p>
             </div>
           </div>
 

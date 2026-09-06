@@ -12,7 +12,7 @@ export default function BookingToken({ entry, onContinue }) {
       </div>
       <div className="p-6 text-center">
         <p className="text-slate-500 text-sm mb-3 uppercase tracking-wider font-semibold">{t('token.your_queue_token')}</p>
-        <div className="token-display text-7xl font-bold text-green-800 mb-4 py-4 bg-green-50 rounded-2xl border-2 border-green-200">
+        <div className="token-display text-4xl sm:text-7xl font-bold text-green-800 mb-4 py-4 px-2 bg-green-50 rounded-2xl border-2 border-green-200 truncate">
           {entry.token}
         </div>
         <div className="space-y-2 text-sm text-slate-600 mb-6">
