@@ -40,6 +40,8 @@ export const api = {
   // Auth
   register: (data) => request('POST', '/auth/register', data),
   login: (data) => request('POST', '/auth/login', data),
+  sendOtp: (mobile) => request('POST', '/auth/send-otp', { mobile }),
+  verifyOtp: (mobile, otp) => request('POST', '/auth/verify-otp', { mobile, otp }),
   updateProfile: (data) => request('PUT', '/auth/profile', data),
   deleteProfile: () => request('DELETE', '/auth/profile'),
 

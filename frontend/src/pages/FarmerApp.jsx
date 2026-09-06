@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../AuthContext'
+import { useNotifications } from '../NotificationContext'
 import { Wheat, MapPin, Clock, Users, Star, ChevronRight, History, Bell, LogOut, X, CheckCircle, Ticket, User, ChevronDown, Settings, Scale } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
+import NotificationCenter from '../components/NotificationCenter'
 import LiveQueueScreen from '../components/farmer/LiveQueueScreen'
 import CentreList from '../components/farmer/CentreList'
 import SlotBookingModal from '../components/farmer/SlotBookingModal'
@@ -96,6 +98,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
 
 export default function FarmerApp() {
   const { user, logout } = useAuth()
+  const { addNotification } = useNotifications()
   const [tab, setTab] = useState('centres')
   const [centres, setCentres] = useState([])
   const [loadingCentres, setLoadingCentres] = useState(true)
@@ -143,11 +146,23 @@ export default function FarmerApp() {
           duration: 8000,
           icon: '💰'
         })
+        addNotification({
+          title: 'DBT Payment Disbursed',
+          message: data.message || `Payment has been settled and transferred directly to your bank account via Direct Benefit Transfer.`,
+          type: 'payment',
+          eventKey: `payment-${data.payment_id || Date.now()}`
+        })
         loadActiveQueue()
       } else if (data.type === 'COMPLETED') {
         toast.success(data.message || '✅ Procurement completed! Generating invoice...', {
           id: 'farmer-proc-completed',
           duration: 6000
+        })
+        addNotification({
+          title: 'Procurement Completed',
+          message: data.message || `Your produce intake has been certified and completed. Official invoice & receipt generated.`,
+          type: 'success',
+          eventKey: `completed-${data.queue_id || data.token || Date.now()}`
         })
         loadActiveQueue()
       } else if (data.type === 'CALLED') {
@@ -156,12 +171,24 @@ export default function FarmerApp() {
           duration: 8000,
           icon: '🔔'
         })
+        addNotification({
+          title: 'Your Turn Called at Counter',
+          message: data.message || `Token called! Please proceed immediately to the counter for digital moisture testing & weighbridge intake.`,
+          type: 'queue',
+          eventKey: `called-${data.queue_id || data.token || Date.now()}`
+        })
         loadActiveQueue()
       } else if (data.type === 'PROCESSING') {
         toast(data.message || '⚙️ Procurement is being processed at the counter.', {
           id: 'farmer-processing',
           duration: 5000,
           icon: '⚙️'
+        })
+        addNotification({
+          title: 'Processing at Counter',
+          message: data.message || `Your produce is undergoing digital assaying and weighbridge intake at the counter.`,
+          type: 'info',
+          eventKey: `processing-${data.queue_id || data.token || Date.now()}`
         })
         loadActiveQueue()
       } else if (data.type === 'QUALITY_DECISION') {
@@ -171,15 +198,27 @@ export default function FarmerApp() {
             duration: 8000,
             icon: '☀️'
           })
+          addNotification({
+            title: 'Sun-Drying Grace Granted',
+            message: data.message || `High moisture level detected. Granted 2.5 hours mandi courtyard sun-drying grace period.`,
+            type: 'assay',
+            eventKey: `deferral-${data.queue_id || Date.now()}`
+          })
         } else if (data.status === 'REJECTED') {
           toast.error(data.message || '⚠️ Produce lot did not meet mandatory mandi quality standards.', {
             id: 'farmer-rejected',
             duration: 8000,
           })
+          addNotification({
+            title: 'Lot Rejection Notice',
+            message: data.message || `Produce exceeded safe moisture limit (20%+) and failed mandatory Mandi Safety Code standards.`,
+            type: 'alert',
+            eventKey: `rejected-${data.queue_id || Date.now()}`
+          })
         }
         loadActiveQueue()
       }
-    }, [loadActiveQueue])
+    }, [loadActiveQueue, addNotification])
   )
 
   // Listen to centre queue changes when active queue is present
@@ -192,6 +231,12 @@ export default function FarmerApp() {
     loadActiveQueue()
     setTab('queue')
     toast.success(`🎫 Token ${entry.token} booked successfully!`)
+    addNotification({
+      title: `Queue Slot Booked: Token ${entry.token}`,
+      message: `Successfully booked for ${entry.crop} at ${entry.centre_name || 'Procurement Centre'}. Track live queue in 'My Queue' tab.`,
+      type: 'queue',
+      eventKey: `booking-${entry.id || entry.token}`
+    })
   }
 
   return (
@@ -218,6 +263,7 @@ export default function FarmerApp() {
                 <Scale className="w-3.5 h-3.5 text-amber-300" />
                 <span className="hidden sm:inline">Govt</span> MSP Rates
               </button>
+              <NotificationCenter dark={true} />
               <ProfileMenu
                 user={user}
                 logout={logout}

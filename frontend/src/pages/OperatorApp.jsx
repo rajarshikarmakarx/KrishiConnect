@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../AuthContext'
+import { useNotifications } from '../NotificationContext'
 import { Wheat, Users, CheckCircle, Clock, X, Wifi, WifiOff, IndianRupee, User, LogOut, Building2, ChevronDown, Scale, Sparkles, AlertCircle, ShieldCheck, Droplets, Sun, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
+import NotificationCenter from '../components/NotificationCenter'
 import { useCentreQueue } from '../hooks/useRealtimeQueue'
 
 const MSP_RATES = {
@@ -539,6 +541,7 @@ function CancelConfirmModal({ entry, onClose, onConfirm, loading }) {
 
 export default function OperatorApp() {
   const { user, logout } = useAuth()
+  const { addNotification } = useNotifications()
   const centreId = user?.assigned_centre_id || 1
   const [queue, setQueue] = useState(null)
   const [centreDetail, setCentreDetail] = useState(null)
@@ -575,6 +578,12 @@ export default function OperatorApp() {
       const res = await api.callNext(centreId)
       if (res.token) {
         toast.success(`🔔 Called ${res.token} → ${res.counter}`)
+        addNotification({
+          title: `Called Token ${res.token}`,
+          message: `Farmer called to ${res.counter || 'Counter'}. Digital moisture testing & weighbridge inspection active.`,
+          type: 'queue',
+          eventKey: `call-${res.token}-${Date.now()}`
+        })
         await loadQueue()
       } else {
         toast('No farmers waiting in queue', { icon: 'ℹ️' })
@@ -591,6 +600,12 @@ export default function OperatorApp() {
     try {
       const res = await api.callSpecific(entry.id)
       toast.success(`🔔 Called ${res.token} → ${res.counter || 'counter'}`)
+      addNotification({
+        title: `Called Token ${res.token}`,
+        message: `Farmer ${entry.farmer_name} called to ${res.counter || 'Counter'} for produce inspection.`,
+        type: 'queue',
+        eventKey: `call-spec-${entry.id}-${Date.now()}`
+      })
       await loadQueue()
     } catch (e) {
       toast.error(e.message || 'Could not call farmer')
@@ -604,6 +619,12 @@ export default function OperatorApp() {
     try {
       await api.cancelBooking(queueId)
       toast.success('✅ Booking cancelled successfully')
+      addNotification({
+        title: 'Queue Booking Cancelled',
+        message: `Queue entry #${queueId} was removed from the active queue.`,
+        type: 'alert',
+        eventKey: `cancel-${queueId}-${Date.now()}`
+      })
       setCancelModal(null)
       await loadQueue()
     } catch (e) {
@@ -617,6 +638,12 @@ export default function OperatorApp() {
     try {
       await api.startProcessing(queueId)
       toast.success('Processing started')
+      addNotification({
+        title: 'Intake Processing Started',
+        message: `Sample assay and weight capture initiated for Queue Entry #${queueId}.`,
+        type: 'info',
+        eventKey: `start-${queueId}-${Date.now()}`
+      })
       await loadQueue()
     } catch (e) {
       toast.error(e.message)
@@ -625,6 +652,12 @@ export default function OperatorApp() {
 
   const handleCompleteSuccess = async () => {
     setCompleteModal(null)
+    addNotification({
+      title: 'Procurement Intake Certified',
+      message: `Produce quality certified and procurement recorded. DBT payment queued for disbursal.`,
+      type: 'success',
+      eventKey: `completed-op-${Date.now()}`
+    })
     await loadQueue()
   }
 
@@ -635,6 +668,12 @@ export default function OperatorApp() {
       toast.success(`🏛️ Govt Payment of ₹${amount?.toLocaleString('en-IN')} for ${token} completed & disbursed!`, {
         duration: 6000,
         icon: '✅'
+      })
+      addNotification({
+        title: 'DBT Payment Disbursed',
+        message: `₹${amount?.toLocaleString('en-IN')} disbursed to farmer for Token ${token}.`,
+        type: 'payment',
+        eventKey: `paid-${paymentId}-${Date.now()}`
       })
       await loadQueue()
     } catch (e) {
@@ -677,6 +716,7 @@ export default function OperatorApp() {
                 <><div className="live-dot" /><span className="text-green-200 font-semibold">LIVE</span></>
               )}
             </div>
+            <NotificationCenter dark={true} />
             <OperatorProfileMenu user={user} logout={logout} centreName={queue?.centre_name} />
           </div>
         </div>
@@ -684,7 +724,7 @@ export default function OperatorApp() {
 
       <div className="max-w-5xl mx-auto px-4 py-5 space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="Waiting" value={queue?.waiting_count || 0} color="slate" />
           <StatCard label="Processing" value={queue?.processing_count || 0} color="orange" />
           <StatCard label="Completed" value={queue?.completed_count || 0} color="green" />

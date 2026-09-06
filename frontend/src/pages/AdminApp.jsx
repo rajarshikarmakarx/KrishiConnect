@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../AuthContext'
+import { useNotifications } from '../NotificationContext'
 import {
   Wheat, Users, Clock, Package, IndianRupee, TrendingUp, RefreshCw,
   LogOut, ShieldCheck, ChevronDown, CheckCircle, Database, Cpu,
@@ -11,6 +12,7 @@ import {
 } from 'recharts'
 import toast from 'react-hot-toast'
 import api from '../api'
+import NotificationCenter from '../components/NotificationCenter'
 import { useAdminQueue } from '../hooks/useRealtimeQueue'
 
 const COLORS = ['#15803d', '#d97706', '#2563eb', '#dc2626', '#7c3aed']
@@ -119,6 +121,7 @@ function AdminProfileMenu({ user, logout }) {
 
 export default function AdminApp() {
   const { user, logout } = useAuth()
+  const { addNotification } = useNotifications()
   const [tab, setTab] = useState('operations')
   const [analytics, setAnalytics] = useState(null)
   const [impactData, setImpactData] = useState(null)
@@ -141,12 +144,26 @@ export default function AdminApp() {
       setHealthData(health)
       setAiDataInfo(aiInfo)
       setMspData(msp)
+
+      // District congestion and milestone check
+      if (dist) {
+        dist.centres?.forEach((c) => {
+          if (c.currently_waiting >= 15) {
+            addNotification({
+              title: `High Congestion Alert: ${c.centre_name}`,
+              message: `${c.currently_waiting} farmers currently waiting. Avg wait time: ${Math.round(c.avg_wait_minutes)} min. Consider routing traffic.`,
+              type: 'alert',
+              eventKey: `congestion-${c.centre_id}-${Math.floor(Date.now() / (1000 * 60 * 15))}` // 15-min cooldown
+            })
+          }
+        })
+      }
     } catch {
       toast.error('Could not load analytics data')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [addNotification])
 
   // Listen for district-wide queue updates via WebSocket
   const { connected } = useAdminQueue(loadAll)
@@ -205,6 +222,7 @@ export default function AdminApp() {
             <button onClick={loadAll} className="p-2 hover:bg-white/10 rounded-xl transition-colors" title="Refresh Live Data">
               <RefreshCw className="w-4 h-4 text-green-200" />
             </button>
+            <NotificationCenter dark={true} />
             <AdminProfileMenu user={user} logout={logout} />
           </div>
         </div>

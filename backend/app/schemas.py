@@ -32,6 +32,19 @@ class LoginRequest(BaseModel):
     mobile: str
     password: str
 
+class SendOtpRequest(BaseModel):
+    mobile: str
+
+class SendOtpResponse(BaseModel):
+    message: str
+    mobile: str
+    otp: Optional[str] = None
+    dev_mode: bool = True
+
+class VerifyOtpRequest(BaseModel):
+    mobile: str
+    otp: str
+
 class ProfileUpdateRequest(BaseModel):
     full_name: Optional[str] = None
     mobile: Optional[str] = None

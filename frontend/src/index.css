@@ -121,6 +121,15 @@ body {
 .input-field {
   @apply w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all;
 }
+.input-field-icon-left {
+  padding-left: 2.5rem !important;
+}
+.input-field-icon-right {
+  padding-right: 2.75rem !important;
+}
+.input-field-btn-right {
+  padding-right: 6rem !important;
+}
 
 /* Mobile safe area */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
