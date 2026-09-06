@@ -7,10 +7,13 @@
 ## 📌 Table of Contents
 - [Executive Overview](#-executive-overview)
 - [Key Architectural Highlights](#-key-architectural-highlights)
+- [Centralized Multilingual Architecture (EN, BN, HI)](#-centralized-multilingual-architecture-en-bn-hi)
 - [User Personas & End-to-End UI Flows](#-user-personas--end-to-end-ui-flows)
   - [1. Farmer Persona](#1-farmer-persona-)
   - [2. Procurement Centre Operator & Assayer Persona](#2-procurement-centre-operator--assayer-persona-)
   - [3. District Agricultural Officer / Admin Persona](#3-district-agricultural-officer--admin-persona-)
+- [Official Form 'J' Printable Invoice](#-official-form-j-printable-invoice)
+- [Professional Notification & Toast Engine](#-professional-notification--toast-engine)
 - [Live Demo Accounts & Credentials](#-live-demo-accounts--credentials)
 - [Local Installation & Setup](#-local-installation--setup)
 - [API Architecture & Endpoints](#-api-architecture--endpoints)
@@ -68,6 +71,20 @@ Traditional agricultural produce procurement at government mandis suffers from u
 - **Fail-Safe & Auto-Healing Endpoints**: Procurement invoice routes auto-generate statutory MSP defaults on-the-fly, preventing 404s and client loading hangs.
 - **Strict Concurrency & Safety Guards**: Atomic counter validation prevents farmer status transitions when counters are occupied, and safety checks block spoiled produce.
 - **In-Session Notification Center**: Deduplicated event ingestion across WebSocket reconnects with read/unread tracking.
+- **Zero-Reload Multilingual Support**: Dynamic state-driven localized interface supporting English, Bengali (`বাংলা`), and Hindi (`हिंदी`).
+
+---
+
+## 🌐 Centralized Multilingual Architecture (EN, BN, HI)
+
+KrishiConnect incorporates a high-performance, zero-reload internationalization (`i18n`) layer specifically designed for rural accessibility in West Bengal:
+
+- **Supported Languages**:
+  - 🇬🇧 **English (`en`)**: Official administrative terminology.
+  - 🇧🇩 **Bengali (`bn` / বাংলা)**: Regional mother tongue covering all mandi operations, assaying metrics, and farmer workflows.
+  - 🇮🇳 **Hindi (`hi` / हिंदी)**: Inter-state agricultural trade standard.
+- **Full Coverage**: All navigation menus, status tags, crop names (Paddy/ধান/धान, Wheat, Mustard, etc.), Agmark grade cards, Form 'J' invoices, and live toast alerts seamlessly switch instantly without losing active form inputs or WebSocket connections.
+- **Instant Language Switcher**: Integrated in the farmer portal header and profile settings with persistent `localStorage` preference retention.
 
 ---
 
@@ -148,6 +165,35 @@ Traditional agricultural produce procurement at government mandis suffers from u
    - Inspects AI model training metadata, features, and synthetic training parameters.
 4. **Live In-Session Notification Center**:
    - Alerts for centre congestion spikes, daily milestones, and payment batches.
+
+---
+
+## 📄 Official Form 'J' Printable Invoice
+
+Under Section 14(2) of the *West Bengal Agricultural Produce Marketing (Regulation) Act*, farmers require a certified statutory intake certificate upon selling produce at Mandis. KrishiConnect includes a dedicated **Form 'J' Invoice Generation & Printing Engine**:
+
+- **A4 Print-Optimized Layout**: Pixel-perfect government typography, state emblem seal, dual QR validation seals, and multi-column breakdown.
+- **Certified Assaying Audit Trail**: Displays moisture %, chaff %, damaged grain %, and Agmark grade (Grade A, Standard FAQ, Sub-Standard).
+- **Direct Benefit Transfer (DBT) Statement**: Includes PFMS reference numbers, disbursement channel (`NPCI AePS / PFMS / RBI e-Kuber`), and statutory floor price calculations.
+- **Physical Signature Sections**: Built-in authorization blocks for the Farmer, Weighbridge Operator, and Centre Superintendent.
+- **Isolated Print Engine**: Dedicated hidden iframe print pipeline (`printInvoice()`) ensuring crisp A4 output without disrupting the active web UI.
+
+---
+
+## 🔔 Professional Notification & Toast Engine
+
+KrishiConnect features an enterprise-grade real-time event notification and toast dispatching system built on WebSocket streams and `react-hot-toast`:
+
+1. **Smart Lifecycle Deduplication**:
+   - Gated behind dynamic session state transitions (`isFirstLoadRef`) so settled DBT payments or historical records never pop up redundantly on page refresh, re-login, or navigation.
+   - Centralized notification listeners in top-level app layouts prevent duplicate/triple toast triggers from child components.
+2. **Interactive Dismissal**:
+   - Every floating toast is rendered via a custom `<ToastBar>` complete with a responsive `(X)` close button for instantaneous manual dismissal.
+   - Tuned auto-dismiss durations (3.5s for success, 4s for queue updates, 4.5s for errors).
+3. **Multilingual Parameter Interpolation**:
+   - Zero-reload dynamic translations for all toast events with dynamic counter names and token IDs across English, Bengali, and Hindi.
+4. **Persistent In-Session Notification Center**:
+   - High-contrast slide-out panel categorizing events into **Queue**, **Assaying**, **Payment**, and **Alerts** with unread count badges and 1-click "Mark All Read".
 
 ---
 
