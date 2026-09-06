@@ -22,7 +22,7 @@ docker compose exec backend python -m app.seed --reset
 
 
 --------------------------------------------------------------------------------
-2. 🚀 STARTING THE PLATFORM
+2. 🚀 STARTING THE PLATFORM LOCALLY
 --------------------------------------------------------------------------------
 
 ### OPTION A: One-Click Scripts (Recommended for Local Dev)
@@ -65,7 +65,42 @@ npm run dev                 # Launches on http://localhost:5173
 
 
 --------------------------------------------------------------------------------
-3. 🧪 RUNNING AUTOMATED TEST SUITES
+3. ☁️ PRODUCTION DEPLOYMENT (RENDER + VERCEL)
+--------------------------------------------------------------------------------
+
+### 🅰️ BACKEND ON RENDER (Web Service - Handles API + WebSockets):
+1. Create a new "Web Service" on dashboard.render.com connected to your GitHub repo.
+2. Settings:
+   - Root Directory:  backend
+   - Runtime:         Python 3
+   - Build Command:   pip install -r requirements.txt
+   - Start Command:   uvicorn app.main:app --host 0.0.0.0 --port $PORT
+   - Health Check:    /health
+3. Environment Variables on Render:
+   - DATABASE_URL:    postgresql://... (Supabase pooler URL from backend/.env)
+   - SECRET_KEY:      krishiconnect-secret-key-2026-hackathon-demo
+   - ALGORITHM:       HS256
+   - ALLOWED_ORIGINS: *
+   - OPERATOR_REG_SECRET: krishi-admin-2026
+4. Reseeding Database on Render:
+   - Go to Render Dashboard -> backend Web Service -> Shell
+   - Run: python -m app.seed --reset
+
+### 🅱️ FRONTEND ON VERCEL (Vite SPA on Global CDN):
+1. Import repository on vercel.com.
+2. Configure Project Settings:
+   - Framework Preset: Vite
+   - Root Directory:   frontend
+   - Build Command:    npm run build
+   - Output Directory: dist
+3. Environment Variables on Vercel:
+   - VITE_API_URL:    https://<your-backend-name>.onrender.com
+   - VITE_WS_URL:     wss://<your-backend-name>.onrender.com
+4. Click Deploy. `frontend/vercel.json` automatically handles SPA routing.
+
+
+--------------------------------------------------------------------------------
+4. 🧪 RUNNING AUTOMATED TEST SUITES
 --------------------------------------------------------------------------------
 
 # 🟢 Run Comprehensive E2E Verification:
@@ -85,7 +120,7 @@ cd frontend && npm run build && cd ..
 
 
 --------------------------------------------------------------------------------
-4. 🔑 DEMO ACCOUNTS & LOGIN CHEAT SHEET
+5. 🔑 DEMO ACCOUNTS & LOGIN CHEAT SHEET
 --------------------------------------------------------------------------------
 
 ### 🌾 1. Demo Farmer
@@ -107,7 +142,7 @@ cd frontend && npm run build && cd ..
 
 
 --------------------------------------------------------------------------------
-5. 🛠️ TROUBLESHOOTING & PORT KILLERS
+6. 🛠️ TROUBLESHOOTING & PORT KILLERS
 --------------------------------------------------------------------------------
 
 # Check if ports 8000 or 5173 are already occupied:
@@ -120,9 +155,6 @@ kill -9 $(lsof -t -i:5173) 2>/dev/null || true
 
 # Test backend health endpoint directly:
 curl -s http://localhost:8000/health
-
-# Test AI recommendation endpoint:
-curl -s "http://localhost:8000/ai/recommend?village=Haripur&district=Howrah&crop=Paddy&quantity_kg=250"
 
 # Clean Docker containers and volumes (Deep Reset):
 docker compose down -v --remove-orphans
