@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CheckCircle, IndianRupee, Download, Calendar, MapPin, ShieldCheck, Printer, FileCheck, Sparkles, RefreshCw, AlertCircle } from 'lucide-react'
+import { CheckCircle, IndianRupee, Download, Calendar, MapPin, ShieldCheck, Printer, FileCheck, Sparkles, RefreshCw, AlertCircle, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api'
 import { useAuth } from '../../AuthContext'
 import { useTranslation } from '../../i18n'
 import { useCentreQueue, useFarmerNotifications } from '../../hooks/useRealtimeQueue'
+import PrintInvoiceModal from './PrintInvoiceModal'
 
 export default function CompletionConfirmation({ queueEntry }) {
   const { user } = useAuth()
@@ -12,6 +13,7 @@ export default function CompletionConfirmation({ queueEntry }) {
   const [proc, setProc] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false)
   const prevPaidStatusRef = useRef(false)
 
   const loadProcurement = useCallback(async () => {
@@ -292,15 +294,31 @@ export default function CompletionConfirmation({ queueEntry }) {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 print:hidden">
+        <div className="flex flex-col sm:flex-row gap-3 print:hidden">
           <button
-            onClick={handlePrint}
-            className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm shadow-md cursor-pointer"
+            onClick={() => setShowInvoiceModal(true)}
+            className="flex-1 bg-green-700 hover:bg-green-800 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all text-sm shadow-md hover:shadow-lg cursor-pointer"
+          >
+            <FileText className="w-4 h-4" />
+            <span>{t('invoice.view_invoice_btn')}</span>
+          </button>
+          <button
+            onClick={() => setShowInvoiceModal(true)}
+            className="bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 px-6 rounded-xl flex items-center justify-center gap-2 transition-colors text-sm shadow-md cursor-pointer"
           >
             <Printer className="w-4 h-4" />
-            {t('completion.print_btn')}
+            <span>{t('invoice.print_invoice_btn')}</span>
           </button>
         </div>
+
+        {/* Form 'J' Official Printable Invoice Modal */}
+        <PrintInvoiceModal
+          isOpen={showInvoiceModal}
+          onClose={() => setShowInvoiceModal(false)}
+          queueEntry={queueEntry}
+          procurement={proc}
+          farmer={user}
+        />
       </div>
     </div>
   )
