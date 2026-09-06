@@ -20,9 +20,19 @@ def get_local_today() -> date:
     return datetime.now(timezone.utc).astimezone(KOLKATA_TZ).date()
 
 
+def is_postgres() -> bool:
+    """Check if active database is PostgreSQL/asyncpg."""
+    from app.database import DATABASE_URL
+    return "postgresql" in DATABASE_URL or "asyncpg" in DATABASE_URL
+
+
 def local_date(col):
     """
-    SQLAlchemy expression for timezone-aware date casting in PostgreSQL.
-    Converts TIMESTAMPTZ column to Asia/Kolkata calendar date.
+    SQLAlchemy expression for timezone-aware date casting in PostgreSQL and SQLite.
+    - PostgreSQL: converts TIMESTAMPTZ column to Asia/Kolkata date via timezone().
+    - SQLite: converts UTC datetime column to Asia/Kolkata (+5:30 = +330 minutes) date.
     """
-    return func.date(func.timezone("Asia/Kolkata", col))
+    if is_postgres():
+        return func.date(func.timezone("Asia/Kolkata", col))
+    return func.date(col, "+330 minutes")
+

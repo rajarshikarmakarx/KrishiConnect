@@ -214,16 +214,30 @@ KrishiConnect features an enterprise-grade real-time event notification and toas
 - **Python**: `3.10+`
 - **Node.js**: `18.0+` & `npm`
 
-### Quick Start (All-in-One Script)
+### Quick Start Options
+
+#### Option A: One-Click Startup Script (Local)
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/KrishiConnect.git
 cd KrishiConnect
 
-# Grant execution rights and launch both backend & frontend
+# Linux / macOS
 chmod +x start.sh
 ./start.sh
+
+# Windows (Command Prompt / PowerShell)
+start.bat
+# or: .\start.ps1
 ```
+
+#### Option B: Docker Compose (Full Stack Orchestration)
+```bash
+# Launch backend API and Nginx-powered frontend in unified network
+docker compose up --build
+```
+- **Farmer & Officer Web Portals**: `http://localhost:5173`
+- **FastAPI Backend & Swagger Docs**: `http://localhost:8000/docs`
 
 ---
 
@@ -293,20 +307,30 @@ Interactive Swagger API documentation is available at `http://localhost:8000/doc
 
 ## 🧪 Automated E2E Verification & Testing
 
-The repository includes a comprehensive automated test suite verifying authentication, quality assaying, safety guards, queue capacity, and analytics.
+The repository includes a comprehensive automated test suite verifying authentication, quality assaying, safety guards, dynamic location routing, real-time WebSockets, session recovery, and analytics.
 
 ```bash
 cd backend
+
 # 1. Test Demo OTP Authentication Flow
 ./venv/bin/python test_auth_otp.py
 
-# 2. Test Produce Quality Assaying & Safety Guards
+# 2. Test Auth Session Recovery & Global 401 Interceptor
+./venv/bin/python test_session_recovery_401.py
+
+# 3. Test Produce Quality Assaying & Moisture Safety Guards
 ./venv/bin/python test_assayer_flow.py
 
-# 3. Test District Analytics & IST Timezones
+# 4. Test Location Intelligence & OSRM Routing Fallback
+./venv/bin/python test_locations_behaviour.py
+
+# 5. Test Live Dual-Channel WebSocket Sync & Broadcast
+./venv/bin/python test_websocket_sync.py
+
+# 6. Test District Analytics & IST Timezones
 ./venv/bin/python test_district_analytics_verification.py
 
-# 4. Full End-to-End Workflow Test
+# 7. Full Comprehensive End-to-End Workflow Test
 ./venv/bin/python test_e2e.py
 ```
 

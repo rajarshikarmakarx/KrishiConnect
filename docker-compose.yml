@@ -1,0 +1,55 @@
+# =============================================================================
+# KrishiConnect Docker Compose Orchestration
+# Run full stack (Backend + Frontend) with: docker compose up --build
+# =============================================================================
+
+services:
+  # Backend API & WebSocket Service (FastAPI + AsyncPG/SQLite)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: krishiconnect-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=8000
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.amkdhrvxfziywgafpbdz:uzairbalochx@aws-0-ap-south-1.pooler.supabase.com:5432/postgres}
+      - SECRET_KEY=${SECRET_KEY:-krishiconnect-secret-key-2026-hackathon-demo}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-10080}
+      - OPERATOR_REG_SECRET=${OPERATOR_REG_SECRET:-krishi-admin-2026}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:80,http://localhost}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - krishiconnect-net
+
+  # Frontend Web Client (React + Vite + Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+        - VITE_WS_URL=${VITE_WS_URL:-ws://localhost:8000}
+    container_name: krishiconnect-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - krishiconnect-net
+
+networks:
+  krishiconnect-net:
+    driver: bridge

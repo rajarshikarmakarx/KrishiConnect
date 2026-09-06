@@ -37,16 +37,24 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS — read from env, never allow wildcard in production
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000")
+# CORS — read from env, support dynamic origins for seamless cloud deployment
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000,http://localhost:80,http://localhost")
 allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
+cors_kwargs = {
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+
+if "*" in allowed_origins:
+    cors_kwargs["allow_origin_regex"] = r"https?://.*"
+else:
+    cors_kwargs["allow_origins"] = allowed_origins
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    **cors_kwargs
 )
 
 # Include routers

@@ -1,0 +1,129 @@
+================================================================================
+🌾 KRISHICONNECT — CHEAT SHEET OF IMPORTANT COMMANDS & DEMO RUNBOOK 🌾
+================================================================================
+Primary Working Directory: /home/rishi/Coding/KrishiConnect
+Interactive API Swagger:   http://localhost:8000/docs
+Farmer & Admin Web App:    http://localhost:5173
+
+--------------------------------------------------------------------------------
+1. 🧹 DATABASE RESET & RESEED (RUN BEFORE DEMO)
+--------------------------------------------------------------------------------
+Wipes any temporary test entries and seeds clean 30-day AI training history,
+live demo tokens, procurement centres, counters, and demo accounts:
+
+# 🟢 Local Environment (from repository root):
+cd backend && PYTHONPATH=. ./venv/bin/python -m app.seed --reset && cd ..
+
+# 🟢 Alternative single-line from root:
+PYTHONPATH=backend backend/venv/bin/python -m app.seed --reset
+
+# 🟢 If running inside Docker Compose:
+docker compose exec backend python -m app.seed --reset
+
+
+--------------------------------------------------------------------------------
+2. 🚀 STARTING THE PLATFORM
+--------------------------------------------------------------------------------
+
+### OPTION A: One-Click Scripts (Recommended for Local Dev)
+# Linux / macOS / Git Bash:
+./start.sh
+
+# Windows (Command Prompt):
+start.bat
+
+# Windows (PowerShell):
+.\start.ps1
+
+
+### OPTION B: Full-Stack Docker Compose (Containerized Production Build)
+# Start all services with live build:
+docker compose up --build
+
+# Start in detached background mode:
+docker compose up -d --build
+
+# View live container logs:
+docker compose logs -f
+
+# View backend logs only:
+docker compose logs -f backend
+
+# Stop all containers:
+docker compose down
+
+
+### OPTION C: Manual Startup (Separate Terminals)
+# Terminal 1 — Backend:
+cd backend
+source venv/bin/activate    # On Windows: venv\Scripts\activate
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Terminal 2 — Frontend:
+cd frontend
+npm run dev                 # Launches on http://localhost:5173
+
+
+--------------------------------------------------------------------------------
+3. 🧪 RUNNING AUTOMATED TEST SUITES
+--------------------------------------------------------------------------------
+
+# 🟢 Run Comprehensive E2E Verification:
+backend/venv/bin/python backend/test_e2e.py
+
+# 🟢 Run All 7 Test Suites Sequentially:
+backend/venv/bin/python backend/test_auth_otp.py && \
+backend/venv/bin/python backend/test_session_recovery_401.py && \
+backend/venv/bin/python backend/test_assayer_flow.py && \
+backend/venv/bin/python backend/test_locations_behaviour.py && \
+backend/venv/bin/python backend/test_websocket_sync.py && \
+backend/venv/bin/python backend/test_district_analytics_verification.py && \
+backend/venv/bin/python backend/test_e2e.py
+
+# 🟢 Test Frontend Production Build:
+cd frontend && npm run build && cd ..
+
+
+--------------------------------------------------------------------------------
+4. 🔑 DEMO ACCOUNTS & LOGIN CHEAT SHEET
+--------------------------------------------------------------------------------
+
+### 🌾 1. Demo Farmer
+- Mobile:   9876543210
+- Password: demo123
+- Master Demo OTP (Fast Login): 123456
+- Role:     Farmer (Haripur Village, Howrah)
+
+### 🔬 2. Procurement Centre Operator & Quality Assayer
+- Haripur Centre:  Mobile: 9800000001 | Password: operator123
+- Bagnan Centre:   Mobile: 9800000002 | Password: operator123
+- Uluberia Centre: Mobile: 9800000003 | Password: operator123
+- Amta Centre:     Mobile: 9800000004 | Password: operator123
+
+### 🏛️ 3. District Agricultural Officer (Admin)
+- Mobile:   9000000000
+- Password: admin123
+- Role:     District Officer (Access to District Analytics & Live WebSocket Stream)
+
+
+--------------------------------------------------------------------------------
+5. 🛠️ TROUBLESHOOTING & PORT KILLERS
+--------------------------------------------------------------------------------
+
+# Check if ports 8000 or 5173 are already occupied:
+lsof -i :8000
+lsof -i :5173
+
+# Kill processes holding port 8000 or 5173 (if previous runs got orphaned):
+kill -9 $(lsof -t -i:8000) 2>/dev/null || true
+kill -9 $(lsof -t -i:5173) 2>/dev/null || true
+
+# Test backend health endpoint directly:
+curl -s http://localhost:8000/health
+
+# Test AI recommendation endpoint:
+curl -s "http://localhost:8000/ai/recommend?village=Haripur&district=Howrah&crop=Paddy&quantity_kg=250"
+
+# Clean Docker containers and volumes (Deep Reset):
+docker compose down -v --remove-orphans
+================================================================================

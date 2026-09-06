@@ -1,0 +1,11 @@
+.git
+.gitignore
+.claude
+memory/
+*.md
+COMMIT_MESSAGE.txt
+backend/venv/
+backend/__pycache__/
+backend/krishiconnect.db
+frontend/node_modules/
+frontend/dist/
