@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useAuth } from '../AuthContext'
+import { useTranslation } from '../i18n'
 import { Wheat, Eye, EyeOff, ArrowRight, Phone, User, ShieldCheck, Sparkles, KeyRound, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 export default function AuthPage() {
   const { login, loginWithOtp, register } = useAuth()
+  const { t } = useTranslation()
   const [mode, setMode] = useState('otp') // 'otp' | 'password' | 'register'
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -27,13 +30,13 @@ export default function AuthPage() {
   const handlePasswordLogin = async (e) => {
     e.preventDefault()
     if (!form.mobile || !form.password) {
-      toast.error('Please enter mobile number and password')
+      toast.error(t('toasts.enter_mobile_password'))
       return
     }
     setLoading(true)
     try {
       await login(form.mobile, form.password)
-      toast.success('Welcome back to KrishiConnect!')
+      toast.success(t('toasts.welcome_back'))
     } catch (err) {
       toast.error(err.message || 'Login failed')
     } finally {
@@ -43,19 +46,19 @@ export default function AuthPage() {
 
   const handleSendOtp = async () => {
     if (!form.mobile || form.mobile.length < 10) {
-      toast.error('Please enter a valid 10-digit mobile number')
+      toast.error(t('toasts.enter_valid_mobile'))
       return
     }
     setOtpSending(true)
     try {
       const res = await api.sendOtp(form.mobile)
       setOtpSent(true)
-      toast.success(`Demo OTP sent! Use code ${res.otp || '123456'}`)
+      toast.success(t('toasts.demo_otp_sent', { otp: res.otp || '123456' }))
       if (res.otp) {
         setOtpCode(res.otp)
       }
     } catch (err) {
-      toast.error(err.message || 'Failed to send OTP')
+      toast.error(err.message || t('toasts.failed_send_otp'))
     } finally {
       setOtpSending(false)
     }
@@ -64,19 +67,19 @@ export default function AuthPage() {
   const handleOtpLogin = async (e) => {
     e.preventDefault()
     if (!form.mobile || form.mobile.length < 10) {
-      toast.error('Please enter a valid 10-digit mobile number')
+      toast.error(t('toasts.enter_valid_mobile'))
       return
     }
     if (!otpCode) {
-      toast.error('Please enter the 6-digit OTP')
+      toast.error(t('toasts.enter_otp'))
       return
     }
     setLoading(true)
     try {
       await loginWithOtp(form.mobile, otpCode)
-      toast.success('OTP verified successfully! Welcome to KrishiConnect.')
+      toast.success(t('toasts.otp_verified'))
     } catch (err) {
-      toast.error(err.message || 'Invalid or expired OTP')
+      toast.error(err.message || t('toasts.invalid_otp'))
     } finally {
       setLoading(false)
     }
@@ -85,15 +88,15 @@ export default function AuthPage() {
   const handleRegister = async (e) => {
     e.preventDefault()
     if (!form.full_name || !form.mobile || !form.village || !form.district || !form.password) {
-      toast.error('Please fill all required fields')
+      toast.error(t('toasts.fill_all_fields'))
       return
     }
     setLoading(true)
     try {
       await register(form)
-      toast.success('Registration successful! Welcome to KrishiConnect.')
+      toast.success(t('toasts.registration_success'))
     } catch (err) {
-      toast.error(err.message || 'Registration failed')
+      toast.error(err.message || t('toasts.registration_failed'))
     } finally {
       setLoading(false)
     }
@@ -105,13 +108,13 @@ export default function AuthPage() {
       update('password', 'demo123')
       setOtpCode('123456')
       setOtpSent(true)
-      toast.success('Loaded Demo Farmer: Ramesh Kumar')
+      toast.success(t('toasts.loaded_demo_farmer', { name: 'Ramesh Kumar' }))
     } else if (role === 'farmer-2') {
       update('mobile', '9000000002')
       update('password', 'demo1234')
       setOtpCode('123456')
       setOtpSent(true)
-      toast.success('Loaded Demo Farmer: Suresh Ghosh')
+      toast.success(t('toasts.loaded_demo_farmer', { name: 'Suresh Ghosh' }))
     }
   }
 
@@ -126,42 +129,45 @@ export default function AuthPage() {
         </div>
 
         <div className="relative z-10">
-          <div className="flex items-center gap-3.5 mb-10 xl:mb-14">
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 shadow-inner backdrop-blur-sm">
-              <Wheat className="w-7 h-7 text-green-200" />
+          <div className="flex items-center justify-between mb-10 xl:mb-14">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 shadow-inner backdrop-blur-sm">
+                <Wheat className="w-7 h-7 text-green-200" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                  {t('common.app_name')}
+                  <span className="px-2 py-0.5 text-[11px] font-semibold bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 rounded-full">
+                    {t('common.gov_portal_badge')}
+                  </span>
+                </h1>
+                <p className="text-green-300 text-xs font-medium tracking-wide">{t('common.app_tagline')}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                KrishiConnect
-                <span className="px-2 py-0.5 text-[11px] font-semibold bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 rounded-full">
-                  Gov Portal
-                </span>
-              </h1>
-              <p className="text-green-300 text-xs font-medium tracking-wide">Public Agricultural Procurement Infrastructure</p>
-            </div>
+            <LanguageSwitcher dark={true} />
           </div>
 
           <div className="space-y-6 xl:space-y-8 max-w-lg">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 text-amber-200 text-xs font-semibold mb-3 border border-amber-400/30">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Next-Gen MSP Assurance & Real-Time Queueing</span>
+                <span>{t('auth.hero_badge')}</span>
               </div>
               <h2 className="text-3xl xl:text-4xl font-extrabold leading-tight text-white mb-3">
-                Digital Mandi Intake <br />
-                <span className="text-amber-300">Empowering Every Farmer</span>
+                {t('auth.hero_title_1')} <br />
+                <span className="text-amber-300">{t('auth.hero_title_2')}</span>
               </h2>
               <p className="text-green-100 text-sm xl:text-base leading-relaxed opacity-90">
-                Transparent moisture assaying, automated Agmark grading, real-time counter routing, and instant Direct Benefit Transfer (DBT) payout disbursal.
+                {t('auth.hero_desc')}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-2">
               {[
-                { icon: '📍', label: 'Geo-Routing', desc: 'Nearest MSP Mandi Centres' },
-                { icon: '🎫', label: 'Smart Tokens', desc: 'Live Queue & Slot Booking' },
-                { icon: '🔬', label: 'Digital Assaying', desc: 'Moisture & Impurity Grading' },
-                { icon: '⚡', label: 'Direct DBT', desc: 'Instant Bank Payout Transfers' },
+                { icon: '📍', label: t('auth.feature_geo'), desc: t('auth.feature_geo_desc') },
+                { icon: '🎫', label: t('auth.feature_token'), desc: t('auth.feature_token_desc') },
+                { icon: '🔬', label: t('auth.feature_assay'), desc: t('auth.feature_assay_desc') },
+                { icon: '⚡', label: t('auth.feature_dbt'), desc: t('auth.feature_dbt_desc') },
               ].map((item, i) => (
                 <div key={i} className="p-3 rounded-2xl bg-white/10 border border-white/10 backdrop-blur-sm flex items-start gap-2.5">
                   <span className="text-xl xl:text-2xl">{item.icon}</span>
@@ -177,12 +183,12 @@ export default function AuthPage() {
 
         <div className="relative z-10 border-t border-white/10 pt-5 flex items-center justify-between text-xs text-green-300/80">
           <div>
-            <p className="font-medium text-white">Government of West Bengal</p>
-            <p className="text-green-300 text-[11px]">Department of Agriculture & Agricultural Marketing</p>
+            <p className="font-medium text-white">{t('common.gov_title')}</p>
+            <p className="text-green-300 text-[11px]">{t('common.gov_dept')}</p>
           </div>
           <div className="flex items-center gap-1.5 font-mono text-[11px]">
             <ShieldCheck className="w-4 h-4 text-emerald-300" />
-            <span>256-Bit SSL Secured</span>
+            <span>{t('common.ssl_secured')}</span>
           </div>
         </div>
       </div>
@@ -190,15 +196,18 @@ export default function AuthPage() {
       {/* Right panel - Auth form */}
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 sm:py-12 bg-slate-50 min-h-screen lg:min-h-0">
         <div className="w-full max-w-md my-auto">
-          {/* Mobile top branding */}
-          <div className="lg:hidden flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-700 rounded-xl flex items-center justify-center shadow-md shrink-0">
-              <Wheat className="w-6 h-6 text-white" />
+          {/* Mobile top branding & Language Switcher */}
+          <div className="lg:hidden flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-700 rounded-xl flex items-center justify-center shadow-md shrink-0">
+                <Wheat className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-900 leading-tight">{t('common.app_name')}</h1>
+                <p className="text-slate-500 text-xs">{t('common.app_tagline')}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900 leading-tight">KrishiConnect</h1>
-              <p className="text-slate-500 text-xs">Smart Agricultural Procurement Portal</p>
-            </div>
+            <LanguageSwitcher />
           </div>
 
           <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-5 sm:p-8 space-y-5">
@@ -208,37 +217,37 @@ export default function AuthPage() {
                 id="tab-otp"
                 type="button"
                 onClick={() => setMode('otp')}
-                className={`flex-1 py-2 px-1 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-2 px-1 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   mode === 'otp'
                     ? 'bg-white text-green-800 shadow-sm border border-slate-200/50'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>📱 Mobile OTP</span>
+                <span>{t('auth.tab_otp')}</span>
               </button>
               <button
                 id="tab-login"
                 type="button"
                 onClick={() => setMode('password')}
-                className={`flex-1 py-2 px-1 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-2 px-1 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   mode === 'password'
                     ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>Password</span>
+                <span>{t('auth.tab_password')}</span>
               </button>
               <button
                 id="tab-register"
                 type="button"
                 onClick={() => setMode('register')}
-                className={`flex-1 py-2 px-1 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-2 px-1 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   mode === 'register'
                     ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>Register</span>
+                <span>{t('auth.tab_register')}</span>
               </button>
             </div>
 
@@ -248,10 +257,10 @@ export default function AuthPage() {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label htmlFor="otp-mobile" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                      Mobile Number
+                      {t('auth.mobile_label')}
                     </label>
                     <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                      Demo OTP: 123456
+                      {t('auth.demo_otp_hint')}
                     </span>
                   </div>
                   <div className="relative flex items-center">
@@ -259,7 +268,7 @@ export default function AuthPage() {
                     <input
                       id="otp-mobile"
                       type="tel"
-                      placeholder="Enter 10-digit mobile"
+                      placeholder={t('auth.mobile_placeholder')}
                       value={form.mobile}
                       onChange={e => update('mobile', e.target.value)}
                       className="w-full !pl-10 !pr-24 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm font-medium transition-all shadow-2xs"
@@ -271,7 +280,7 @@ export default function AuthPage() {
                       disabled={otpSending}
                       className="absolute right-2 px-2.5 py-1 text-xs font-semibold bg-green-50 text-green-700 hover:bg-green-100 rounded-lg transition-colors border border-green-200 flex items-center gap-1 z-10 cursor-pointer"
                     >
-                      {otpSending ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Get OTP'}
+                      {otpSending ? <RefreshCw className="w-3 h-3 animate-spin" /> : t('auth.get_otp')}
                     </button>
                   </div>
                 </div>
@@ -279,14 +288,14 @@ export default function AuthPage() {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label htmlFor="otp-code" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                      6-Digit OTP Code
+                      {t('auth.otp_code_label')}
                     </label>
                     <button
                       type="button"
                       onClick={() => setOtpCode('123456')}
                       className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1 cursor-pointer"
                     >
-                      <Sparkles className="w-3 h-3" /> Auto-Fill (123456)
+                      <Sparkles className="w-3 h-3" /> {t('auth.auto_fill_otp')}
                     </button>
                   </div>
                   <div className="relative flex items-center">
@@ -295,7 +304,7 @@ export default function AuthPage() {
                       id="otp-code"
                       type="text"
                       maxLength={6}
-                      placeholder="Enter 6-digit code"
+                      placeholder={t('auth.otp_code_placeholder')}
                       value={otpCode}
                       onChange={e => setOtpCode(e.target.value)}
                       className="w-full !pl-10 !pr-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent tracking-widest font-mono text-sm font-bold transition-all shadow-2xs"
@@ -307,7 +316,7 @@ export default function AuthPage() {
                 <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-start gap-2">
                   <span className="text-sm shrink-0">💡</span>
                   <p className="leading-relaxed">
-                    <strong>Demo Hackathon Mode:</strong> Any 10-digit mobile will auto-provision a verified Farmer profile with master OTP <strong>123456</strong>.
+                    <strong>{t('auth.demo_hackathon_mode')}</strong> {t('auth.demo_hackathon_desc')}
                   </p>
                 </div>
 
@@ -320,7 +329,7 @@ export default function AuthPage() {
                   {loading ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <>Verify OTP & Enter Portal <ArrowRight className="w-4 h-4" /></>
+                    <>{t('auth.verify_and_enter')} <ArrowRight className="w-4 h-4" /></>
                   )}
                 </button>
               </form>
@@ -331,14 +340,14 @@ export default function AuthPage() {
               <form onSubmit={handlePasswordLogin} className="space-y-4">
                 <div>
                   <label htmlFor="login-mobile" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Mobile Number
+                    {t('auth.mobile_label')}
                   </label>
                   <div className="relative flex items-center">
                     <Phone className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none z-10" />
                     <input
                       id="login-mobile"
                       type="tel"
-                      placeholder="Enter 10-digit mobile number"
+                      placeholder={t('auth.mobile_password_placeholder')}
                       value={form.mobile}
                       onChange={e => update('mobile', e.target.value)}
                       className="w-full !pl-10 !pr-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm transition-all shadow-2xs"
@@ -349,13 +358,13 @@ export default function AuthPage() {
 
                 <div>
                   <label htmlFor="login-password" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                    Password
+                    {t('auth.password_label')}
                   </label>
                   <div className="relative flex items-center">
                     <input
                       id="login-password"
                       type={showPass ? 'text' : 'password'}
-                      placeholder="Enter account password"
+                      placeholder={t('auth.password_placeholder')}
                       value={form.password}
                       onChange={e => update('password', e.target.value)}
                       className="w-full !pl-4 !pr-11 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm transition-all shadow-2xs"
@@ -380,7 +389,7 @@ export default function AuthPage() {
                   {loading ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <>Sign In with Password <ArrowRight className="w-4 h-4" /></>
+                    <>{t('auth.sign_in_with_password')} <ArrowRight className="w-4 h-4" /></>
                   )}
                 </button>
               </form>
@@ -390,13 +399,13 @@ export default function AuthPage() {
             {mode === 'register' && (
               <form onSubmit={handleRegister} className="space-y-3.5">
                 <div>
-                  <label htmlFor="reg-name" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Full Name *</label>
+                  <label htmlFor="reg-name" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">{t('auth.full_name_label')}</label>
                   <div className="relative flex items-center">
                     <User className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none z-10" />
                     <input
                       id="reg-name"
                       type="text"
-                      placeholder="e.g. Ramesh Kumar"
+                      placeholder={t('auth.full_name_placeholder')}
                       value={form.full_name}
                       onChange={e => update('full_name', e.target.value)}
                       className="w-full !pl-10 !pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm shadow-2xs"
@@ -406,13 +415,13 @@ export default function AuthPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="reg-mobile" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Mobile Number *</label>
+                  <label htmlFor="reg-mobile" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">{t('auth.mobile_label')} *</label>
                   <div className="relative flex items-center">
                     <Phone className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none z-10" />
                     <input
                       id="reg-mobile"
                       type="tel"
-                      placeholder="10-digit mobile number"
+                      placeholder={t('auth.mobile_placeholder')}
                       value={form.mobile}
                       onChange={e => update('mobile', e.target.value)}
                       className="w-full !pl-10 !pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm shadow-2xs"
@@ -423,11 +432,11 @@ export default function AuthPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div>
-                    <label htmlFor="reg-village" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Village *</label>
+                    <label htmlFor="reg-village" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">{t('auth.village_label')}</label>
                     <input
                       id="reg-village"
                       type="text"
-                      placeholder="Village name"
+                      placeholder={t('auth.village_placeholder')}
                       value={form.village}
                       onChange={e => update('village', e.target.value)}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm shadow-2xs"
@@ -435,11 +444,11 @@ export default function AuthPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="reg-district" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">District *</label>
+                    <label htmlFor="reg-district" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">{t('auth.district_label')}</label>
                     <input
                       id="reg-district"
                       type="text"
-                      placeholder="District"
+                      placeholder={t('auth.district_placeholder')}
                       value={form.district}
                       onChange={e => update('district', e.target.value)}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm shadow-2xs"
@@ -450,7 +459,7 @@ export default function AuthPage() {
 
                 <div>
                   <label htmlFor="reg-farmer-id" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                    Farmer ID <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                    {t('auth.farmer_id_label')} <span className="text-slate-400 font-normal lowercase">{t('auth.optional')}</span>
                   </label>
                   <input
                     id="reg-farmer-id"
@@ -463,12 +472,12 @@ export default function AuthPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="reg-password" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Password *</label>
+                  <label htmlFor="reg-password" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">{t('auth.register_password_label')}</label>
                   <div className="relative flex items-center">
                     <input
                       id="reg-password"
                       type={showPass ? 'text' : 'password'}
-                      placeholder="Create a secure password"
+                      placeholder={t('auth.register_password_placeholder')}
                       value={form.password}
                       onChange={e => update('password', e.target.value)}
                       className="w-full !pl-4 !pr-11 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm shadow-2xs"
@@ -493,7 +502,7 @@ export default function AuthPage() {
                   {loading ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <>Register Farmer Account <ArrowRight className="w-4 h-4" /></>
+                    <>{t('auth.register_btn')} <ArrowRight className="w-4 h-4" /></>
                   )}
                 </button>
               </form>
@@ -502,7 +511,7 @@ export default function AuthPage() {
             {/* Quick Demo Fill Buttons */}
             <div className="border-t border-slate-100 pt-3.5">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">⚡ 1-Click Demo Farmers</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{t('auth.demo_farmers_header')}</span>
                 <span className="text-[10px] text-slate-400 font-mono">OTP: 123456</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -513,7 +522,7 @@ export default function AuthPage() {
                 >
                   <span className="text-base shrink-0">🌾</span>
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-800 group-hover:text-green-800 truncate">Ramesh Kumar</p>
+                    <p className="font-semibold text-slate-800 group-hover:text-green-800 truncate">{t('auth.demo_farmer_1_name')}</p>
                     <p className="text-[10px] text-slate-400 font-mono">9876543210</p>
                   </div>
                 </button>
@@ -524,7 +533,7 @@ export default function AuthPage() {
                 >
                   <span className="text-base shrink-0">🚜</span>
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-800 group-hover:text-green-800 truncate">Suresh Ghosh</p>
+                    <p className="font-semibold text-slate-800 group-hover:text-green-800 truncate">{t('auth.demo_farmer_2_name')}</p>
                     <p className="text-[10px] text-slate-400 font-mono">9000000002</p>
                   </div>
                 </button>
@@ -537,8 +546,8 @@ export default function AuthPage() {
                 href="/admin"
                 className="text-xs text-slate-500 hover:text-green-700 font-medium inline-flex items-center gap-1 transition-colors"
               >
-                <span>Are you a Mandi Officer or District Admin?</span>
-                <span className="text-green-600 font-semibold underline">Official Portal →</span>
+                <span>{t('auth.mandi_officer_prompt')}</span>
+                <span className="text-green-600 font-semibold underline">{t('auth.official_portal_link')}</span>
               </a>
             </div>
           </div>

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../AuthContext'
 import { useNotifications } from '../NotificationContext'
+import { useTranslation } from '../i18n'
 import { Wheat, MapPin, Clock, Users, Star, ChevronRight, History, Bell, LogOut, X, CheckCircle, Ticket, User, ChevronDown, Settings, Scale } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
 import NotificationCenter from '../components/NotificationCenter'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import LiveQueueScreen from '../components/farmer/LiveQueueScreen'
 import CentreList from '../components/farmer/CentreList'
 import SlotBookingModal from '../components/farmer/SlotBookingModal'
@@ -16,13 +18,8 @@ import FarmerHistory from '../components/farmer/FarmerHistory'
 import MspRatesModal from '../components/farmer/MspRatesModal'
 import { useFarmerNotifications, useCentreQueue } from '../hooks/useRealtimeQueue'
 
-const TABS = [
-  { id: 'centres', label: 'Centres', icon: MapPin },
-  { id: 'queue', label: 'My Queue', icon: Ticket },
-  { id: 'history', label: 'History', icon: History },
-]
-
 function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -37,7 +34,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
       <button
         id="btn-profile-menu"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors border border-white/20"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors border border-white/20 cursor-pointer"
       >
         <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
           <User className="w-4 h-4 text-white" />
@@ -53,7 +50,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
               <User className="w-5 h-5 text-white" />
             </div>
             <p className="font-bold text-white text-sm">{user.full_name}</p>
-            <p className="text-green-200 text-xs">Farmer · {user.mobile}</p>
+            <p className="text-green-200 text-xs">{t('nav.farmer_role')} · {user.mobile}</p>
           </div>
           <div className="p-3 space-y-1 border-b border-slate-100">
             {user.village && (
@@ -63,31 +60,31 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
               </div>
             )}
             {user.farmer_id && (
-              <div className="px-2 py-1 text-xs text-slate-400 font-mono">ID: {user.farmer_id}</div>
+              <div className="px-2 py-1 text-xs text-slate-400 font-mono">{t('nav.id_prefix')} {user.farmer_id}</div>
             )}
           </div>
           <div className="p-2 space-y-1">
             <button
               onClick={() => { onOpenMsp(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-green-800 hover:bg-green-50 rounded-xl transition-colors font-medium"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-green-800 hover:bg-green-50 rounded-xl transition-colors font-medium cursor-pointer"
             >
               <Scale className="w-4 h-4 text-green-700" />
-              Govt MSP Rates
+              {t('nav.govt_msp_rates')}
             </button>
             <button
               onClick={() => { onEditProfile(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors font-medium"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors font-medium cursor-pointer"
             >
               <Settings className="w-4 h-4 text-slate-500" />
-              Edit Profile
+              {t('nav.edit_profile')}
             </button>
             <button
               id="btn-logout"
               onClick={() => { logout(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
-              Sign Out
+              {t('nav.sign_out')}
             </button>
           </div>
         </div>
@@ -99,6 +96,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
 export default function FarmerApp() {
   const { user, logout } = useAuth()
   const { addNotification } = useNotifications()
+  const { t, translateCrop } = useTranslation()
   const [tab, setTab] = useState('centres')
   const [centres, setCentres] = useState([])
   const [loadingCentres, setLoadingCentres] = useState(true)
@@ -110,17 +108,23 @@ export default function FarmerApp() {
   const [showProfileEdit, setShowProfileEdit] = useState(false)
   const [showMspModal, setShowMspModal] = useState(false)
 
+  const TABS = [
+    { id: 'centres', label: t('nav.centres'), icon: MapPin },
+    { id: 'queue', label: t('nav.my_queue'), icon: Ticket },
+    { id: 'history', label: t('nav.history'), icon: History },
+  ]
+
   const loadCentres = useCallback(async (overrideUser) => {
     const activeUser = overrideUser || user
     try {
       const data = await api.getCentres(activeUser?.village, activeUser?.district)
       setCentres(data)
     } catch (e) {
-      toast.error('Could not load centres')
+      toast.error(t('toasts.could_not_load_centres'))
     } finally {
       setLoadingCentres(false)
     }
-  }, [user])
+  }, [user, t])
 
   const loadActiveQueue = useCallback(async () => {
     try {
@@ -141,84 +145,84 @@ export default function FarmerApp() {
     token,
     useCallback((data) => {
       if (data.type === 'PAYMENT_PAID') {
-        toast.success(data.message || '🎉 Direct Benefit Transfer credited to your bank account!', {
+        toast.success(t('toasts.dbt_paid_toast'), {
           id: 'farmer-payment-paid',
           duration: 8000,
           icon: '💰'
         })
         addNotification({
-          title: 'DBT Payment Disbursed',
-          message: data.message || `Payment has been settled and transferred directly to your bank account via Direct Benefit Transfer.`,
+          title: t('notifications.dbt_paid_title'),
+          message: t('notifications.dbt_paid_msg'),
           type: 'payment',
           eventKey: `payment-${data.payment_id || Date.now()}`
         })
         loadActiveQueue()
       } else if (data.type === 'COMPLETED') {
-        toast.success(data.message || '✅ Procurement completed! Generating invoice...', {
+        toast.success(t('toasts.proc_completed_toast'), {
           id: 'farmer-proc-completed',
           duration: 6000
         })
         addNotification({
-          title: 'Procurement Completed',
-          message: data.message || `Your produce intake has been certified and completed. Official invoice & receipt generated.`,
+          title: t('notifications.proc_completed_title'),
+          message: t('notifications.proc_completed_msg'),
           type: 'success',
           eventKey: `completed-${data.queue_id || data.token || Date.now()}`
         })
         loadActiveQueue()
       } else if (data.type === 'CALLED') {
-        toast(data.message || '🔔 Your turn! Please proceed to the counter.', {
+        toast(t('toasts.turn_called_toast'), {
           id: 'farmer-called',
           duration: 8000,
           icon: '🔔'
         })
         addNotification({
-          title: 'Your Turn Called at Counter',
-          message: data.message || `Token called! Please proceed immediately to the counter for digital moisture testing & weighbridge intake.`,
+          title: t('notifications.turn_called_title'),
+          message: t('notifications.turn_called_msg'),
           type: 'queue',
           eventKey: `called-${data.queue_id || data.token || Date.now()}`
         })
         loadActiveQueue()
       } else if (data.type === 'PROCESSING') {
-        toast(data.message || '⚙️ Procurement is being processed at the counter.', {
+        toast(t('toasts.processing_toast'), {
           id: 'farmer-processing',
           duration: 5000,
           icon: '⚙️'
         })
         addNotification({
-          title: 'Processing at Counter',
-          message: data.message || `Your produce is undergoing digital assaying and weighbridge intake at the counter.`,
+          title: t('notifications.processing_title'),
+          message: t('notifications.processing_msg'),
           type: 'info',
           eventKey: `processing-${data.queue_id || data.token || Date.now()}`
         })
         loadActiveQueue()
       } else if (data.type === 'QUALITY_DECISION') {
         if (data.status === 'DEFERRED_SUN_DRYING') {
-          toast(data.message || '🌾 Sun-drying grace granted. Please dry your produce in the mandi yard.', {
+          toast(t('toasts.sun_drying_toast'), {
             id: 'farmer-sun-drying',
             duration: 8000,
             icon: '☀️'
           })
           addNotification({
-            title: 'Sun-Drying Grace Granted',
-            message: data.message || `High moisture level detected. Granted 2.5 hours mandi courtyard sun-drying grace period.`,
+            title: t('notifications.sun_drying_title'),
+            message: t('notifications.sun_drying_msg'),
             type: 'assay',
             eventKey: `deferral-${data.queue_id || Date.now()}`
           })
         } else if (data.status === 'REJECTED') {
-          toast.error(data.message || '⚠️ Produce lot did not meet mandatory mandi quality standards.', {
+          toast.error(t('toasts.rejected_toast'), {
             id: 'farmer-rejected',
             duration: 8000,
           })
           addNotification({
-            title: 'Lot Rejection Notice',
-            message: data.message || `Produce exceeded safe moisture limit (20%+) and failed mandatory Mandi Safety Code standards.`,
+            title: t('notifications.rejection_title'),
+            message: t('notifications.rejection_msg'),
             type: 'alert',
             eventKey: `rejected-${data.queue_id || Date.now()}`
           })
         }
         loadActiveQueue()
       }
-    }, [loadActiveQueue, addNotification])
+    }, [loadActiveQueue, addNotification, t])
   )
 
   // Listen to centre queue changes when active queue is present
@@ -230,10 +234,13 @@ export default function FarmerApp() {
     setActiveQueue(null)
     loadActiveQueue()
     setTab('queue')
-    toast.success(`🎫 Token ${entry.token} booked successfully!`)
+    toast.success(t('toasts.token_booked_success', { token: entry.token }))
     addNotification({
-      title: `Queue Slot Booked: Token ${entry.token}`,
-      message: `Successfully booked for ${entry.crop} at ${entry.centre_name || 'Procurement Centre'}. Track live queue in 'My Queue' tab.`,
+      title: t('notifications.slot_booked_title', { token: entry.token }),
+      message: t('notifications.slot_booked_msg', {
+        crop: translateCrop(entry.crop),
+        centre: entry.centre_name || t('nav.centres')
+      }),
       type: 'queue',
       eventKey: `booking-${entry.id || entry.token}`
     })
@@ -250,18 +257,20 @@ export default function FarmerApp() {
                 <Wheat className="w-5 h-5 text-green-200" />
               </div>
               <div>
-                <h1 className="text-lg font-bold leading-tight">KrishiConnect</h1>
-                <p className="text-green-300 text-xs">Smart Agricultural Procurement</p>
+                <h1 className="text-lg font-bold leading-tight">{t('common.app_name')}</h1>
+                <p className="text-green-300 text-xs">{t('common.app_tagline')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <LanguageSwitcher dark={true} />
               <button
                 onClick={() => setShowMspModal(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-semibold border border-amber-400/30 transition-colors"
-                title="View Government MSP Floor Prices"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-semibold border border-amber-400/30 transition-colors cursor-pointer"
+                title={t('msp.title')}
               >
                 <Scale className="w-3.5 h-3.5 text-amber-300" />
-                <span className="hidden sm:inline">Govt</span> MSP Rates
+                <span className="hidden sm:inline">{t('nav.govt_msp_rates')}</span>
+                <span className="sm:hidden">MSP</span>
               </button>
               <NotificationCenter dark={true} />
               <ProfileMenu
@@ -283,11 +292,13 @@ export default function FarmerApp() {
               <div className="live-dot" />
               <div>
                 <span className="font-mono font-bold text-lg">{activeQueue.queue_entry.token}</span>
-                <span className="text-green-200 text-sm ml-2">· {activeQueue.farmers_ahead} ahead · ~{Math.round(activeQueue.estimated_wait_minutes)} min</span>
+                <span className="text-green-200 text-sm ml-2">
+                  · {activeQueue.farmers_ahead} {t('queue.farmers_ahead')} · ~{Math.round(activeQueue.estimated_wait_minutes)} {t('common.min')}
+                </span>
               </div>
             </div>
-            <button onClick={() => setTab('queue')} className="text-green-200 hover:text-white text-sm font-semibold flex items-center gap-1">
-              View <ChevronRight className="w-4 h-4" />
+            <button onClick={() => setTab('queue')} className="text-green-200 hover:text-white text-sm font-semibold flex items-center gap-1 cursor-pointer">
+              {t('common.view')} <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -331,9 +342,9 @@ export default function FarmerApp() {
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Ticket className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-700 mb-2">No Active Booking</h3>
-              <p className="text-slate-500 text-sm mb-6">Book a slot at a procurement centre to get your queue token</p>
-              <button onClick={() => setTab('centres')} className="btn-primary">Browse Centres</button>
+              <h3 className="text-lg font-semibold text-slate-700 mb-2">{t('token.no_active_booking')}</h3>
+              <p className="text-slate-500 text-sm mb-6">{t('token.no_active_booking_desc')}</p>
+              <button onClick={() => setTab('centres')} className="btn-primary cursor-pointer">{t('token.browse_centres')}</button>
             </div>
           )
         )}
@@ -348,7 +359,7 @@ export default function FarmerApp() {
               key={id}
               id={`tab-${id}`}
               onClick={() => setTab(id)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-colors ${
+              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-colors cursor-pointer ${
                 tab === id ? 'text-green-700 font-bold' : 'text-slate-400 font-medium'
               }`}
             >

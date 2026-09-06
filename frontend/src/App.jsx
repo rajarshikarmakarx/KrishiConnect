@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
+import { LanguageProvider, useTranslation } from './i18n'
 import { AuthProvider, useAuth } from './AuthContext'
 import { NotificationProvider } from './NotificationContext'
 import AuthPage from './pages/AuthPage'
@@ -10,13 +11,14 @@ import AdminApp from './pages/AdminApp'
 
 function FarmerRoute() {
   const { user, loading } = useAuth()
+  const { t } = useTranslation()
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-green-700 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-600 font-medium">Loading KrishiConnect...</p>
+          <p className="text-slate-600 font-medium">{t('common.loading_app')}</p>
         </div>
       </div>
     )
@@ -83,36 +85,38 @@ function AdminRoute() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <NotificationProvider>
-          <Routes>
-            <Route path="/" element={<FarmerRoute />} />
-            <Route path="/admin" element={<AdminRoute />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 5000,
-              style: {
-                background: '#fff',
-                color: '#0f172a',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontFamily: 'Inter, sans-serif',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-              },
-              success: {
-                iconTheme: { primary: '#15803d', secondary: '#fff' }
-              },
-              error: {
-                iconTheme: { primary: '#dc2626', secondary: '#fff' }
-              }
-            }}
-          />
-        </NotificationProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <Routes>
+              <Route path="/" element={<FarmerRoute />} />
+              <Route path="/admin" element={<AdminRoute />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 5000,
+                style: {
+                  background: '#fff',
+                  color: '#0f172a',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontFamily: 'Inter, sans-serif',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                },
+                success: {
+                  iconTheme: { primary: '#15803d', secondary: '#fff' }
+                },
+                error: {
+                  iconTheme: { primary: '#dc2626', secondary: '#fff' }
+                }
+              }}
+            />
+          </NotificationProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   )
 }

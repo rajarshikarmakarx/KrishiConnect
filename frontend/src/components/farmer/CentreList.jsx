@@ -1,12 +1,20 @@
 import { useState } from 'react'
 import { MapPin, Clock, Users, Building2, ChevronRight, Star, TrendingDown, Sparkles, Navigation, AlertTriangle, Info } from 'lucide-react'
+import { useTranslation } from '../../i18n'
 
 function StatusBadge({ status }) {
+  const { t } = useTranslation()
   const map = { OPEN: 'bg-green-100 text-green-700', CLOSED: 'bg-red-100 text-red-700', FULL: 'bg-orange-100 text-orange-700' }
-  return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[status] || map.OPEN}`}>{status}</span>
+  const labelMap = {
+    OPEN: t('common.open'),
+    CLOSED: t('common.closed'),
+    FULL: t('common.full')
+  }
+  return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[status] || map.OPEN}`}>{labelMap[status] || status}</span>
 }
 
 function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
+  const { t } = useTranslation()
   const eta = Math.round(centre.estimated_wait_minutes)
   const roundtripTravelMins = Math.round(centre.distance_km * 2 * 3.0)
   const totalDoorToDoor = roundtripTravelMins + eta
@@ -22,7 +30,7 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
       {isRecommended && !isLongDistance && (
         <div className="bg-gradient-to-r from-green-800 to-green-700 text-white px-4 py-2 flex items-center gap-2 text-sm font-semibold">
           <Star className="w-4 h-4 fill-amber-300 text-amber-300" />
-          <span>Smart AI Pick: Best Overall Centre</span>
+          <span>{t('centres.smart_pick_badge')}</span>
           {centre.recommendation_reasons?.length > 0 && (
             <span className="ml-auto text-green-200 font-normal text-xs bg-black/20 px-2 py-0.5 rounded-full">
               {centre.recommendation_reasons[0]}
@@ -34,9 +42,9 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
       {isRecommended && isLongDistance && (
         <div className="bg-gradient-to-r from-amber-700 to-amber-600 text-white px-4 py-2 flex items-center gap-2 text-sm font-semibold">
           <AlertTriangle className="w-4 h-4 text-amber-200" />
-          <span>Nearest Available Regional Centre</span>
+          <span>{t('centres.nearest_regional_badge')}</span>
           <span className="ml-auto text-amber-100 font-normal text-xs bg-black/20 px-2 py-0.5 rounded-full">
-            {centre.distance_km} km away
+            {t('centres.km_away', { distance: centre.distance_km })}
           </span>
         </div>
       )}
@@ -48,13 +56,13 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
               {centre.name}
               {isRecommended && !isLongDistance && (
                 <span className="text-[10px] bg-green-100 text-green-800 font-bold px-1.5 py-0.5 rounded-md border border-green-200">
-                  TOP MATCH
+                  {t('common.top_match')}
                 </span>
               )}
               {isLongDistance && (
                 <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-md border border-amber-200 flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" />
-                  REGIONAL (50+ KM)
+                  {t('common.regional')}
                 </span>
               )}
             </h3>
@@ -62,7 +70,7 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
               <MapPin className="w-3.5 h-3.5 text-slate-400" />
               <span>{centre.location}</span>
               <span className={`ml-1 font-medium ${isLongDistance ? 'text-amber-700 font-semibold' : 'text-slate-500'}`}>
-                · {centre.distance_km} km away
+                · {t('centres.km_away', { distance: centre.distance_km })}
               </span>
             </div>
           </div>
@@ -73,19 +81,19 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
           <div className="text-center p-3 bg-slate-50 rounded-xl">
             <div className="text-2xl font-bold text-slate-800">{centre.waiting_count}</div>
             <div className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
-              <Users className="w-3 h-3" />Waiting
+              <Users className="w-3 h-3" />{t('common.waiting')}
             </div>
           </div>
           <div className="text-center p-3 bg-slate-50 rounded-xl">
             <div className="text-2xl font-bold text-green-700">{centre.active_counters}</div>
             <div className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
-              <Building2 className="w-3 h-3" />Counters
+              <Building2 className="w-3 h-3" />{t('common.counters')}
             </div>
           </div>
           <div className="text-center p-3 bg-amber-50 rounded-xl">
-            <div className="text-2xl font-bold text-amber-700">~{eta}m</div>
+            <div className="text-2xl font-bold text-amber-700">~{eta}{t('common.min')}</div>
             <div className="text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
-              <Clock className="w-3 h-3" />Est. Wait
+              <Clock className="w-3 h-3" />{t('common.est_wait')}
             </div>
           </div>
         </div>
@@ -96,10 +104,10 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
         }`}>
           <span className="flex items-center gap-1.5 font-medium">
             <Navigation className={`w-3.5 h-3.5 ${isLongDistance ? 'text-amber-600' : 'text-blue-600'}`} />
-            Door-to-Door Estimated Time:
+            {t('centres.door_to_door_time')}
           </span>
           <span className="font-bold">
-            ~{totalDoorToDoor} min <span className={`font-normal ${isLongDistance ? 'text-amber-700' : 'text-slate-400'}`}>({roundtripTravelMins}m travel + {eta}m wait)</span>
+            ~{totalDoorToDoor} {t('common.min')} <span className={`font-normal ${isLongDistance ? 'text-amber-700' : 'text-slate-400'}`}>{t('centres.door_to_door_breakdown', { travel: roundtripTravelMins, wait: eta })}</span>
           </span>
         </div>
 
@@ -121,14 +129,14 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
         )}
 
         <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-          <span className="text-sm text-slate-500">{centre.available_slots_today} slots available today</span>
+          <span className="text-sm text-slate-500">{t('centres.slots_available_today', { count: centre.available_slots_today })}</span>
           <button
             id={`btn-select-centre-${centre.id}`}
             onClick={() => onSelect(centre)}
             disabled={centre.status !== 'OPEN' || centre.available_slots_today === 0}
-            className="btn-primary py-2 px-4 text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary py-2 px-4 text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            Book Slot <ChevronRight className="w-4 h-4" />
+            {t('centres.book_slot')} <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -137,6 +145,8 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
 }
 
 export default function CentreList({ centres, loading, onSelect, userLocation }) {
+  const { t } = useTranslation()
+
   if (loading) return (
     <div className="space-y-4 animate-pulse">
       {[1, 2, 3].map(i => <div key={i} className="h-48 bg-slate-100 rounded-2xl" />)}
@@ -144,7 +154,7 @@ export default function CentreList({ centres, loading, onSelect, userLocation })
   )
 
   if (!centres.length) return (
-    <div className="text-center py-16 text-slate-500">No procurement centres found</div>
+    <div className="text-center py-16 text-slate-500">{t('centres.no_centres_found')}</div>
   )
 
   const nearbyCentres = centres.filter(c => c.distance_km < 50.0)
@@ -160,9 +170,9 @@ export default function CentreList({ centres, loading, onSelect, userLocation })
             <Sparkles className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0 text-xs">
-            <p className="font-bold text-emerald-900 text-sm">Smart Queue-Aware Centre Routing</p>
+            <p className="font-bold text-emerald-900 text-sm">{t('centres.ai_routing_title')}</p>
             <p className="text-emerald-700 mt-0.5">
-              Centres are dynamically ranked using real-time queue depth, road distance, and historical throughput to minimize your total door-to-door time.
+              {t('centres.ai_routing_desc')}
             </p>
           </div>
         </div>
@@ -176,10 +186,10 @@ export default function CentreList({ centres, loading, onSelect, userLocation })
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-amber-900 text-sm">
-              No Procurement Centres Within 50 km
+              {t('centres.no_nearby_title')}
             </h3>
             <p className="text-amber-800 text-xs mt-1 leading-relaxed">
-              There are currently no direct procurement centres operational in your immediate vicinity{userLocation ? ` (${userLocation})` : ''}. Showing nearest available centres in adjacent districts (50+ km transit):
+              {t('centres.no_nearby_desc', { location: userLocation ? ` (${userLocation})` : '' })}
             </p>
           </div>
         </div>
@@ -189,9 +199,9 @@ export default function CentreList({ centres, loading, onSelect, userLocation })
       {nearbyCentres.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-bold text-slate-900">Nearby Procurement Centres (&lt; 50 km)</h2>
+            <h2 className="text-lg font-bold text-slate-900">{t('centres.nearby_heading')}</h2>
             <span className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded-full">
-              {nearbyCentres.length} available
+              {t('centres.available_count', { count: nearbyCentres.length })}
             </span>
           </div>
 
@@ -213,10 +223,10 @@ export default function CentreList({ centres, loading, onSelect, userLocation })
           <div className="flex items-center justify-between mb-2 pt-2">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-amber-600" />
-              {hasNoNearbyCentres ? 'Available Regional Centres' : 'Other Regional Centres (50+ km away)'}
+              {hasNoNearbyCentres ? t('centres.regional_available_heading') : t('centres.regional_heading')}
             </h2>
             <span className="text-xs text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full font-medium">
-              Longer Transit
+              {t('centres.longer_transit')}
             </span>
           </div>
 

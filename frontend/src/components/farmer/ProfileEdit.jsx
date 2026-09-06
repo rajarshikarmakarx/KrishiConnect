@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { User, Phone, MapPin, Save, Trash2, AlertCircle, X, Building2 } from 'lucide-react'
 import api from '../../api'
 import { useAuth } from '../../AuthContext'
+import { useTranslation } from '../../i18n'
 
 const DEFAULT_DISTRICTS = [
   'Howrah',
@@ -23,6 +24,7 @@ const FALLBACK_VILLAGES = {
 
 export default function ProfileEdit({ onClose, onProfileUpdated }) {
   const { user, setUser, logout } = useAuth()
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     mobile: user?.mobile || '',
@@ -129,7 +131,7 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Edit Profile & Location</h2>
+          <h2 className="text-xl font-bold text-white">{t('profile.title')}</h2>
           <button
             onClick={onClose}
             className="text-white/90 hover:text-white transition-colors"
@@ -145,7 +147,7 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
               <div className="bg-green-100 rounded-full p-1">
                 <Save className="w-4 h-4 text-green-600" />
               </div>
-              <p className="text-sm text-green-700 font-medium">Profile & location updated successfully!</p>
+              <p className="text-sm text-green-700 font-medium">{t('profile.success')}</p>
             </div>
           )}
 
@@ -162,7 +164,7 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
             {/* Full Name */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Full Name
+                {t('profile.full_name')}
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -172,7 +174,7 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
                   value={formData.full_name}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
-                  placeholder="Enter your full name"
+                  placeholder={t('profile.name_placeholder')}
                   required
                 />
               </div>
@@ -181,7 +183,7 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
             {/* Mobile */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Mobile Number
+                {t('profile.mobile')}
               </label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -191,7 +193,7 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
                   value={formData.mobile}
                   onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
-                  placeholder="10-digit mobile number"
+                  placeholder={t('profile.mobile_placeholder')}
                   pattern="[0-9]{10}"
                   required
                 />
@@ -201,7 +203,7 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
             {/* District Selector */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                District (West Bengal)
+                {t('profile.district')}
               </label>
               <div className="relative">
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
@@ -222,7 +224,7 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
             {/* Village / Block Selector */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Village / Block
+                {t('profile.village')}
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
@@ -245,13 +247,13 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
                     value={formData.village}
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
-                    placeholder="Enter village name"
+                    placeholder={t('profile.village_placeholder')}
                     required
                   />
                 )}
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
-                Route distances and centre ETA will dynamically calculate from this location.
+                {t('profile.village_hint')}
               </p>
             </div>
 
@@ -260,18 +262,18 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors text-sm"
+                className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors text-sm cursor-pointer"
                 disabled={loading}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm cursor-pointer"
                 disabled={loading}
               >
                 <Save className="w-4 h-4" />
-                {loading ? 'Saving...' : 'Save Changes'}
+                {loading ? t('profile.saving') : t('profile.save_btn')}
               </button>
             </div>
           </form>
@@ -281,34 +283,34 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
             {!showDeleteConfirm ? (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="w-full text-red-600 hover:text-red-700 font-medium text-xs py-1.5 flex items-center justify-center gap-1.5 transition-colors"
+                className="w-full text-red-600 hover:text-red-700 font-medium text-xs py-1.5 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Delete Account
+                {t('profile.delete_account')}
               </button>
             ) : (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                 <div className="flex items-start gap-2 mb-2">
                   <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs font-semibold text-red-900">Delete Account?</p>
-                    <p className="text-[11px] text-red-700">This action cannot be undone. All your data will be permanently deleted.</p>
+                    <p className="text-xs font-semibold text-red-900">{t('profile.delete_confirm_title')}</p>
+                    <p className="text-[11px] text-red-700">{t('profile.delete_confirm_desc')}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors"
+                    className="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
                     disabled={loading}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="flex-1 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+                    className="flex-1 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                     disabled={loading}
                   >
-                    {loading ? 'Deleting...' : 'Yes, Delete'}
+                    {loading ? t('profile.deleting') : t('profile.confirm_delete')}
                   </button>
                 </div>
               </div>

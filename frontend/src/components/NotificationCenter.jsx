@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Bell, CheckCheck, Trash2, X, AlertTriangle, CheckCircle2, Clock, Sparkles, Activity, FileText } from 'lucide-react'
 import { useNotifications } from '../NotificationContext'
+import { useTranslation } from '../i18n'
 
 export default function NotificationCenter({ className = '', dark = false, headerVariant = false }) {
+  const { t } = useTranslation()
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification, clearAll } = useNotifications()
   const [isOpen, setIsOpen] = useState(false)
   const [filter, setFilter] = useState('all') // 'all' | 'unread'
@@ -29,19 +31,19 @@ export default function NotificationCenter({ className = '', dark = false, heade
     : notifications
 
   const formatTimeAgo = (timestamp) => {
-    if (!timestamp) return 'Just now'
+    if (!timestamp) return t('common.time_just_now')
     try {
       const diffMs = Date.now() - new Date(timestamp).getTime()
       const diffSec = Math.floor(diffMs / 1000)
-      if (diffSec < 60) return 'Just now'
+      if (diffSec < 60) return t('common.time_just_now')
       const diffMin = Math.floor(diffSec / 60)
-      if (diffMin < 60) return `${diffMin}m ago`
+      if (diffMin < 60) return t('common.time_mins_ago', { min: diffMin })
       const diffHour = Math.floor(diffMin / 60)
-      if (diffHour < 24) return `${diffHour}h ago`
+      if (diffHour < 24) return t('common.time_hours_ago', { hour: diffHour })
       const diffDay = Math.floor(diffHour / 24)
-      return `${diffDay}d ago`
+      return t('common.time_days_ago', { day: diffDay })
     } catch {
-      return 'Recently'
+      return t('common.time_just_now')
     }
   }
 
@@ -90,7 +92,7 @@ export default function NotificationCenter({ className = '', dark = false, heade
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notifications"
-        className={`relative p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 ${
+        className={`relative p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 cursor-pointer ${
           isDarkHeader
             ? 'text-white/85 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 bg-white'
@@ -113,10 +115,10 @@ export default function NotificationCenter({ className = '', dark = false, heade
           {/* Header */}
           <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/90 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-sm tracking-tight text-slate-900">Notification Center</span>
+              <span className="font-bold text-sm tracking-tight text-slate-900">{t('notifications.center_title')}</span>
               {unreadCount > 0 && (
                 <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-green-100 text-green-800 border border-green-200">
-                  {unreadCount} new
+                  {t('notifications.new_count', { count: unreadCount })}
                 </span>
               )}
             </div>
@@ -126,19 +128,19 @@ export default function NotificationCenter({ className = '', dark = false, heade
                 <button
                   type="button"
                   onClick={markAllAsRead}
-                  title="Mark all as read"
-                  className="px-2 py-1 rounded-lg text-xs font-semibold text-green-700 hover:bg-green-50 transition-colors flex items-center gap-1"
+                  title={t('notifications.mark_all_read')}
+                  className="px-2 py-1 rounded-lg text-xs font-semibold text-green-700 hover:bg-green-50 transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Mark all read</span>
+                  <span className="hidden sm:inline">{t('notifications.mark_all_read')}</span>
                 </button>
               )}
               {notifications.length > 0 && (
                 <button
                   type="button"
                   onClick={clearAll}
-                  title="Clear all notifications"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title={t('notifications.clear_all')}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -146,7 +148,7 @@ export default function NotificationCenter({ className = '', dark = false, heade
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -159,24 +161,24 @@ export default function NotificationCenter({ className = '', dark = false, heade
               <button
                 type="button"
                 onClick={() => setFilter('all')}
-                className={`px-3 py-1 rounded-lg transition-all ${
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
                   filter === 'all'
                     ? 'bg-white text-slate-900 font-bold shadow-xs border border-slate-200/70'
                     : 'hover:text-slate-700'
                 }`}
               >
-                All ({notifications.length})
+                {t('notifications.tab_all', { count: notifications.length })}
               </button>
               <button
                 type="button"
                 onClick={() => setFilter('unread')}
-                className={`px-3 py-1 rounded-lg transition-all ${
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
                   filter === 'unread'
                     ? 'bg-white text-slate-900 font-bold shadow-xs border border-slate-200/70'
                     : 'hover:text-slate-700'
                 }`}
               >
-                Unread ({unreadCount})
+                {t('notifications.tab_unread', { count: unreadCount })}
               </button>
             </div>
           )}
@@ -189,12 +191,12 @@ export default function NotificationCenter({ className = '', dark = false, heade
                   <Bell className="w-5 h-5 opacity-40" />
                 </div>
                 <p className="text-sm font-bold text-slate-700">
-                  {filter === 'unread' ? 'No unread notifications' : 'All caught up!'}
+                  {filter === 'unread' ? t('notifications.empty_unread_title') : t('notifications.empty_all_title')}
                 </p>
                 <p className="text-xs text-slate-400 mt-1 max-w-[240px] mx-auto leading-relaxed">
                   {filter === 'unread'
-                    ? 'You have viewed all live event notifications.'
-                    : 'Real-time queue calls, quality assays, and DBT payment alerts will appear here.'}
+                    ? t('notifications.empty_unread_desc')
+                    : t('notifications.empty_all_desc')}
                 </p>
               </div>
             ) : (
@@ -243,7 +245,7 @@ export default function NotificationCenter({ className = '', dark = false, heade
                     {!n.read && (
                       <span
                         className="w-2 h-2 rounded-full bg-green-600 shrink-0"
-                        title="Unread"
+                        title={t('notifications.unread_dot')}
                       />
                     )}
                     <button
@@ -252,8 +254,8 @@ export default function NotificationCenter({ className = '', dark = false, heade
                         e.stopPropagation()
                         removeNotification(n.id)
                       }}
-                      title="Remove notification"
-                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity"
+                      title={t('notifications.remove_notification')}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity cursor-pointer"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -265,10 +267,10 @@ export default function NotificationCenter({ className = '', dark = false, heade
 
           {/* Footer status */}
           <div className="px-4 py-2 border-t border-slate-100 bg-slate-50 text-[11px] flex items-center justify-between font-mono text-slate-500">
-            <span>Real-time Ingest Active</span>
+            <span>{t('notifications.ingest_active')}</span>
             <span className="flex items-center gap-1.5 text-green-700 font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              Connected
+              {t('notifications.connected')}
             </span>
           </div>
         </div>

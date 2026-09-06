@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Wheat, X, Scale, Info, ShieldCheck } from 'lucide-react'
 import api from '../../api'
+import { useTranslation } from '../../i18n'
 
 const DEFAULT_RATES = [
   { crop: 'Paddy', common_grade_per_quintal: 2300, a_grade_per_quintal: 2320, per_kg: 23.0 },
@@ -13,6 +14,7 @@ const DEFAULT_RATES = [
 ]
 
 export default function MspRatesModal({ onClose }) {
+  const { t, translateCrop } = useTranslation()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -34,15 +36,15 @@ export default function MspRatesModal({ onClose }) {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Scale className="w-5 h-5 text-amber-400" />
-              <h3 className="font-bold text-lg">Govt MSP Price Gazette</h3>
+              <h3 className="font-bold text-lg">{t('msp.title')}</h3>
             </div>
             <p className="text-green-200 text-xs">
-              {data?.season || 'Kharif Season 2025-26'} · West Bengal Mandated Floor Rates
+              {data?.season || t('msp.kharif_season')} · {t('msp.wb_mandated')}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+            className="p-1.5 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -53,8 +55,8 @@ export default function MspRatesModal({ onClose }) {
           <div className="bg-green-50 border border-green-200 rounded-2xl p-3 flex items-center gap-3 text-xs text-green-900">
             <ShieldCheck className="w-5 h-5 text-green-700 flex-shrink-0" />
             <div>
-              <p className="font-bold">Price Guarantee Protection</p>
-              <p className="text-green-700">Procurement centres cannot buy below these government floor prices.</p>
+              <p className="font-bold">{t('msp.guarantee_title')}</p>
+              <p className="text-green-700">{t('msp.guarantee_desc')}</p>
             </div>
           </div>
 
@@ -62,14 +64,14 @@ export default function MspRatesModal({ onClose }) {
             {rates.map((r, idx) => (
               <div key={idx} className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors">
                 <div>
-                  <h4 className="font-bold text-slate-900 text-sm">{r.crop}</h4>
+                  <h4 className="font-bold text-slate-900 text-sm">{translateCrop(r.crop)}</h4>
                   <p className="text-xs text-slate-400">
-                    ₹{r.common_grade_per_quintal.toLocaleString('en-IN')} / quintal (100 kg)
+                    ₹{r.common_grade_per_quintal.toLocaleString('en-IN')} {t('msp.per_quintal')}
                   </p>
                 </div>
                 <div className="text-right">
                   <span className="text-lg font-bold text-green-700">₹{r.per_kg.toFixed(2)}</span>
-                  <span className="text-xs text-slate-500 ml-1">/ kg</span>
+                  <span className="text-xs text-slate-500 ml-1">{t('common.per_kg')}</span>
                 </div>
               </div>
             ))}
@@ -78,10 +80,10 @@ export default function MspRatesModal({ onClose }) {
           <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 space-y-1">
             <p className="font-bold flex items-center gap-1">
               <Info className="w-3.5 h-3.5" />
-              Quality & Fair Average Quality (FAQ) Standards:
+              {t('msp.faq_standards_title')}
             </p>
             <p className="text-[11px] text-amber-700 leading-relaxed">
-              Rates apply to clean produce meeting moisture tolerances (Paddy ≤ 17%, Wheat ≤ 12%, Mustard ≤ 9%).
+              {t('msp.faq_standards_desc')}
             </p>
           </div>
         </div>
@@ -90,9 +92,9 @@ export default function MspRatesModal({ onClose }) {
         <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end flex-shrink-0">
           <button
             onClick={onClose}
-            className="btn-primary py-2 px-6 text-sm"
+            className="btn-primary py-2 px-6 text-sm cursor-pointer"
           >
-            Got it
+            {t('msp.got_it')}
           </button>
         </div>
       </div>
