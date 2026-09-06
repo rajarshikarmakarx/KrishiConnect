@@ -21,6 +21,7 @@ from app.schemas import (
 )
 from app.auth import decode_token
 from app.realtime import manager
+from app.timezone_utils import get_local_today, local_date
 
 router = APIRouter(prefix="/queue", tags=["queue"])
 
@@ -110,13 +111,13 @@ async def book_slot(
         raise HTTPException(status_code=403, detail="Only farmers can book slots")
 
     # Check for existing active booking at this centre today
-    today = date.today()
+    today = get_local_today()
     result = await db.execute(
         select(QueueEntry).where(
             QueueEntry.farmer_id == current_user.id,
             QueueEntry.centre_id == data.centre_id,
             QueueEntry.status.in_([QueueStatus.WAITING, QueueStatus.CALLED, QueueStatus.PROCESSING]),
-            func.date(QueueEntry.booked_at) == today
+            local_date(QueueEntry.booked_at) == today
         )
     )
     existing = result.scalar_one_or_none()
@@ -139,7 +140,7 @@ async def book_slot(
             select(QueueEntry).where(
                 QueueEntry.centre_id == data.centre_id,
                 QueueEntry.token == token,
-                func.date(QueueEntry.booked_at) == today
+                local_date(QueueEntry.booked_at) == today
             )
         )
         if not r.scalar_one_or_none():
@@ -294,7 +295,7 @@ async def get_centre_queue(centre_id: int, db: AsyncSession = Depends(get_db)):
         select(func.count(QueueEntry.id)).where(
             QueueEntry.centre_id == centre_id,
             QueueEntry.status == QueueStatus.COMPLETED,
-            func.date(QueueEntry.completed_at) == date.today()
+            local_date(QueueEntry.completed_at) == get_local_today()
         )
     )
     completed_count = r.scalar() or 0
@@ -303,7 +304,7 @@ async def get_centre_queue(centre_id: int, db: AsyncSession = Depends(get_db)):
         select(func.count(QueueEntry.id)).where(
             QueueEntry.centre_id == centre_id,
             QueueEntry.status == QueueStatus.CANCELLED,
-            func.date(QueueEntry.cancelled_at) == date.today()
+            local_date(QueueEntry.cancelled_at) == get_local_today()
         )
     )
     cancelled_count = r.scalar() or 0
@@ -574,8 +575,11 @@ async def complete_procurement(
     if not entry:
         raise HTTPException(status_code=404, detail="Not found")
 
-    if entry.status != QueueStatus.PROCESSING:
-        raise HTTPException(status_code=400, detail="Entry must be in PROCESSING status to complete")
+    if entry.status not in [QueueStatus.CALLED, QueueStatus.PROCESSING]:
+        raise HTTPException(status_code=400, detail="Entry must be in CALLED or PROCESSING status to complete")
+
+    if not entry.processing_started_at:
+        entry.processing_started_at = datetime.now(timezone.utc)
 
     total = round(data.accepted_quantity_kg * data.rate_per_kg, 2)
 

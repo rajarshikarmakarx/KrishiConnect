@@ -45,6 +45,7 @@ from app.models import (
 )
 from app.locations_data import find_village_coordinates
 from app.distance import calculate_distance_and_duration
+from app.timezone_utils import get_local_today, local_date
 
 ai_router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -69,7 +70,7 @@ async def _ema_wait_minutes(db: AsyncSession, centre_id: int) -> float:
     Wait time = processing_started_at - booked_at (in minutes).
     Days with no data inherit the previous day's EMA (keeps signal stable).
     """
-    today = date.today()
+    today = get_local_today()
     daily_avgs: List[Optional[float]] = []
 
     for offset in range(LOOKBACK_DAYS - 1, -1, -1):  # oldest → newest
@@ -78,7 +79,7 @@ async def _ema_wait_minutes(db: AsyncSession, centre_id: int) -> float:
             select(QueueEntry.booked_at, QueueEntry.processing_started_at).where(
                 QueueEntry.centre_id == centre_id,
                 QueueEntry.status == QueueStatus.COMPLETED,
-                func.date(QueueEntry.completed_at) == day,
+                local_date(QueueEntry.completed_at) == day,
                 QueueEntry.processing_started_at.is_not(None)
             )
         )
@@ -133,7 +134,7 @@ async def _live_pressure(db: AsyncSession, centre_id: int) -> dict:
 
 async def _available_slots(db: AsyncSession, centre_id: int) -> tuple[int, int]:
     """(available_today, total_today)"""
-    today = date.today()
+    today = get_local_today()
     r = await db.execute(
         select(
             func.sum(TimeSlot.total_capacity),
@@ -152,13 +153,13 @@ async def _available_slots(db: AsyncSession, centre_id: int) -> tuple[int, int]:
 
 async def _historical_throughput(db: AsyncSession, centre_id: int) -> float:
     """Average farmers served per hour over the last 7 days."""
-    today = date.today()
+    today = get_local_today()
     cutoff = today - timedelta(days=LOOKBACK_DAYS)
     r = await db.execute(
         select(func.count(QueueEntry.id)).where(
             QueueEntry.centre_id == centre_id,
             QueueEntry.status == QueueStatus.COMPLETED,
-            func.date(QueueEntry.completed_at) >= cutoff
+            local_date(QueueEntry.completed_at) >= cutoff
         )
     )
     total_completed = r.scalar() or 0
@@ -190,12 +191,12 @@ async def ai_eta(centre_id: int, db: AsyncSession = Depends(get_db)):
     predicted = round(ema_wait + live_delta * 0.5, 1)  # blend, not replace
 
     # Confidence based on how many historical days have data
-    today = date.today()
+    today = get_local_today()
     r = await db.execute(
-        select(func.count(func.date(QueueEntry.completed_at).distinct())).where(
+        select(func.count(local_date(QueueEntry.completed_at).distinct())).where(
             QueueEntry.centre_id == centre_id,
             QueueEntry.status == QueueStatus.COMPLETED,
-            func.date(QueueEntry.completed_at) >= today - timedelta(days=LOOKBACK_DAYS)
+            local_date(QueueEntry.completed_at) >= today - timedelta(days=LOOKBACK_DAYS)
         )
     )
     days_with_data = r.scalar() or 0

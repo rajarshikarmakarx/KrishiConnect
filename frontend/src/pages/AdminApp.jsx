@@ -11,7 +11,7 @@ import {
 } from 'recharts'
 import toast from 'react-hot-toast'
 import api from '../api'
-import { useCentreQueue } from '../hooks/useRealtimeQueue'
+import { useAdminQueue } from '../hooks/useRealtimeQueue'
 
 const COLORS = ['#15803d', '#d97706', '#2563eb', '#dc2626', '#7c3aed']
 
@@ -148,8 +148,8 @@ export default function AdminApp() {
     }
   }, [])
 
-  // Listen for any centre updates via WebSocket
-  const { connected } = useCentreQueue(1, loadAll)
+  // Listen for district-wide queue updates via WebSocket
+  const { connected } = useAdminQueue(loadAll)
 
   useEffect(() => { loadAll() }, [loadAll])
 

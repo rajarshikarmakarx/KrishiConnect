@@ -14,6 +14,7 @@ from app.models import (
 from app.schemas import PaymentOut, DistrictAnalytics, CentreAnalytics
 from app.auth import decode_token
 from app.realtime import manager
+from app.timezone_utils import get_local_today, local_date, KOLKATA_TZ
 
 payments_router = APIRouter(prefix="/payments", tags=["payments"])
 analytics_router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -147,13 +148,13 @@ async def mark_payment_paid(
 
 
 async def get_centre_analytics(db: AsyncSession, centre: ProcurementCentre) -> CentreAnalytics:
-    today = date.today()
+    today = get_local_today()
 
     r = await db.execute(
         select(func.count(QueueEntry.id)).where(
             QueueEntry.centre_id == centre.id,
             QueueEntry.status == QueueStatus.COMPLETED,
-            func.date(QueueEntry.completed_at) == today
+            local_date(QueueEntry.completed_at) == today
         )
     )
     today_served = r.scalar() or 0
@@ -181,7 +182,7 @@ async def get_centre_analytics(db: AsyncSession, centre: ProcurementCentre) -> C
                 select(QueueEntry.id).where(
                     QueueEntry.centre_id == centre.id,
                     QueueEntry.status == QueueStatus.COMPLETED,
-                    func.date(QueueEntry.completed_at) == today
+                    local_date(QueueEntry.completed_at) == today
                 )
             )
         )
@@ -199,7 +200,7 @@ async def get_centre_analytics(db: AsyncSession, centre: ProcurementCentre) -> C
                     Procurement.queue_entry_id.in_(
                         select(QueueEntry.id).where(
                             QueueEntry.centre_id == centre.id,
-                            func.date(QueueEntry.completed_at) == today
+                            local_date(QueueEntry.completed_at) == today
                         )
                     )
                 )
@@ -214,7 +215,7 @@ async def get_centre_analytics(db: AsyncSession, centre: ProcurementCentre) -> C
         select(QueueEntry.booked_at, QueueEntry.processing_started_at).where(
             QueueEntry.centre_id == centre.id,
             QueueEntry.status == QueueStatus.COMPLETED,
-            func.date(QueueEntry.completed_at) == today,
+            local_date(QueueEntry.completed_at) == today,
             QueueEntry.processing_started_at != None
         )
     )

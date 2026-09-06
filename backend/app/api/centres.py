@@ -13,6 +13,7 @@ from app.schemas import CentreOut, CentreDetailOut, SlotOut, CounterOut
 from app.auth import decode_token
 from app.locations_data import find_village_coordinates
 from app.distance import calculate_distance_and_duration
+from app.timezone_utils import get_local_today, local_date
 
 router = APIRouter(prefix="/centres", tags=["centres"])
 
@@ -34,7 +35,7 @@ async def get_current_user_optional(authorization: str = Header(None), db: Async
 
 async def compute_centre_stats(db: AsyncSession, centre: ProcurementCentre) -> dict:
     """Compute live stats for a centre"""
-    today = date.today()
+    today = get_local_today()
 
     # Waiting count
     r = await db.execute(
@@ -59,7 +60,7 @@ async def compute_centre_stats(db: AsyncSession, centre: ProcurementCentre) -> d
         select(func.count(QueueEntry.id)).where(
             QueueEntry.centre_id == centre.id,
             QueueEntry.status == QueueStatus.COMPLETED,
-            func.date(QueueEntry.completed_at) == today
+            local_date(QueueEntry.completed_at) == today
         )
     )
     completed_count = r.scalar() or 0
@@ -320,7 +321,7 @@ async def get_centre(
 @router.get("/{centre_id}/slots", response_model=List[SlotOut])
 async def get_slots(centre_id: int, slot_date: Optional[date] = None, db: AsyncSession = Depends(get_db)):
     if slot_date is None:
-        slot_date = date.today()
+        slot_date = get_local_today()
 
     result = await db.execute(
         select(TimeSlot).where(

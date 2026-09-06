@@ -178,3 +178,90 @@ export function useFarmerNotifications(farmerId, token, onNotification) {
 
   return { connected }
 }
+
+/**
+ * WebSocket hook for full-district admin real-time updates
+ */
+export function useAdminQueue(onUpdate) {
+  const wsRef = useRef(null)
+  const [connected, setConnected] = useState(false)
+  const [reconnecting, setReconnecting] = useState(false)
+  const reconnectTimer = useRef(null)
+  const pingTimer = useRef(null)
+  const mountedRef = useRef(true)
+  const onUpdateRef = useRef(onUpdate)
+
+  useEffect(() => {
+    onUpdateRef.current = onUpdate
+  }, [onUpdate])
+
+  const connect = useCallback(() => {
+    if (!mountedRef.current) return
+
+    try {
+      const base = getWsBaseUrl()
+      const ws = new WebSocket(`${base}/ws/admin`)
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        if (!mountedRef.current) return
+        setConnected(true)
+        setReconnecting(false)
+        ws.send('ping')
+
+        clearInterval(pingTimer.current)
+        pingTimer.current = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send('ping')
+          }
+        }, 20000)
+      }
+
+      ws.onmessage = (event) => {
+        if (!mountedRef.current) return
+        try {
+          const data = JSON.parse(event.data)
+          if (onUpdateRef.current) {
+            onUpdateRef.current(data)
+          }
+        } catch {}
+      }
+
+      ws.onclose = () => {
+        clearInterval(pingTimer.current)
+        if (!mountedRef.current) return
+        setConnected(false)
+        setReconnecting(true)
+        reconnectTimer.current = setTimeout(() => {
+          if (mountedRef.current) connect()
+        }, 2500)
+      }
+
+      ws.onerror = () => {
+        ws.close()
+      }
+    } catch (err) {
+      setReconnecting(true)
+      reconnectTimer.current = setTimeout(() => {
+        if (mountedRef.current) connect()
+      }, 3000)
+    }
+  }, [])
+
+  useEffect(() => {
+    mountedRef.current = true
+    connect()
+
+    return () => {
+      mountedRef.current = false
+      clearTimeout(reconnectTimer.current)
+      clearInterval(pingTimer.current)
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
+    }
+  }, [connect])
+
+  return { connected, reconnecting }
+}
+
