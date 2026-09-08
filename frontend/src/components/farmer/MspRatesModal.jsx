@@ -14,7 +14,7 @@ const DEFAULT_RATES = [
 ]
 
 export default function MspRatesModal({ onClose }) {
-  const { t, translateCrop } = useTranslation()
+  const { t, translateCrop, formatNumber } = useTranslation()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -66,11 +66,11 @@ export default function MspRatesModal({ onClose }) {
                 <div>
                   <h4 className="font-bold text-slate-900 text-sm">{translateCrop(r.crop)}</h4>
                   <p className="text-xs text-slate-400">
-                    ₹{r.common_grade_per_quintal.toLocaleString('en-IN')} {t('msp.per_quintal')}
+                    ₹{formatNumber(r.common_grade_per_quintal.toLocaleString('en-IN'))} {t('msp.per_quintal')}
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-green-700">₹{r.per_kg.toFixed(2)}</span>
+                  <span className="text-lg font-bold text-green-700">₹{formatNumber(r.per_kg.toFixed(2))}</span>
                   <span className="text-xs text-slate-500 ml-1">{t('common.per_kg')}</span>
                 </div>
               </div>

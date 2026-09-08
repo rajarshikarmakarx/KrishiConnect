@@ -2,7 +2,7 @@ import { CheckCircle, MapPin, Clock } from 'lucide-react'
 import { useTranslation } from '../../i18n'
 
 export default function BookingToken({ entry, onContinue }) {
-  const { t, translateCrop } = useTranslation()
+  const { t, translateCrop, translateCentreName, formatTimeSlot, formatNumber } = useTranslation()
 
   return (
     <div className="bg-white rounded-2xl border border-green-200 shadow-sm overflow-hidden animate-slide-up">
@@ -18,13 +18,13 @@ export default function BookingToken({ entry, onContinue }) {
         <div className="space-y-2 text-sm text-slate-600 mb-6">
           <div className="flex items-center justify-center gap-2">
             <MapPin className="w-4 h-4 text-slate-400" />
-            <span>{entry.centre_name}</span>
+            <span>{translateCentreName(entry.centre_name)}</span>
           </div>
           <div className="flex items-center justify-center gap-2">
             <Clock className="w-4 h-4 text-slate-400" />
-            <span>{entry.slot_start_time} – {entry.slot_end_time}</span>
+            <span>{formatTimeSlot(entry.slot_start_time, entry.slot_end_time)}</span>
           </div>
-          <p><span className="font-medium">{translateCrop(entry.crop)}</span> · {entry.expected_quantity_kg} {t('common.kg')}</p>
+          <p><span className="font-medium">{translateCrop(entry.crop)}</span> · {formatNumber(entry.expected_quantity_kg)} {t('common.kg')}</p>
         </div>
         <button id="btn-view-queue" onClick={onContinue} className="btn-primary w-full cursor-pointer">{t('token.view_live_queue')}</button>
       </div>

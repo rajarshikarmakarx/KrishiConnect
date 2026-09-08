@@ -5,7 +5,7 @@ import { useTranslation } from '../../i18n'
 import { useCentreQueue } from '../../hooks/useRealtimeQueue'
 
 export default function ProcurementStatus({ queueEntry }) {
-  const { t, translateCrop } = useTranslation()
+  const { t, translateCrop, formatNumber } = useTranslation()
   const [proc, setProc] = useState(null)
 
   const load = useCallback(() => {
@@ -62,19 +62,19 @@ export default function ProcurementStatus({ queueEntry }) {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">{t('procurement.expected')}</span>
-              <span className="font-medium">{proc.expected_quantity_kg} {t('common.kg')}</span>
+              <span className="font-medium">{formatNumber(proc.expected_quantity_kg)} {t('common.kg')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">{t('procurement.accepted')}</span>
-              <span className="font-medium">{proc.accepted_quantity_kg} {t('common.kg')}</span>
+              <span className="font-medium">{formatNumber(proc.accepted_quantity_kg)} {t('common.kg')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">{t('procurement.rate')}</span>
-              <span className="font-medium">₹{proc.rate_per_kg}{t('common.per_kg')}</span>
+              <span className="font-medium">₹{formatNumber(proc.rate_per_kg)} {t('common.per_kg')}</span>
             </div>
             <div className="flex justify-between border-t border-slate-200 pt-2 mt-2">
               <span className="font-bold text-slate-800">{t('procurement.total_amount')}</span>
-              <span className="font-bold text-green-700 text-base">₹{proc.total_amount?.toLocaleString('en-IN')}</span>
+              <span className="font-bold text-green-700 text-base">₹{formatNumber(proc.total_amount?.toLocaleString('en-IN'))}</span>
             </div>
           </div>
         )}
@@ -85,7 +85,7 @@ export default function ProcurementStatus({ queueEntry }) {
             <div className="flex items-center gap-2">
               <IndianRupee className={`w-5 h-5 ${isPaid ? 'text-green-600' : 'text-amber-600'}`} />
               <div>
-                <p className="font-bold text-slate-900">₹{proc.payment.amount?.toLocaleString('en-IN')}</p>
+                <p className="font-bold text-slate-900">₹{formatNumber(proc.payment.amount?.toLocaleString('en-IN'))}</p>
                 <p className="text-xs text-slate-500">{t('procurement.payment')}</p>
               </div>
             </div>

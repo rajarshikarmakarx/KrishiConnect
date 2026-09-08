@@ -24,7 +24,7 @@ const FALLBACK_VILLAGES = {
 
 export default function ProfileEdit({ onClose, onProfileUpdated }) {
   const { user, setUser, logout } = useAuth()
-  const { t } = useTranslation()
+  const { t, translateDistrict, translateVillage } = useTranslation()
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     mobile: user?.mobile || '',
@@ -134,7 +134,7 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
           <h2 className="text-xl font-bold text-white">{t('profile.title')}</h2>
           <button
             onClick={onClose}
-            className="text-white/90 hover:text-white transition-colors"
+            className="text-white/90 hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-6 h-6" />
           </button>
@@ -215,7 +215,7 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
                   required
                 >
                   {districts.map(d => (
-                    <option key={d} value={d}>{d}</option>
+                    <option key={d} value={d}>{translateDistrict(d)}</option>
                   ))}
                 </select>
               </div>
@@ -237,7 +237,7 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
                     required
                   >
                     {villages.map(v => (
-                      <option key={v} value={v}>{v}</option>
+                      <option key={v} value={v}>{translateVillage(v)}</option>
                     ))}
                   </select>
                 ) : (

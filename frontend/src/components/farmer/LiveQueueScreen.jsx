@@ -6,7 +6,7 @@ import { useCentreQueue } from '../../hooks/useRealtimeQueue'
 import CompletionConfirmation from './CompletionConfirmation'
 
 export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh }) {
-  const { t, translateCrop } = useTranslation()
+  const { t, translateCrop, translateCentreName, translateCounter, formatTimeSlot, formatNumber } = useTranslation()
   const [status, setStatus] = useState(initialStatus)
   const [loading, setLoading] = useState(false)
   const [notification, setNotification] = useState(initialStatus?.notification)
@@ -99,7 +99,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
         {/* Centre header */}
         <div className="bg-gradient-to-r from-green-800 to-green-700 text-white px-5 py-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold text-base">{entry.centre_name}</h2>
+            <h2 className="font-bold text-base">{translateCentreName(entry.centre_name)}</h2>
             <div className="flex items-center gap-1.5 text-xs">
               {reconnecting ? (
                 <><WifiOff className="w-3.5 h-3.5 text-yellow-300" /><span className="text-yellow-200">{t('common.reconnecting')}</span></>
@@ -108,7 +108,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
               )}
             </div>
           </div>
-          <p className="text-green-300 text-xs mt-0.5">{entry.slot_start_time} – {entry.slot_end_time} · {translateCrop(entry.crop)}</p>
+          <p className="text-green-300 text-xs mt-0.5">{formatTimeSlot(entry.slot_start_time, entry.slot_end_time)} · {translateCrop(entry.crop)}</p>
         </div>
 
         <div className="p-5">
@@ -139,7 +139,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
               <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
                 <Users className="w-5 h-5 text-slate-500" />
                 <div>
-                  <p className="text-xl font-bold text-slate-800">{farmers_ahead}</p>
+                  <p className="text-xl font-bold text-slate-800">{formatNumber(farmers_ahead)}</p>
                   <p className="text-xs text-slate-500">{t('queue.farmers_ahead')}</p>
                 </div>
               </div>
@@ -147,7 +147,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
                 <Clock className="w-5 h-5 text-amber-600" />
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <p className="text-xl font-bold text-amber-700">~{eta} {t('common.min')}</p>
+                    <p className="text-xl font-bold text-amber-700">~{formatNumber(eta)} {t('common.min')}</p>
                     <span className="text-[9px] bg-amber-200/70 text-amber-900 font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
                       <Sparkles className="w-2.5 h-2.5" /> {t('queue.ai_ema')}
                     </span>
@@ -162,7 +162,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-center animate-pulse">
               <p className="text-blue-800 font-bold text-lg">{t('queue.your_turn')}</p>
               <p className="text-blue-600 text-sm mt-1">
-                {t('queue.proceed_to_counter', { counter: entry.counter_label || t('queue.default_counter') })}
+                {t('queue.proceed_to_counter', { counter: translateCounter(entry.counter_label) })}
               </p>
             </div>
           )}
@@ -171,7 +171,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4 text-center">
               <p className="text-orange-800 font-bold text-lg">{t('queue.processing_procurement')}</p>
               <p className="text-orange-600 text-sm mt-1">
-                {t('queue.weighing_and_grading', { counter: entry.counter_label || t('queue.default_counter') })}
+                {t('queue.weighing_and_grading', { counter: translateCounter(entry.counter_label) })}
               </p>
             </div>
           )}
@@ -182,7 +182,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
                 <span>{t('queue.sun_drying_grace_title')}</span>
               </div>
               <p className="text-amber-900 text-xs sm:text-sm">
-                {t('queue.sun_drying_grace_desc', { moisture: entry.assay_record?.moisture_percentage ?? '18+' })}
+                {t('queue.sun_drying_grace_desc', { moisture: formatNumber(entry.assay_record?.moisture_percentage) || '18+' })}
               </p>
             </div>
           )}

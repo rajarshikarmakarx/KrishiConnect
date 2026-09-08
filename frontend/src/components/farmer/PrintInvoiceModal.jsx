@@ -4,7 +4,7 @@ import { useTranslation } from '../../i18n'
 import { numberToIndianWords } from '../../utils/numberToWords'
 
 export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procurement, farmer }) {
-  const { t, language, translateCrop } = useTranslation()
+  const { t, language, translateCrop, translateCentreName, translateLocation, translateDistrict, formatNumber } = useTranslation()
   const printContentRef = useRef(null)
 
   if (!isOpen || !queueEntry) return null
@@ -44,7 +44,9 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
   const farmerName = farmer?.full_name || queueEntry.farmer_name || 'Farmer Partner'
   const farmerMobile = farmer?.mobile || queueEntry.farmer_mobile || '9876543210'
   const farmerId = farmer?.farmer_id || `FARM-${farmerMobile.slice(-4)}`
-  const farmerLocation = `${farmer?.village || queueEntry.village || 'Haripur'}, ${farmer?.district || queueEntry.district || 'Howrah'}, West Bengal`
+  const vName = farmer?.village || queueEntry.village || 'Haripur'
+  const dName = farmer?.district || queueEntry.district || 'Howrah'
+  const farmerLocation = `${translateLocation(`${vName}, ${dName}`)}, ${language === 'bn' ? 'পশ্চিমবঙ্গ' : language === 'hi' ? 'पश्चिम बंगाल' : 'West Bengal'}`
 
   const handlePrint = () => {
     const invoiceEl = document.getElementById('krishi-printable-invoice')
@@ -140,7 +142,7 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
             </div>
             <div>
               <h3 className="font-bold text-sm tracking-tight">{t('invoice.form_j_title')}</h3>
-              <p className="text-[11px] text-slate-400">{receiptNo} · {queueEntry.centre_name}</p>
+              <p className="text-[11px] text-slate-400">{receiptNo} · {translateCentreName(queueEntry.centre_name)}</p>
             </div>
           </div>
           <button
@@ -214,11 +216,11 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
               </div>
               <div>
                 <span className="text-slate-500 block text-[10px] uppercase font-semibold">{t('invoice.centre_name')}</span>
-                <span className="font-bold text-slate-900 truncate block">{queueEntry.centre_name}</span>
+                <span className="font-bold text-slate-900 truncate block">{translateCentreName(queueEntry.centre_name)}</span>
               </div>
               <div>
                 <span className="text-slate-500 block text-[10px] uppercase font-semibold">{t('invoice.district')}</span>
-                <span className="font-bold text-slate-900">{farmer?.district || queueEntry.district || 'Howrah'}, WB</span>
+                <span className="font-bold text-slate-900">{translateDistrict(farmer?.district || queueEntry.district || 'Howrah')}, {language === 'bn' ? 'পশ্চিমবঙ্গ' : language === 'hi' ? 'पश्चिम बंगाल' : 'WB'}</span>
               </div>
             </div>
 
@@ -260,17 +262,17 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
                 <div className="p-1.5 rounded bg-slate-50 border border-slate-200">
                   <p className="text-[10px] text-slate-500 font-semibold uppercase">{t('invoice.moisture_observed')}</p>
-                  <p className="text-sm font-black text-slate-900 my-0.5">{moisture}%</p>
+                  <p className="text-sm font-black text-slate-900 my-0.5">{formatNumber(moisture)}%</p>
                   <p className="text-[9px] text-slate-500">{t('invoice.moisture_limit')}</p>
                 </div>
                 <div className="p-1.5 rounded bg-slate-50 border border-slate-200">
                   <p className="text-[10px] text-slate-500 font-semibold uppercase">{t('invoice.chaff_observed')}</p>
-                  <p className="text-sm font-black text-slate-900 my-0.5">{chaff}%</p>
+                  <p className="text-sm font-black text-slate-900 my-0.5">{formatNumber(chaff)}%</p>
                   <p className="text-[9px] text-slate-500">{t('invoice.chaff_limit')}</p>
                 </div>
                 <div className="p-1.5 rounded bg-slate-50 border border-slate-200">
                   <p className="text-[10px] text-slate-500 font-semibold uppercase">{t('invoice.damaged_observed')}</p>
-                  <p className="text-sm font-black text-slate-900 my-0.5">{damaged}%</p>
+                  <p className="text-sm font-black text-slate-900 my-0.5">{formatNumber(damaged)}%</p>
                   <p className="text-[9px] text-slate-500">{t('invoice.damaged_limit')}</p>
                 </div>
               </div>
@@ -304,18 +306,18 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
                         <span className="text-[10px] text-slate-500 block">Kharif Season 2025-26 · {grade}</span>
                       </td>
                       <td className="p-1.5 border-r border-slate-300 text-right text-slate-600">
-                        {displayExpectedQty} {t('invoice.unit_kg')}
+                        {formatNumber(displayExpectedQty)} {t('invoice.unit_kg')}
                       </td>
                       <td className="p-1.5 border-r border-slate-300 text-right font-bold text-slate-900">
-                        {displayAcceptedQty} {t('invoice.unit_kg')}
-                        <span className="text-[10px] text-slate-500 block font-normal">({acceptedQuintals} {t('invoice.unit_quintal')})</span>
+                        {formatNumber(displayAcceptedQty)} {t('invoice.unit_kg')}
+                        <span className="text-[10px] text-slate-500 block font-normal">({formatNumber(acceptedQuintals)} {t('invoice.unit_quintal')})</span>
                       </td>
                       <td className="p-1.5 border-r border-slate-300 text-right text-slate-900 font-semibold">
-                        ₹{displayRate.toFixed(2)}/kg
-                        <span className="text-[10px] text-slate-500 block font-normal">₹{ratePerQuintal}/qtl</span>
+                        ₹{formatNumber(displayRate.toFixed(2))}/kg
+                        <span className="text-[10px] text-slate-500 block font-normal">₹{formatNumber(ratePerQuintal)}/qtl</span>
                       </td>
                       <td className="p-1.5 text-right font-black text-slate-900 text-sm">
-                        ₹{displayTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        ₹{formatNumber(displayTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }))}
                       </td>
                     </tr>
                   </tbody>
@@ -325,7 +327,7 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
                         {t('invoice.total_amount')} (INR):
                       </td>
                       <td className="p-1.5 text-right font-black text-green-900 text-base">
-                        ₹{displayTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        ₹{formatNumber(displayTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }))}
                       </td>
                     </tr>
                   </tfoot>

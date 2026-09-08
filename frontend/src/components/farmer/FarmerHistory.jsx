@@ -7,7 +7,7 @@ import PrintInvoiceModal from './PrintInvoiceModal'
 
 export default function FarmerHistory() {
   const { user } = useAuth()
-  const { t, translateCrop } = useTranslation()
+  const { t, translateCrop, translateCentreName, formatNumber } = useTranslation()
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedInvoiceEntry, setSelectedInvoiceEntry] = useState(null)
@@ -63,7 +63,7 @@ export default function FarmerHistory() {
               </div>
               <div className="flex items-center gap-1 text-slate-500 text-sm">
                 <MapPin className="w-3.5 h-3.5" />
-                <span>{entry.centre_name}</span>
+                <span>{translateCentreName(entry.centre_name)}</span>
               </div>
             </div>
             <div className="text-right text-sm text-slate-500">
@@ -73,11 +73,11 @@ export default function FarmerHistory() {
           <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-50 flex-wrap gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-slate-600 font-medium">
-                {translateCrop(entry.crop)} · {entry.expected_quantity_kg} {t('common.kg')}
+                {translateCrop(entry.crop)} · {formatNumber(entry.expected_quantity_kg)} {t('common.kg')}
               </span>
               {entry.assay_record && (
                 <span className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">
-                  🔬 {entry.assay_record.grade} ({entry.assay_record.moisture_percentage}%)
+                  🔬 {entry.assay_record.grade} ({formatNumber(entry.assay_record.moisture_percentage)}%)
                 </span>
               )}
             </div>

@@ -9,7 +9,7 @@ import PrintInvoiceModal from './PrintInvoiceModal'
 
 export default function CompletionConfirmation({ queueEntry }) {
   const { user } = useAuth()
-  const { t, translateCrop } = useTranslation()
+  const { t, translateCrop, translateCentreName, formatNumber } = useTranslation()
   const [proc, setProc] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -108,7 +108,7 @@ export default function CompletionConfirmation({ queueEntry }) {
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-500 font-medium mb-0.5">{t('completion.procurement_centre')}</p>
-              <p className="font-bold text-slate-800 text-sm">{queueEntry.centre_name}</p>
+              <p className="font-bold text-slate-800 text-sm">{translateCentreName(queueEntry.centre_name)}</p>
             </div>
           </div>
           <div className="flex items-center justify-between text-xs text-slate-500 pt-2.5 border-t border-slate-100">
@@ -137,22 +137,22 @@ export default function CompletionConfirmation({ queueEntry }) {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">{t('completion.expected_quantity')}</span>
-              <span className="font-medium text-slate-700">{displayExpectedQty} {t('common.kg')}</span>
+              <span className="font-medium text-slate-700">{formatNumber(displayExpectedQty)} {t('common.kg')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">{t('completion.verified_accepted_qty')}</span>
-              <span className="font-bold text-green-700">{displayAcceptedQty} {t('common.kg')}</span>
+              <span className="font-bold text-green-700">{formatNumber(displayAcceptedQty)} {t('common.kg')}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">{t('completion.statutory_msp_rate')}</span>
-              <span className="font-semibold text-slate-800">₹{displayRate.toFixed(2)} {t('common.per_kg')}</span>
+              <span className="font-semibold text-slate-800">₹{formatNumber(displayRate.toFixed(2))} {t('common.per_kg')}</span>
             </div>
             <div className="flex justify-between items-center border-t border-slate-200 pt-3 mt-3">
               <span className="font-bold text-slate-900 text-base">{t('completion.total_payout_amount')}</span>
               <div className="flex items-center gap-1">
                 <IndianRupee className="w-5 h-5 text-green-700" />
                 <span className="font-extrabold text-green-700 text-2xl">
-                  {displayTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  {formatNumber(displayTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }))}
                 </span>
               </div>
             </div>
@@ -174,21 +174,21 @@ export default function CompletionConfirmation({ queueEntry }) {
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('completion.moisture')}</p>
                 <p className="text-base font-bold text-slate-800 mt-0.5">
-                  {proc?.assay_record?.moisture_percentage ?? queueEntry?.assay_record?.moisture_percentage ?? 13.5}%
+                  {formatNumber(proc?.assay_record?.moisture_percentage ?? queueEntry?.assay_record?.moisture_percentage ?? 13.5)}%
                 </p>
                 <p className="text-[9px] text-slate-400">{t('completion.moisture_standard')}</p>
               </div>
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('completion.foreign_chaff')}</p>
                 <p className="text-base font-bold text-slate-800 mt-0.5">
-                  {proc?.assay_record?.chaff_percentage ?? queueEntry?.assay_record?.chaff_percentage ?? 0.5}%
+                  {formatNumber(proc?.assay_record?.chaff_percentage ?? queueEntry?.assay_record?.chaff_percentage ?? 0.5)}%
                 </p>
                 <p className="text-[9px] text-slate-400">{t('completion.chaff_standard')}</p>
               </div>
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('completion.damaged_grain')}</p>
                 <p className="text-base font-bold text-slate-800 mt-0.5">
-                  {proc?.assay_record?.damaged_grains_percentage ?? queueEntry?.assay_record?.damaged_grains_percentage ?? 0.0}%
+                  {formatNumber(proc?.assay_record?.damaged_grains_percentage ?? queueEntry?.assay_record?.damaged_grains_percentage ?? 0.0)}%
                 </p>
                 <p className="text-[9px] text-slate-400">{t('completion.damaged_standard')}</p>
               </div>
@@ -213,7 +213,7 @@ export default function CompletionConfirmation({ queueEntry }) {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-extrabold text-slate-900 text-xl">
-                    ₹{(proc?.payment?.amount || displayTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹{formatNumber((proc?.payment?.amount || displayTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 }))}
                   </p>
                   <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
                     isPaid ? 'bg-emerald-600 text-white shadow-sm' : 'bg-amber-500 text-white animate-pulse'

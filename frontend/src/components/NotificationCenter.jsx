@@ -4,7 +4,7 @@ import { useNotifications } from '../NotificationContext'
 import { useTranslation } from '../i18n'
 
 export default function NotificationCenter({ className = '', dark = false, headerVariant = false }) {
-  const { t } = useTranslation()
+  const { t, formatNumber } = useTranslation()
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification, clearAll } = useNotifications()
   const [isOpen, setIsOpen] = useState(false)
   const [filter, setFilter] = useState('all') // 'all' | 'unread'
@@ -101,7 +101,7 @@ export default function NotificationCenter({ className = '', dark = false, heade
         <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 flex h-4.5 min-w-[18px] px-1 items-center justify-center rounded-full bg-amber-500 text-[10px] font-extrabold text-white shadow-md ring-2 ring-white">
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {unreadCount > 99 ? '99+' : formatNumber(unreadCount)}
             <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping" />
           </span>
         )}

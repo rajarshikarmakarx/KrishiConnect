@@ -19,7 +19,7 @@ import MspRatesModal from '../components/farmer/MspRatesModal'
 import { useFarmerNotifications, useCentreQueue } from '../hooks/useRealtimeQueue'
 
 function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
-  const { t } = useTranslation()
+  const { t, translateLocation } = useTranslation()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -57,7 +57,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
             {user.village && (
               <div className="flex items-center gap-2 px-2 py-1 text-xs text-slate-500">
                 <MapPin className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{user.village}, {user.district}</span>
+                <span className="truncate">{translateLocation(`${user.village}, ${user.district}`)}</span>
               </div>
             )}
             {user.farmer_id && (
@@ -97,7 +97,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
 export default function FarmerApp() {
   const { user, logout } = useAuth()
   const { addNotification } = useNotifications()
-  const { t, translateCrop } = useTranslation()
+  const { t, translateCrop, translateCentreName, formatNumber } = useTranslation()
   const [tab, setTab] = useState('centres')
   const [centres, setCentres] = useState([])
   const [loadingCentres, setLoadingCentres] = useState(true)
@@ -260,7 +260,7 @@ export default function FarmerApp() {
       title: t('notifications.slot_booked_title', { token: entry.token }),
       message: t('notifications.slot_booked_msg', {
         crop: translateCrop(entry.crop),
-        centre: entry.centre_name || t('nav.centres')
+        centre: translateCentreName(entry.centre_name) || t('nav.centres')
       }),
       type: 'queue',
       eventKey: `booking-${entry.id || entry.token}`
@@ -314,7 +314,7 @@ export default function FarmerApp() {
               <div>
                 <span className="font-mono font-bold text-lg">{activeQueue.queue_entry.token}</span>
                 <span className="text-green-200 text-sm ml-2">
-                  · {activeQueue.farmers_ahead} {t('queue.farmers_ahead')} · ~{Math.round(activeQueue.estimated_wait_minutes)} {t('common.min')}
+                  · {formatNumber(activeQueue.farmers_ahead)} {t('queue.farmers_ahead')} · ~{formatNumber(Math.round(activeQueue.estimated_wait_minutes))} {t('common.min')}
                 </span>
               </div>
             </div>

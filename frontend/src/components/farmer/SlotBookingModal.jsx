@@ -7,7 +7,7 @@ import { useTranslation } from '../../i18n'
 const CROPS = ['Paddy', 'Wheat', 'Mustard', 'Jute', 'Potato', 'Onion']
 
 export default function SlotBookingModal({ centre, onClose, onSuccess, onGoToQueue, activeQueueToken }) {
-  const { t, translateCrop } = useTranslation()
+  const { t, translateCrop, translateCentreName, formatTimeSlot, formatNumber } = useTranslation()
   const [slots, setSlots] = useState([])
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [crop, setCrop] = useState('Paddy')
@@ -73,7 +73,7 @@ export default function SlotBookingModal({ centre, onClose, onSuccess, onGoToQue
         <div className="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl">
           <div>
             <h2 className="font-bold text-slate-900">{t('booking.title')}</h2>
-            <p className="text-sm text-slate-500">{centre.name}</p>
+            <p className="text-sm text-slate-500">{translateCentreName(centre.name)}</p>
           </div>
           <button id="close-booking-modal" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer">
             <X className="w-5 h-5 text-slate-500" />
@@ -172,7 +172,7 @@ export default function SlotBookingModal({ centre, onClose, onSuccess, onGoToQue
                   >
                     <div>
                       <span className="font-semibold text-slate-800 text-sm">
-                        {slot.start_time} – {slot.end_time}
+                        {formatTimeSlot(slot.start_time, slot.end_time)}
                       </span>
                     </div>
                     <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${
@@ -180,7 +180,7 @@ export default function SlotBookingModal({ centre, onClose, onSuccess, onGoToQue
                       slot.available < 5 ? 'bg-orange-100 text-orange-600' :
                       'bg-green-100 text-green-700'
                     }`}>
-                      {slot.is_full ? t('common.full') : t('common.slots_left', { count: slot.available })}
+                      {slot.is_full ? t('common.full') : t('common.slots_left', { count: formatNumber(slot.available) })}
                     </span>
                   </button>
                 ))}
