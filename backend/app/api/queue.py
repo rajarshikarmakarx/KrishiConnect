@@ -20,9 +20,11 @@ from app.schemas import (
     MyQueueStatus, CompleteQueueRequest, QualityActionRequest,
     ProcurementOut, PaymentOut, AssayRecordOut
 )
+import asyncio
 from app.auth import decode_token
 from app.realtime import manager
 from app.timezone_utils import get_local_today, local_date
+from app.sms import send_multilingual_sms
 
 router = APIRouter(prefix="/queue", tags=["queue"])
 
@@ -203,6 +205,22 @@ async def book_slot(
 
     r = await db.execute(select(ProcurementCentre).where(ProcurementCentre.id == data.centre_id))
     centre = r.scalar_one_or_none()
+
+    # Dispatch confirmation SMS in farmer's selected language
+    if current_user.mobile:
+        asyncio.create_task(
+            send_multilingual_sms(
+                mobile=current_user.mobile,
+                msg_type="SLOT_BOOKED",
+                params={
+                    "token": entry.token,
+                    "centre_name": centre.name if centre else "Mandi",
+                    "date": str(slot.date),
+                    "slot_time": f"{slot.start_time} - {slot.end_time}"
+                },
+                lang=getattr(data, "lang", None) or "en"
+            )
+        )
 
     return await enrich_entry(entry, db, centre.name if centre else None, current_user.full_name)
 
@@ -541,8 +559,20 @@ async def call_next_farmer(
     counter_id = entry.counter_id
     await db.commit()
 
-    # Notify farmer
-    counter_label = free_counter.label or "the counter"
+    # Notify farmer via WebSocket and real SMS
+    counter_label = free_counter.label or "Counter 1"
+
+    # Fetch farmer mobile for SMS dispatch
+    r_farmer = await db.execute(select(User).where(User.id == farmer_id))
+    farmer_user = r_farmer.scalar_one_or_none()
+    if farmer_user and farmer_user.mobile:
+        asyncio.create_task(
+            send_multilingual_sms(
+                mobile=farmer_user.mobile,
+                msg_type="TURN_CALLED",
+                params={"token": token, "counter": counter_label}
+            )
+        )
 
     await manager.broadcast_farmer_update(farmer_id, {
         "type": "CALLED",
@@ -710,6 +740,23 @@ async def complete_procurement(
     await db.commit()
 
     await manager.broadcast_queue_changed(entry.centre_id, "complete")
+    # Fetch farmer mobile for completion SMS
+    r_farmer = await db.execute(select(User).where(User.id == entry.farmer_id))
+    farmer_user = r_farmer.scalar_one_or_none()
+    if farmer_user and farmer_user.mobile:
+        asyncio.create_task(
+            send_multilingual_sms(
+                mobile=farmer_user.mobile,
+                msg_type="PROCUREMENT_COMPLETED",
+                params={
+                    "crop": entry.crop,
+                    "accepted_quantity_kg": data.accepted_quantity_kg,
+                    "rate_per_kg": data.rate_per_kg,
+                    "total_amount": total
+                }
+            )
+        )
+
     await manager.broadcast_farmer_update(entry.farmer_id, {
         "type": "COMPLETED",
         "token": entry.token,

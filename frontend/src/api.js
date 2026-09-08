@@ -80,8 +80,9 @@ export const api = {
   // Auth
   register: (data) => request('POST', '/auth/register', data),
   login: (data) => request('POST', '/auth/login', data),
-  sendOtp: (mobile) => request('POST', '/auth/send-otp', { mobile }),
+  sendOtp: (mobile, lang = 'en') => request('POST', '/auth/send-otp', { mobile, lang }),
   verifyOtp: (mobile, otp) => request('POST', '/auth/verify-otp', { mobile, otp }),
+  getSmsLogs: () => request('GET', '/auth/sms-logs'),
   getMe: () => request('GET', '/auth/me'),
   getProfile: () => request('GET', '/auth/me'),
   updateProfile: (data) => request('PUT', '/auth/profile', data),
@@ -129,6 +130,7 @@ export const api = {
   getDistrictAnalytics: () => request('GET', '/analytics/district'),
   getSystemHealth: () => request('GET', '/analytics/system-health'),
   getImpactMetrics: () => request('GET', '/analytics/impact'),
+  getEnamSurge: () => request('GET', '/analytics/enam-surge'),
 
   // AI & Transparency Layer
   getAiEta: (centreId) => request('GET', `/ai/eta/${centreId}`),

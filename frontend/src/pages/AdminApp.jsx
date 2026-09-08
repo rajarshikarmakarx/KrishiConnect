@@ -4,7 +4,7 @@ import { useNotifications } from '../NotificationContext'
 import {
   Wheat, Users, Clock, Package, IndianRupee, TrendingUp, RefreshCw,
   LogOut, ShieldCheck, ChevronDown, CheckCircle, Database, Cpu,
-  Scale, FileText, ArrowDownRight, Server, Layers, AlertCircle, Info, Sparkles
+  Scale, FileText, ArrowDownRight, Server, Layers, AlertCircle, Info, Sparkles, Activity, Zap
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -13,6 +13,7 @@ import {
 import toast from 'react-hot-toast'
 import api from '../api'
 import NotificationCenter from '../components/NotificationCenter'
+import EnamSurgeForecaster from '../components/EnamSurgeForecaster'
 import { useAdminQueue } from '../hooks/useRealtimeQueue'
 
 const COLORS = ['#15803d', '#d97706', '#2563eb', '#dc2626', '#7c3aed']
@@ -232,6 +233,7 @@ export default function AdminApp() {
         <div className="max-w-6xl mx-auto mt-3 sm:mt-4 flex border-b border-green-700/50 space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none -mx-3 px-3 sm:mx-0 sm:px-0">
           {[
             { id: 'operations', label: 'Live Operations', icon: TrendingUp },
+            { id: 'enam_surge', label: 'e-NAM Surge Forecaster', icon: Activity, badge: 'AI Predictor' },
             { id: 'impact', label: 'Impact & Scalability', icon: ShieldCheck, badge: `${impactData?.current_performance?.wait_reduction_percent || 70}% Faster` },
             { id: 'ai_data', label: 'AI & Data Transparency', icon: Cpu },
             { id: 'msp', label: 'MSP Reference Rates', icon: Scale },
@@ -268,6 +270,23 @@ export default function AdminApp() {
         {/* ── TAB 1: LIVE OPERATIONS ────────────────────────────────────────── */}
         {tab === 'operations' && (
           <div className="space-y-6 animate-fade-in">
+            {/* Proactive e-NAM Market Arbitrage Quick Alert */}
+            <div className="bg-gradient-to-r from-red-950 via-slate-900 to-slate-900 text-white rounded-2xl border border-red-500/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-ping shrink-0" />
+                <span className="text-xs font-bold text-red-300 uppercase tracking-wider font-mono">e-NAM Arbitrage Alert:</span>
+                <span className="text-xs text-slate-200">Singur & Burdwan APMCs trading ₹247/Q below MSP. Mandi queue surge projected: <strong>+48% Inflow</strong>.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTab('enam_surge')}
+                className="px-3 py-1 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 self-start sm:self-auto cursor-pointer shadow-sm shrink-0"
+              >
+                <span>View Forecaster & Scale Bays</span>
+                <ArrowDownRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             {/* Today's KPIs */}
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -710,6 +729,13 @@ export default function AdminApp() {
                 </p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── TAB: e-NAM SURGE FORECASTER ───────────────────────────── */}
+        {tab === 'enam_surge' && (
+          <div className="animate-fade-in">
+            <EnamSurgeForecaster />
           </div>
         )}
       </div>

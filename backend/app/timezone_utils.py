@@ -3,11 +3,14 @@ KrishiConnect Timezone & Date Utilities
 Provides consistent Indian Standard Time (IST / Asia/Kolkata, UTC+5:30) date handling across
 PostgreSQL / SQLite databases and API routers.
 """
-from datetime import datetime, date, timezone
-import zoneinfo
+from datetime import datetime, date, timezone, timedelta
 from sqlalchemy import func
 
-KOLKATA_TZ = zoneinfo.ZoneInfo("Asia/Kolkata")
+try:
+    import zoneinfo
+    KOLKATA_TZ = zoneinfo.ZoneInfo("Asia/Kolkata")
+except Exception:
+    KOLKATA_TZ = timezone(timedelta(hours=5, minutes=30), name="IST")
 
 
 def utc_now() -> datetime:

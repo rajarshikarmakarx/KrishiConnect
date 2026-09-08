@@ -9,6 +9,7 @@ import AdminAuthPage from './pages/AdminAuthPage'
 import FarmerApp from './pages/FarmerApp'
 import OperatorApp from './pages/OperatorApp'
 import AdminApp from './pages/AdminApp'
+import FeaturePhoneSimulator from './components/FeaturePhoneSimulator'
 
 function FarmerRoute() {
   const { user, loading } = useAuth()
@@ -94,6 +95,7 @@ export default function App() {
               <Route path="/admin" element={<AdminRoute />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <FeaturePhoneSimulator />
             <Toaster
               position="top-right"
               containerStyle={{

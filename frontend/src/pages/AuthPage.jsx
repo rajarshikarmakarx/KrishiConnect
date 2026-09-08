@@ -8,7 +8,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
 
 export default function AuthPage() {
   const { login, loginWithOtp, register } = useAuth()
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
   const [mode, setMode] = useState('otp') // 'otp' | 'password' | 'register'
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -51,9 +51,13 @@ export default function AuthPage() {
     }
     setOtpSending(true)
     try {
-      const res = await api.sendOtp(form.mobile)
+      const res = await api.sendOtp(form.mobile, language)
       setOtpSent(true)
-      toast.success(t('toasts.demo_otp_sent', { otp: res.otp || '123456' }))
+      if (res.sms_provider === 'FAST2SMS_REAL') {
+        toast.success(`📱 Real SMS delivered to +91 ${form.mobile} in ${language.toUpperCase()}!`, { duration: 6000 })
+      } else {
+        toast.success(t('toasts.demo_otp_sent', { otp: res.otp || '123456' }), { duration: 6000 })
+      }
       if (res.otp) {
         setOtpCode(res.otp)
       }

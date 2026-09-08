@@ -109,3 +109,6 @@ secrets.json
 Thumbs.db
 COMMIT_MESSAGE.txt
 .claude/
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md
