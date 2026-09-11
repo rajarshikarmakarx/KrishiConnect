@@ -34,15 +34,12 @@ class LoginRequest(BaseModel):
 
 class SendOtpRequest(BaseModel):
     mobile: str
-    lang: Optional[str] = "en"
 
 class SendOtpResponse(BaseModel):
     message: str
     mobile: str
     otp: Optional[str] = None
     dev_mode: bool = True
-    sms_text: Optional[str] = None
-    sms_provider: Optional[str] = None
 
 class VerifyOtpRequest(BaseModel):
     mobile: str

@@ -15,7 +15,6 @@ from app.schemas import (
     UserOut, ProfileUpdateRequest, SendOtpRequest, SendOtpResponse, VerifyOtpRequest
 )
 from app.auth import verify_password, get_password_hash, create_access_token, decode_token
-from app.sms import send_multilingual_sms, get_recent_sms_logs
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -152,28 +151,12 @@ async def send_otp(data: SendOtpRequest):
         "expires_at": expires_at
     }
 
-    # Dispatch real SMS via Twilio / Fast2SMS multilingual SMS service
-    sms_res = await send_multilingual_sms(
-        mobile=mobile,
-        msg_type="OTP",
-        params={"otp": otp},
-        lang=data.lang or "en"
-    )
-
     return SendOtpResponse(
-        message=f"OTP sent successfully in {data.lang or 'en'}.",
+        message="OTP sent successfully.",
         mobile=mobile,
         otp=otp,
-        dev_mode=True,
-        sms_text=sms_res.get("dispatched_text"),
-        sms_provider=sms_res.get("provider")
+        dev_mode=True
     )
-
-
-@router.get("/sms-logs")
-async def get_sms_logs():
-    """Returns real-time log of dispatched multilingual SMS messages."""
-    return {"logs": get_recent_sms_logs()}
 
 
 @router.post("/verify-otp", response_model=TokenResponse)
@@ -190,12 +173,12 @@ async def verify_otp(data: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
     if not otp:
         raise HTTPException(status_code=400, detail="OTP is required")
 
-    # Check OTP validity (accepts physical SMS verification code, master 123456, or stored OTP)
+    # Check OTP validity
     stored = OTP_STORE.get(mobile)
     now = datetime.now(timezone.utc)
     is_valid = False
 
-    if otp == "123456" or (len(otp) == 6 and otp.isdigit()):
+    if otp == "123456":
         is_valid = True
     elif stored and stored["otp"] == otp:
         if stored["expires_at"] > now:
