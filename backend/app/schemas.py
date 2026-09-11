@@ -173,6 +173,10 @@ class QueueEntryOut(SchemaModel):
     farmer_name: Optional[str] = None
     centre_id: int
     centre_name: Optional[str] = None
+    centre_location: Optional[str] = None
+    centre_district: Optional[str] = None
+    centre_latitude: Optional[float] = None
+    centre_longitude: Optional[float] = None
     slot_id: Optional[int] = None
     counter_id: Optional[int] = None
     counter_label: Optional[str] = None

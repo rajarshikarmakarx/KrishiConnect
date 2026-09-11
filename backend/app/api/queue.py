@@ -79,11 +79,22 @@ async def enrich_entry(entry: QueueEntry, db: AsyncSession, centre_name: str = N
     """Add computed fields to a queue entry"""
     cn = centre_name
     fn = farmer_name
+    c_loc = None
+    c_dist = None
+    c_lat = None
+    c_lon = None
 
-    if cn is None:
-        r = await db.execute(select(ProcurementCentre).where(ProcurementCentre.id == entry.centre_id))
-        c = r.scalar_one_or_none()
-        cn = c.name if c else "Unknown"
+    r = await db.execute(select(ProcurementCentre).where(ProcurementCentre.id == entry.centre_id))
+    c = r.scalar_one_or_none()
+    if c:
+        if cn is None:
+            cn = c.name
+        c_loc = c.location
+        c_dist = c.district
+        c_lat = c.latitude
+        c_lon = c.longitude
+    elif cn is None:
+        cn = "Unknown"
 
     if fn is None:
         r = await db.execute(select(User).where(User.id == entry.farmer_id))
@@ -120,6 +131,10 @@ async def enrich_entry(entry: QueueEntry, db: AsyncSession, centre_name: str = N
         farmer_name=fn,
         centre_id=entry.centre_id,
         centre_name=cn,
+        centre_location=c_loc,
+        centre_district=c_dist,
+        centre_latitude=c_lat,
+        centre_longitude=c_lon,
         slot_id=entry.slot_id,
         counter_id=entry.counter_id,
         counter_label=counter_label,
