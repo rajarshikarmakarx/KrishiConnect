@@ -2,10 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { Ticket, Clock, Users, Wifi, WifiOff, Bell, Sparkles } from 'lucide-react'
 import api from '../../api'
 import { useTranslation } from '../../i18n'
+import { useAuth } from '../../AuthContext'
 import { useCentreQueue } from '../../hooks/useRealtimeQueue'
 import CompletionConfirmation from './CompletionConfirmation'
+import MandiRouteMap from './MandiRouteMap'
 
 export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh }) {
+  const { user } = useAuth()
   const { t, translateCrop, translateCentreName, translateCounter, formatTimeSlot, formatNumber } = useTranslation()
   const [status, setStatus] = useState(initialStatus)
   const [loading, setLoading] = useState(false)
@@ -209,6 +212,14 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
           </button>
         </div>
       </div>
+
+      {/* Mandi Route & Navigation Window */}
+      <MandiRouteMap
+        centre={entry}
+        farmerVillage={user?.village}
+        farmerDistrict={user?.district}
+        defaultExpanded={false}
+      />
     </div>
   )
 }

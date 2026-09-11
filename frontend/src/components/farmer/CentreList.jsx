@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { MapPin, Clock, Users, Building2, ChevronRight, Star, TrendingDown, Sparkles, Navigation, AlertTriangle, Info } from 'lucide-react'
+import { MapPin, Clock, Users, Building2, ChevronRight, Star, TrendingDown, Sparkles, Navigation, AlertTriangle, Info, X } from 'lucide-react'
 import { useTranslation } from '../../i18n'
+import { useAuth } from '../../AuthContext'
+import MandiRouteMap from './MandiRouteMap'
 
 function StatusBadge({ status }) {
   const { t } = useTranslation()
@@ -13,7 +15,7 @@ function StatusBadge({ status }) {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[status] || map.OPEN}`}>{labelMap[status] || status}</span>
 }
 
-function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
+function CentreCard({ centre, onSelect, onPreviewRoute, isRecommended, isLongDistance }) {
   const { t, translateCentreName, translateLocation, translateReason, formatNumber } = useTranslation()
   const eta = Math.round(centre.estimated_wait_minutes)
   const roundtripTravelMins = Math.round(centre.distance_km * 2 * 3.0)
@@ -128,13 +130,21 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-          <span className="text-sm text-slate-500">{t('centres.slots_available_today', { count: formatNumber(centre.available_slots_today) })}</span>
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2">
+          <button
+            type="button"
+            onClick={() => onPreviewRoute?.(centre)}
+            className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 py-2 px-3 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+            title={t('map.view_route')}
+          >
+            <Navigation className="w-3.5 h-3.5 text-emerald-600" />
+            <span>{t('map.view_route')}</span>
+          </button>
           <button
             id={`btn-select-centre-${centre.id}`}
             onClick={() => onSelect(centre)}
             disabled={centre.status !== 'OPEN' || centre.available_slots_today === 0}
-            className="btn-primary py-2 px-4 text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="btn-primary py-2 px-4 text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
           >
             {t('centres.book_slot')} <ChevronRight className="w-4 h-4" />
           </button>
@@ -145,7 +155,9 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
 }
 
 export default function CentreList({ centres, loading, onSelect, userLocation }) {
+  const { user } = useAuth()
   const { t, translateLocation, formatNumber } = useTranslation()
+  const [previewCentre, setPreviewCentre] = useState(null)
 
   if (loading) return (
     <div className="space-y-4 animate-pulse">
@@ -210,6 +222,7 @@ export default function CentreList({ centres, loading, onSelect, userLocation })
               key={c.id}
               centre={c}
               onSelect={onSelect}
+              onPreviewRoute={(targetCentre) => setPreviewCentre(targetCentre)}
               isRecommended={i === 0}
               isLongDistance={false}
             />
@@ -235,10 +248,56 @@ export default function CentreList({ centres, loading, onSelect, userLocation })
               key={c.id}
               centre={c}
               onSelect={onSelect}
+              onPreviewRoute={(targetCentre) => setPreviewCentre(targetCentre)}
               isRecommended={hasNoNearbyCentres && i === 0}
               isLongDistance={true}
             />
           ))}
+        </div>
+      )}
+
+      {/* Route Preview Modal */}
+      {previewCentre && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setPreviewCentre(null)} />
+          <div className="relative bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl shadow-2xl max-h-[92vh] overflow-y-auto animate-slide-up">
+            <div className="sticky top-0 bg-white z-20 px-5 py-3.5 border-b border-slate-100 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl">
+              <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                <Navigation className="w-4 h-4 text-emerald-600" />
+                <span>{t('map.mandi_route_preview')}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setPreviewCentre(null)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                aria-label={t('common.close')}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-5 space-y-4">
+              <MandiRouteMap
+                centre={previewCentre}
+                farmerVillage={user?.village}
+                farmerDistrict={user?.district}
+                defaultExpanded={true}
+              />
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const c = previewCentre
+                    setPreviewCentre(null)
+                    onSelect(c)
+                  }}
+                  disabled={previewCentre.status !== 'OPEN' || previewCentre.available_slots_today === 0}
+                  className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                >
+                  {t('centres.book_slot')} <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
