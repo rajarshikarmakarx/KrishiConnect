@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CheckCircle, IndianRupee, Download, Calendar, MapPin, ShieldCheck, Printer, FileCheck, Sparkles, RefreshCw, AlertCircle, FileText } from 'lucide-react'
+import { CheckCircle, IndianRupee, Download, Calendar, MapPin, ShieldCheck, Printer, FileCheck, Sparkles, RefreshCw, AlertCircle, FileText, Info, Award } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api'
 import { useAuth } from '../../AuthContext'
 import { useTranslation } from '../../i18n'
 import { useCentreQueue } from '../../hooks/useRealtimeQueue'
 import PrintInvoiceModal from './PrintInvoiceModal'
+import QualityStandardsModal from './QualityStandardsModal'
 
 export default function CompletionConfirmation({ queueEntry }) {
   const { user } = useAuth()
@@ -14,6 +15,7 @@ export default function CompletionConfirmation({ queueEntry }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showInvoiceModal, setShowInvoiceModal] = useState(false)
+  const [showStandardsModal, setShowStandardsModal] = useState(false)
   const isFirstLoadRef = useRef(true)
   const prevPaidStatusRef = useRef(false)
 
@@ -162,13 +164,24 @@ export default function CompletionConfirmation({ queueEntry }) {
         {/* Quality Assay Certificate */}
         {(proc?.assay_record || queueEntry?.assay_record || proc?.grade) && (
           <div className="bg-white rounded-2xl p-5 border border-emerald-200 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                 <span>{t('completion.quality_cert_title')}</span>
               </h3>
-              <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
-                {proc?.assay_record?.grade || proc?.grade || queueEntry?.assay_record?.grade || 'Grade A (FAQ)'}
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  id="btn-view-quality-standards"
+                  onClick={() => setShowStandardsModal(true)}
+                  className="text-xs text-emerald-800 hover:text-emerald-950 font-semibold bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-xl transition-all flex items-center gap-1 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                  title={t('completion.view_standards_tooltip')}
+                >
+                  <Info className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>{t('completion.view_standards_btn')}</span>
+                </button>
+                <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  {proc?.assay_record?.grade || proc?.grade || queueEntry?.assay_record?.grade || 'Grade A (FAQ)'}
+                </span>
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-2.5 text-center pt-1">
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
@@ -193,9 +206,17 @@ export default function CompletionConfirmation({ queueEntry }) {
                 <p className="text-[9px] text-slate-400">{t('completion.damaged_standard')}</p>
               </div>
             </div>
-            <p className="text-[10px] text-slate-500 mt-2.5 text-center">
-              {t('completion.safety_compliance')}
-            </p>
+            <div className="flex items-center justify-between text-[10px] text-slate-500 mt-3 pt-2.5 border-t border-slate-100 flex-wrap gap-2">
+              <p className="flex-1">
+                {t('completion.safety_compliance')}
+              </p>
+              <button
+                onClick={() => setShowStandardsModal(true)}
+                className="text-emerald-700 hover:text-emerald-900 font-bold underline cursor-pointer text-[11px] shrink-0"
+              >
+                {t('completion.view_standards_btn')} →
+              </button>
+            </div>
           </div>
         )}
 
@@ -302,6 +323,15 @@ export default function CompletionConfirmation({ queueEntry }) {
           procurement={proc}
           farmer={user}
         />
+
+        {/* Official Statutory Agmark Quality Standards Modal */}
+        {showStandardsModal && (
+          <QualityStandardsModal
+            isOpen={showStandardsModal}
+            onClose={() => setShowStandardsModal(false)}
+            initialCrop={displayCrop}
+          />
+        )}
       </div>
     </div>
   )

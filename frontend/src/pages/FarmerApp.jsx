@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../AuthContext'
 import { useNotifications } from '../NotificationContext'
 import { useTranslation } from '../i18n'
-import { Wheat, MapPin, ChevronRight, History, LogOut, Ticket, User, ChevronDown, Settings, Scale } from 'lucide-react'
+import { Wheat, MapPin, ChevronRight, History, LogOut, Ticket, User, ChevronDown, Settings, Scale, Award } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
 import NotificationCenter from '../components/NotificationCenter'
@@ -16,9 +16,10 @@ import CompletionConfirmation from '../components/farmer/CompletionConfirmation'
 import ProfileEdit from '../components/farmer/ProfileEdit'
 import FarmerHistory from '../components/farmer/FarmerHistory'
 import MspRatesModal from '../components/farmer/MspRatesModal'
+import QualityStandardsModal from '../components/farmer/QualityStandardsModal'
 import { useFarmerNotifications, useCentreQueue } from '../hooks/useRealtimeQueue'
 
-function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
+function ProfileMenu({ user, logout, onEditProfile, onOpenMsp, onOpenStandards }) {
   const { t, translateLocation } = useTranslation()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -73,6 +74,13 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
           </div>
           <div className="p-2 space-y-1">
             <button
+              onClick={() => { onOpenStandards(); setOpen(false) }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-emerald-800 hover:bg-emerald-50 rounded-xl transition-colors font-medium cursor-pointer"
+            >
+              <Award className="w-4 h-4 text-emerald-700 shrink-0" />
+              {t('nav.govt_quality_standards')}
+            </button>
+            <button
               onClick={() => { onOpenMsp(); setOpen(false) }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-green-800 hover:bg-green-50 rounded-xl transition-colors font-medium cursor-pointer"
             >
@@ -115,6 +123,7 @@ export default function FarmerApp() {
   const [newToken, setNewToken] = useState(null)
   const [showProfileEdit, setShowProfileEdit] = useState(false)
   const [showMspModal, setShowMspModal] = useState(false)
+  const [showQualityStandardsModal, setShowQualityStandardsModal] = useState(false)
 
   const TABS = [
     { id: 'centres', label: t('nav.centres'), icon: MapPin },
@@ -303,6 +312,16 @@ export default function FarmerApp() {
           <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-3.5 shrink-0">
             <LanguageSwitcher dark={true} />
             <button
+              id="btn-quality-standards-header"
+              onClick={() => setShowQualityStandardsModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-emerald-400/20 hover:bg-emerald-400/30 text-emerald-100 text-xs font-semibold border border-emerald-400/40 transition-all cursor-pointer shrink-0 shadow-xs active:scale-95"
+              title={t('quality_standards.modal_title')}
+            >
+              <Award className="w-4 h-4 text-emerald-300 shrink-0" />
+              <span className="hidden sm:inline font-semibold">{t('nav.govt_quality_standards')}</span>
+              <span className="sm:hidden font-bold">Agmark</span>
+            </button>
+            <button
               id="btn-msp-rates-header"
               onClick={() => setShowMspModal(true)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-100 text-xs font-semibold border border-amber-400/40 transition-all cursor-pointer shrink-0 shadow-xs active:scale-95"
@@ -318,6 +337,7 @@ export default function FarmerApp() {
               logout={logout}
               onEditProfile={() => setShowProfileEdit(true)}
               onOpenMsp={() => setShowMspModal(true)}
+              onOpenStandards={() => setShowQualityStandardsModal(true)}
             />
           </div>
         </div>
@@ -444,6 +464,14 @@ export default function FarmerApp() {
       {/* MSP Rates Modal */}
       {showMspModal && (
         <MspRatesModal onClose={() => setShowMspModal(false)} />
+      )}
+
+      {/* Agmark Quality Standards Modal */}
+      {showQualityStandardsModal && (
+        <QualityStandardsModal
+          isOpen={showQualityStandardsModal}
+          onClose={() => setShowQualityStandardsModal(false)}
+        />
       )}
     </div>
   )

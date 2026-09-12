@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Ticket, Clock, Users, Wifi, WifiOff, Bell, Sparkles } from 'lucide-react'
+import { Ticket, Clock, Users, Wifi, WifiOff, Bell, Sparkles, Award, Info } from 'lucide-react'
 import api from '../../api'
 import { useTranslation } from '../../i18n'
 import { useAuth } from '../../AuthContext'
 import { useCentreQueue } from '../../hooks/useRealtimeQueue'
 import CompletionConfirmation from './CompletionConfirmation'
 import MandiRouteMap from './MandiRouteMap'
+import QualityStandardsModal from './QualityStandardsModal'
 
 export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh }) {
   const { user } = useAuth()
@@ -13,6 +14,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
   const [status, setStatus] = useState(initialStatus)
   const [loading, setLoading] = useState(false)
   const [notification, setNotification] = useState(initialStatus?.notification)
+  const [showStandardsModal, setShowStandardsModal] = useState(false)
 
   // Sync prop updates into internal state
   useEffect(() => {
@@ -181,8 +183,15 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
 
           {entry.status === 'DEFERRED_SUN_DRYING' && (
             <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 mb-4">
-              <div className="flex items-center gap-2 text-amber-800 font-bold text-base mb-1">
-                <span>{t('queue.sun_drying_grace_title')}</span>
+              <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                <span className="text-amber-800 font-bold text-base">{t('queue.sun_drying_grace_title')}</span>
+                <button
+                  onClick={() => setShowStandardsModal(true)}
+                  className="text-xs text-amber-900 hover:text-amber-950 font-bold bg-amber-200/80 hover:bg-amber-300/80 border border-amber-400/60 px-2.5 py-1 rounded-xl transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Award className="w-3.5 h-3.5 text-amber-800" />
+                  <span>{t('completion.view_standards_btn')}</span>
+                </button>
               </div>
               <p className="text-amber-900 text-xs sm:text-sm">
                 {t('queue.sun_drying_grace_desc', { moisture: formatNumber(entry.assay_record?.moisture_percentage) || '18+' })}
@@ -192,8 +201,15 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
 
           {entry.status === 'REJECTED' && (
             <div className="bg-red-50 border border-red-300 rounded-2xl p-4 mb-4">
-              <div className="flex items-center gap-2 text-red-800 font-bold text-base mb-1">
-                <span>{t('queue.lot_rejected_title')}</span>
+              <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                <span className="text-red-800 font-bold text-base">{t('queue.lot_rejected_title')}</span>
+                <button
+                  onClick={() => setShowStandardsModal(true)}
+                  className="text-xs text-red-900 hover:text-red-950 font-bold bg-red-200/80 hover:bg-red-300/80 border border-red-400/60 px-2.5 py-1 rounded-xl transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Info className="w-3.5 h-3.5 text-red-800" />
+                  <span>{t('completion.view_standards_btn')}</span>
+                </button>
               </div>
               <p className="text-red-900 text-xs sm:text-sm">
                 {entry.assay_record?.rejection_reason || t('queue.lot_rejected_default_desc')}
@@ -220,6 +236,15 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
         farmerDistrict={user?.district}
         defaultExpanded={false}
       />
+
+      {/* Quality Standards Modal */}
+      {showStandardsModal && (
+        <QualityStandardsModal
+          isOpen={showStandardsModal}
+          onClose={() => setShowStandardsModal(false)}
+          initialCrop={entry?.crop}
+        />
+      )}
     </div>
   )
 }

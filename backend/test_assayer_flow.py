@@ -23,6 +23,7 @@ from app.api.queue import (
     book_slot, call_next, complete_procurement,
     record_quality_action, get_procurement, compute_quality_grade
 )
+from app.api.ai import quality_standards
 from app.api.analytics import mark_payment_paid
 from app.schemas import BookSlotRequest, CompleteQueueRequest, QualityActionRequest
 
@@ -67,6 +68,16 @@ async def run_assayer_verification():
         assert "aflatoxin" in rej_msg.lower() or "fungal" in rej_msg.lower()
         print("   ✓ Spoilage Rejection verified (Moisture 22.5% -> Aflatoxin rot hazard)")
 
+        # Test Statutory Quality Standards API Schema & Payload
+        standards_data = await quality_standards()
+        assert "grading_tiers" in standards_data
+        assert len(standards_data["grading_tiers"]) == 4
+        assert "crop_standards" in standards_data
+        assert any(c["crop"] == "Paddy" for c in standards_data["crop_standards"])
+        assert any(c["crop"] == "Wheat" for c in standards_data["crop_standards"])
+        assert "statutory_rules" in standards_data
+        print(f"   ✓ Quality Standards API verified: {len(standards_data['grading_tiers'])} tiers, {len(standards_data['crop_standards'])} crops, {len(standards_data['statutory_rules'])} safety rules")
+
         # 2. Fetch or create test operator & farmer
         print("\n2️⃣  Setting up Test Operator & Farmer...")
         farmer_res = await db.execute(select(User).where(User.role == UserRole.FARMER))
@@ -79,13 +90,13 @@ async def run_assayer_verification():
         print(f"   ✓ Farmer: {farmer.full_name} (ID: {farmer.id})")
         print(f"   ✓ Operator: {operator.full_name} (ID: {operator.id})")
 
-        centre_res = await db.execute(select(ProcurementCentre).where(ProcurementCentre.id == 1))
-        centre = centre_res.scalar_one_or_none()
-        assert centre is not None, "Centre 1 not found"
+        centre_res = await db.execute(select(ProcurementCentre))
+        centre = centre_res.scalars().first()
+        assert centre is not None, "No ProcurementCentre found in DB"
 
-        slot_res = await db.execute(select(TimeSlot).where(TimeSlot.centre_id == 1))
+        slot_res = await db.execute(select(TimeSlot).where(TimeSlot.centre_id == centre.id))
         slot = slot_res.scalars().first()
-        assert slot is not None, "TimeSlot not found"
+        assert slot is not None, f"TimeSlot not found for centre {centre.id}"
 
         # 3. Test Moisture Safety Guard on complete_procurement
         print("\n3️⃣  Testing Moisture Safety Guard (Moisture >= 20.0% MUST be blocked)...")

@@ -142,6 +142,7 @@ export const api = {
   getAiEta: (centreId) => request('GET', `/ai/eta/${centreId}`),
   getAiRecommendation: (village) => request('GET', `/ai/recommend${village ? `?village=${encodeURIComponent(village)}` : ''}`),
   getMspRates: () => request('GET', '/ai/msp-rates'),
+  getQualityStandards: () => request('GET', '/ai/quality-standards'),
   getAiDataInfo: () => request('GET', '/ai/data-info'),
 }
 
