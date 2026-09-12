@@ -9,6 +9,7 @@ export default function AdminAuthPage() {
   const navigate = useNavigate()
   const [mobile, setMobile] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
@@ -16,7 +17,7 @@ export default function AdminAuthPage() {
     if (!mobile || !password) return toast.error('Enter mobile number and password')
     setLoading(true)
     try {
-      const res = await login(mobile, password)
+      const res = await login(mobile, password, rememberMe)
       if (res.role === 'farmer') {
         toast.error('Farmer accounts must use the Farmer Portal at /')
       } else {
@@ -103,6 +104,19 @@ export default function AdminAuthPage() {
                   required
                 />
               </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 pt-1">
+              <input
+                id="admin-remember"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={e => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-green-500 focus:ring-green-500 cursor-pointer"
+              />
+              <label htmlFor="admin-remember" className="text-xs text-slate-300 font-medium cursor-pointer select-none">
+                Keep me logged in for 7 days
+              </label>
             </div>
 
             <button

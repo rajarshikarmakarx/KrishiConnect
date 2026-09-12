@@ -66,6 +66,7 @@ export default {
     tab_otp: '📱 Mobile OTP',
     tab_password: 'Password',
     tab_register: 'Register',
+    remember_me: 'Keep me logged in for 7 days',
     mobile_label: 'Mobile Number',
     mobile_placeholder: 'Enter 10-digit mobile',
     mobile_password_placeholder: 'Enter 10-digit mobile number',

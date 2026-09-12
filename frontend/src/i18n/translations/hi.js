@@ -66,6 +66,7 @@ export default {
     tab_otp: '📱 मोबाइल ओटीपी',
     tab_password: 'पासवर्ड',
     tab_register: 'पंजीकरण',
+    remember_me: 'मुझे 7 दिनों तक लॉग इन रखें',
     mobile_label: 'मोबाइल नंबर',
     mobile_placeholder: '10 अंकों का मोबाइल नंबर दर्ज करें',
     mobile_password_placeholder: '10 अंकों का मोबाइल नंबर दर्ज करें',

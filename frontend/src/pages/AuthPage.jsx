@@ -15,6 +15,7 @@ export default function AuthPage() {
   const [otpSent, setOtpSent] = useState(false)
   const [otpCode, setOtpCode] = useState('')
   const [otpSending, setOtpSending] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
 
   const [form, setForm] = useState({
     full_name: '',
@@ -35,7 +36,7 @@ export default function AuthPage() {
     }
     setLoading(true)
     try {
-      await login(form.mobile, form.password)
+      await login(form.mobile, form.password, rememberMe)
       toast.success(t('toasts.welcome_back'))
     } catch (err) {
       toast.error(err.message || 'Login failed')
@@ -82,7 +83,7 @@ export default function AuthPage() {
     }
     setLoading(true)
     try {
-      await loginWithOtp(form.mobile, otpCode)
+      await loginWithOtp(form.mobile, otpCode, rememberMe)
       toast.success(t('toasts.otp_verified'))
     } catch (err) {
       toast.error(err.message || t('toasts.invalid_otp'))
@@ -99,7 +100,7 @@ export default function AuthPage() {
     }
     setLoading(true)
     try {
-      await register(form)
+      await register(form, rememberMe)
       toast.success(t('toasts.registration_success'))
     } catch (err) {
       toast.error(err.message || t('toasts.registration_failed'))
@@ -326,6 +327,19 @@ export default function AuthPage() {
                   </p>
                 </div>
 
+                <div className="flex items-center gap-2.5 pt-1">
+                  <input
+                    id="remember-otp"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={e => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                  />
+                  <label htmlFor="remember-otp" className="text-xs text-slate-600 font-medium cursor-pointer select-none">
+                    {t('auth.remember_me')}
+                  </label>
+                </div>
+
                 <button
                   id="btn-otp-login"
                   type="submit"
@@ -384,6 +398,19 @@ export default function AuthPage() {
                       {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 pt-1">
+                  <input
+                    id="remember-pass"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={e => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                  />
+                  <label htmlFor="remember-pass" className="text-xs text-slate-600 font-medium cursor-pointer select-none">
+                    {t('auth.remember_me')}
+                  </label>
                 </div>
 
                 <button
