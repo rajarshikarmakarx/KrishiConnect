@@ -112,7 +112,7 @@ export function useFarmerNotifications(farmerId, token, onNotification) {
   }, [onNotification])
 
   const connect = useCallback(() => {
-    const activeToken = token || localStorage.getItem('krishi_token')
+    const activeToken = token || localStorage.getItem('krishi_token') || sessionStorage.getItem('krishi_token')
     if (!farmerId || !activeToken || !mountedRef.current) return
 
     try {

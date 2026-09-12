@@ -110,7 +110,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp, onOpenStandards }
 }
 
 export default function FarmerApp() {
-  const { user, logout } = useAuth()
+  const { user, token, logout } = useAuth()
   const { addNotification } = useNotifications()
   const { t, translateCrop, translateCentreName, formatNumber } = useTranslation()
   const [tab, setTab] = useState('centres')
@@ -156,7 +156,6 @@ export default function FarmerApp() {
   useEffect(() => { loadCentres(); loadActiveQueue() }, [])
 
   // Top-level farmer notification listener
-  const token = localStorage.getItem('krishi_token')
   useFarmerNotifications(
     user?.id,
     token,

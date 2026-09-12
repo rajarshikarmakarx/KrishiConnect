@@ -526,6 +526,19 @@ export default function AuthPage() {
                   </div>
                 </div>
 
+                <div className="flex items-center gap-2.5 pt-1">
+                  <input
+                    id="remember-reg"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={e => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                  />
+                  <label htmlFor="remember-reg" className="text-xs text-slate-600 font-medium cursor-pointer select-none">
+                    {t('auth.remember_me')}
+                  </label>
+                </div>
+
                 <button
                   id="btn-register"
                   type="submit"

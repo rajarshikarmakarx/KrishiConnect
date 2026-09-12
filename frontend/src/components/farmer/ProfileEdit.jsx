@@ -23,7 +23,7 @@ const FALLBACK_VILLAGES = {
 }
 
 export default function ProfileEdit({ onClose, onProfileUpdated }) {
-  const { user, setUser, logout } = useAuth()
+  const { user, setUser, updateUser, logout } = useAuth()
   const { t, translateDistrict, translateVillage } = useTranslation()
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
@@ -96,8 +96,11 @@ export default function ProfileEdit({ onClose, onProfileUpdated }) {
     try {
       const updated = await api.updateProfile(formData)
       const mergedUser = { ...user, ...updated }
-      setUser(mergedUser)
-      localStorage.setItem('krishi_user', JSON.stringify(mergedUser))
+      if (updateUser) {
+        updateUser(mergedUser)
+      } else {
+        setUser(mergedUser)
+      }
       setSuccess(true)
       if (onProfileUpdated) {
         onProfileUpdated(mergedUser)

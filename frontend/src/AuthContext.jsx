@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import api, { clearSession } from './api'
+import { createAuthBus } from './utils/authSync'
 
 const AuthContext = createContext(null)
 
@@ -10,7 +11,7 @@ const REMEMBER_KEY  = 'krishi_remember_until'  // epoch-ms expiry, only set when
 // Storage helpers — token + user live in the same store (local vs session)
 // ---------------------------------------------------------------------------
 
-function saveSession(token, userObj, rememberMe) {
+export function saveSession(token, userObj, rememberMe) {
   const store = rememberMe ? localStorage : sessionStorage
   store.setItem('krishi_token', token)
   store.setItem('krishi_user', JSON.stringify(userObj))
@@ -18,6 +19,9 @@ function saveSession(token, userObj, rememberMe) {
   if (rememberMe) {
     const expiresAt = Date.now() + REMEMBER_DAYS * 24 * 60 * 60 * 1000
     localStorage.setItem(REMEMBER_KEY, expiresAt.toString())
+    // Clean any tab-isolated sessionStorage duplicate
+    sessionStorage.removeItem('krishi_token')
+    sessionStorage.removeItem('krishi_user')
   } else {
     // Clean up any leftover remember-me stamp from a previous session
     localStorage.removeItem(REMEMBER_KEY)
@@ -26,14 +30,14 @@ function saveSession(token, userObj, rememberMe) {
   }
 }
 
-function readSession() {
+export function readSession() {
   // Check localStorage first (remember-me path)
   const lsToken = localStorage.getItem('krishi_token')
   const lsUser  = localStorage.getItem('krishi_user')
   if (lsToken && lsUser) {
     return { token: lsToken, userStr: lsUser, store: 'local' }
   }
-  // Fall back to sessionStorage (no-remember path)
+  // Fall back to sessionStorage (no-remember tab session path)
   const ssToken = sessionStorage.getItem('krishi_token')
   const ssUser  = sessionStorage.getItem('krishi_user')
   if (ssToken && ssUser) {
@@ -42,7 +46,7 @@ function readSession() {
   return null
 }
 
-function wipeSession() {
+export function wipeSession() {
   localStorage.removeItem('krishi_token')
   localStorage.removeItem('krishi_user')
   localStorage.removeItem(REMEMBER_KEY)
@@ -69,10 +73,23 @@ export function isJwtExpired(token) {
 }
 
 /** Returns true if a remember-me session has passed its 7-day wall-clock expiry */
-function isRememberMeExpired() {
+export function isRememberMeExpired() {
   const raw = localStorage.getItem(REMEMBER_KEY)
   if (!raw) return false
   return Date.now() > parseInt(raw, 10)
+}
+
+function buildUserObj(data, mobile) {
+  return {
+    id:                  data.user_id ?? data.id,
+    role:                data.role,
+    full_name:           data.full_name,
+    mobile:              mobile ?? data.mobile,
+    assigned_centre_id:  data.assigned_centre_id ?? null,
+    village:             data.village            ?? null,
+    district:            data.district           ?? null,
+    farmer_id:           data.farmer_id          ?? null,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -84,55 +101,96 @@ export function AuthProvider({ children }) {
   const [token, setToken]     = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const tokenRef = useRef(token)
+  const userRef  = useRef(user)
+  const busRef   = useRef(null)
+
+  useEffect(() => {
+    tokenRef.current = token
+  }, [token])
+
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+
   useEffect(() => {
     let isMounted = true
 
-    const verifySession = async () => {
-      const session = readSession()
+    // Initialize cross-tab synchronization bus
+    const bus = createAuthBus()
+    busRef.current = bus
 
-      // Case 1: Nothing stored — not logged in
-      if (!session) {
-        if (isMounted) { setToken(null); setUser(null); setLoading(false) }
-        return
+    const unsubscribeBus = bus.subscribe((msg) => {
+      if (!isMounted) return
+
+      switch (msg.type) {
+        case 'REQUEST_SESSION': {
+          // Another tab just opened and asked for active session
+          const activeSession = readSession()
+          const currentToken = tokenRef.current || activeSession?.token
+          let currentUser = userRef.current
+          if (!currentUser && activeSession?.userStr) {
+            try { currentUser = JSON.parse(activeSession.userStr) } catch {}
+          }
+
+          if (currentToken && currentUser && !isJwtExpired(currentToken)) {
+            const isRemembered = Boolean(localStorage.getItem(REMEMBER_KEY))
+            bus.postMessage({
+              type: 'SESSION_RESPONSE',
+              toTabId: msg.fromTabId,
+              token: currentToken,
+              user: currentUser,
+              rememberMe: isRemembered,
+            })
+          }
+          break
+        }
+
+        case 'LOGIN': {
+          if (msg.token && msg.user && !isJwtExpired(msg.token)) {
+            saveSession(msg.token, msg.user, msg.rememberMe)
+            setToken(msg.token)
+            setUser(msg.user)
+            setLoading(false)
+          }
+          break
+        }
+
+        case 'LOGOUT': {
+          wipeSession()
+          setToken(null)
+          setUser(null)
+          setLoading(false)
+          break
+        }
+
+        case 'USER_UPDATED': {
+          if (msg.user) {
+            const activeSession = readSession()
+            const store = activeSession?.store === 'local' ? localStorage : sessionStorage
+            store.setItem('krishi_user', JSON.stringify(msg.user))
+            setUser(msg.user)
+          }
+          break
+        }
+
+        default:
+          break
+      }
+    })
+
+    const verifyAndLoad = async (sessionToken, sessionUser, storeType) => {
+      if (isMounted) {
+        setUser(sessionUser)
+        setToken(sessionToken)
       }
 
-      const { token: savedToken, userStr: savedUserStr, store } = session
-
-      // Case 2: JWT is expired
-      if (isJwtExpired(savedToken)) {
-        wipeSession()
-        clearSession('Token expired')
-        if (isMounted) { setToken(null); setUser(null); setLoading(false) }
-        return
-      }
-
-      // Case 3: Remember-me session has passed its 7-day wall-clock limit
-      if (store === 'local' && isRememberMeExpired()) {
-        wipeSession()
-        clearSession('Remember-me period expired')
-        if (isMounted) { setToken(null); setUser(null); setLoading(false) }
-        return
-      }
-
-      // Case 4: Parse stored user optimistically (instant render)
-      let parsedUser = null
-      try {
-        parsedUser = JSON.parse(savedUserStr)
-        if (isMounted) { setUser(parsedUser); setToken(savedToken) }
-      } catch {
-        wipeSession()
-        clearSession('Corrupted user session')
-        if (isMounted) { setToken(null); setUser(null); setLoading(false) }
-        return
-      }
-
-      // Case 5: Verify against backend (handles server restarts / DB wipes)
+      // Verify with backend
       try {
         const freshUser = await api.getMe()
         if (isMounted) {
-          const userObj = buildUserObj(freshUser, freshUser.mobile ?? parsedUser.mobile)
-          // Write back refreshed user to whichever store is active
-          const writeStore = store === 'local' ? localStorage : sessionStorage
+          const userObj = buildUserObj(freshUser, freshUser.mobile ?? sessionUser?.mobile)
+          const writeStore = storeType === 'local' ? localStorage : sessionStorage
           writeStore.setItem('krishi_user', JSON.stringify(userObj))
           setUser(userObj)
         }
@@ -143,42 +201,94 @@ export function AuthProvider({ children }) {
           err.message.includes('User not found') ||
           err.message.includes('Not authenticated')
         )) {
-          if (isMounted) { setToken(null); setUser(null) }
+          if (isMounted) {
+            setToken(null)
+            setUser(null)
+          }
         }
-        // Network error → keep optimistic user, don't wipe
       } finally {
         if (isMounted) setLoading(false)
       }
     }
 
-    verifySession()
+    const initAuth = async () => {
+      // 1. Check if session already exists in localStorage (7-day remember-me) or sessionStorage (active tab)
+      const session = readSession()
+
+      if (session) {
+        const { token: savedToken, userStr: savedUserStr, store } = session
+
+        if (isJwtExpired(savedToken)) {
+          wipeSession()
+          clearSession('Token expired')
+          if (isMounted) { setToken(null); setUser(null); setLoading(false) }
+          return
+        }
+
+        if (store === 'local' && isRememberMeExpired()) {
+          wipeSession()
+          clearSession('Remember-me period expired')
+          if (isMounted) { setToken(null); setUser(null); setLoading(false) }
+          return
+        }
+
+        let parsedUser = null
+        try {
+          parsedUser = JSON.parse(savedUserStr)
+        } catch {
+          wipeSession()
+          clearSession('Corrupted user session')
+          if (isMounted) { setToken(null); setUser(null); setLoading(false) }
+          return
+        }
+
+        await verifyAndLoad(savedToken, parsedUser, store)
+        return
+      }
+
+      // 2. Tab is newly opened and has no local session.
+      // Ask other open tabs in the same browser session if any has an active login session!
+      try {
+        const siblingSession = await bus.requestSession(90)
+        if (siblingSession && siblingSession.token && siblingSession.user && !isJwtExpired(siblingSession.token)) {
+          saveSession(siblingSession.token, siblingSession.user, siblingSession.rememberMe)
+          await verifyAndLoad(
+            siblingSession.token,
+            siblingSession.user,
+            siblingSession.rememberMe ? 'local' : 'session'
+          )
+          return
+        }
+      } catch {}
+
+      // 3. No session found in this tab or any sibling tab
+      if (isMounted) {
+        setToken(null)
+        setUser(null)
+        setLoading(false)
+      }
+    }
+
+    initAuth()
 
     const handleAuthExpired = () => {
-      if (isMounted) { setToken(null); setUser(null) }
+      if (isMounted) {
+        wipeSession()
+        setToken(null)
+        setUser(null)
+        bus.postMessage({ type: 'LOGOUT' })
+      }
     }
+
     window.addEventListener('krishi:auth-expired', handleAuthExpired)
+
     return () => {
       isMounted = false
+      unsubscribeBus()
       window.removeEventListener('krishi:auth-expired', handleAuthExpired)
+      bus.close()
     }
   }, [])
-
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
-  function buildUserObj(data, mobile) {
-    return {
-      id:                  data.user_id ?? data.id,
-      role:                data.role,
-      full_name:           data.full_name,
-      mobile,
-      assigned_centre_id:  data.assigned_centre_id ?? null,
-      village:             data.village            ?? null,
-      district:            data.district           ?? null,
-      farmer_id:           data.farmer_id          ?? null,
-    }
-  }
 
   // ---------------------------------------------------------------------------
   // Auth actions — all accept an optional rememberMe flag (default false)
@@ -190,6 +300,12 @@ export function AuthProvider({ children }) {
     saveSession(data.access_token, userObj, rememberMe)
     setToken(data.access_token)
     setUser(userObj)
+    busRef.current?.postMessage({
+      type: 'LOGIN',
+      token: data.access_token,
+      user: userObj,
+      rememberMe,
+    })
     return userObj
   }
 
@@ -199,6 +315,12 @@ export function AuthProvider({ children }) {
     saveSession(data.access_token, userObj, rememberMe)
     setToken(data.access_token)
     setUser(userObj)
+    busRef.current?.postMessage({
+      type: 'LOGIN',
+      token: data.access_token,
+      user: userObj,
+      rememberMe,
+    })
     return userObj
   }
 
@@ -208,20 +330,49 @@ export function AuthProvider({ children }) {
     saveSession(data.access_token, userObj, rememberMe)
     setToken(data.access_token)
     setUser(userObj)
+    busRef.current?.postMessage({
+      type: 'LOGIN',
+      token: data.access_token,
+      user: userObj,
+      rememberMe,
+    })
     return userObj
+  }
+
+  const updateUser = (updatedUser) => {
+    const session = readSession()
+    const writeStore = session?.store === 'local' ? localStorage : sessionStorage
+    writeStore.setItem('krishi_user', JSON.stringify(updatedUser))
+    setUser(updatedUser)
+    busRef.current?.postMessage({
+      type: 'USER_UPDATED',
+      user: updatedUser,
+    })
   }
 
   const logout = () => {
     wipeSession()
     setToken(null)
     setUser(null)
+    busRef.current?.postMessage({ type: 'LOGOUT' })
   }
 
   /** True when the current session is a remember-me session */
   const isRemembered = Boolean(localStorage.getItem(REMEMBER_KEY))
 
   return (
-    <AuthContext.Provider value={{ user, token, setUser, loading, login, loginWithOtp, register, logout, isRemembered }}>
+    <AuthContext.Provider value={{
+      user,
+      token,
+      setUser,
+      updateUser,
+      loading,
+      login,
+      loginWithOtp,
+      register,
+      logout,
+      isRemembered,
+    }}>
       {children}
     </AuthContext.Provider>
   )
