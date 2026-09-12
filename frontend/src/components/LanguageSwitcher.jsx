@@ -5,7 +5,16 @@ import { useTranslation, LANGUAGES } from '../i18n'
 const SHORT_CODES = {
   en: 'EN',
   bn: 'বাং',
-  hi: 'हिं'
+  hi: 'हिं',
+  mr: 'मरा',
+  te: 'తె',
+  ta: 'த',
+  gu: 'ગુ',
+  kn: 'ಕ',
+  ml: 'മ',
+  pa: 'ਪੰ',
+  or: 'ଓ',
+  as: 'অ'
 }
 
 export default function LanguageSwitcher({
@@ -84,10 +93,10 @@ export default function LanguageSwitcher({
 
       {open && (
         <div
-          className="absolute right-0 mt-2 w-48 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white text-slate-900 shadow-2xl border border-slate-100 z-50 overflow-hidden py-1.5 animate-fade-in origin-top-right"
+          className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-1.5rem)] max-h-[70vh] overflow-y-auto rounded-2xl bg-white text-slate-900 shadow-2xl border border-slate-100 z-50 py-1.5 animate-fade-in origin-top-right divide-y divide-slate-50"
         >
-          <div className="px-3.5 py-1.5 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Select Language / ভাষা / भाषा
+          <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xs px-3.5 py-2 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Select Language / भाषा / ভাষা
           </div>
           {LANGUAGES.map((lang) => {
             const isActive = language === lang.code

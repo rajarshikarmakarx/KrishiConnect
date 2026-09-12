@@ -50,7 +50,7 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
   const farmerId = farmer?.farmer_id || `FARM-${farmerMobile.slice(-4)}`
   const vName = farmer?.village || queueEntry.village || 'Haripur'
   const dName = farmer?.district || queueEntry.district || 'Howrah'
-  const farmerLocation = `${translateLocation(`${vName}, ${dName}`)}, ${language === 'bn' ? 'পশ্চিমবঙ্গ' : language === 'hi' ? 'पश्चिम बंगाल' : 'West Bengal'}`
+  const farmerLocation = `${translateLocation(`${vName}, ${dName}`)}, ${translateDistrict('West Bengal')}`
 
   const handlePrint = () => {
     const invoiceEl = document.getElementById('krishi-printable-invoice')
@@ -224,7 +224,7 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
               </div>
               <div>
                 <span className="text-slate-500 block text-[10px] uppercase font-semibold">{t('invoice.district')}</span>
-                <span className="font-bold text-slate-900">{translateDistrict(farmer?.district || queueEntry.district || 'Howrah')}, {language === 'bn' ? 'পশ্চিমবঙ্গ' : language === 'hi' ? 'पश्चिम बंगाल' : 'WB'}</span>
+                <span className="font-bold text-slate-900">{translateDistrict(farmer?.district || queueEntry.district || 'Howrah')}, {translateDistrict('West Bengal')}</span>
               </div>
             </div>
 

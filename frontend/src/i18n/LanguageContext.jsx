@@ -12,6 +12,15 @@ export const LANGUAGES = [
   { code: 'en', label: 'English', native: 'English', flag: '🇬🇧' },
   { code: 'bn', label: 'Bengali', native: 'বাংলা', flag: '🌾' },
   { code: 'hi', label: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
+  { code: 'mr', label: 'Marathi', native: 'मराठी', flag: '🌾' },
+  { code: 'te', label: 'Telugu', native: 'తెలుగు', flag: '🌾' },
+  { code: 'ta', label: 'Tamil', native: 'தமிழ்', flag: '🌾' },
+  { code: 'gu', label: 'Gujarati', native: 'ગુજરાતી', flag: '🌾' },
+  { code: 'kn', label: 'Kannada', native: 'ಕನ್ನಡ', flag: '🌾' },
+  { code: 'ml', label: 'Malayalam', native: 'മലയാളം', flag: '🌾' },
+  { code: 'pa', label: 'Punjabi', native: 'ਪੰਜਾਬੀ', flag: '🌾' },
+  { code: 'or', label: 'Odia', native: 'ଓଡ଼ିଆ', flag: '🌾' },
+  { code: 'as', label: 'Assamese', native: 'অসমীয়া', flag: '🌾' },
 ]
 
 const LanguageContext = createContext(null)
@@ -20,7 +29,7 @@ export function LanguageProvider({ children }) {
   const [language, setLanguageState] = useState(() => {
     try {
       const saved = localStorage.getItem('krishi_lang')
-      if (saved && (saved === 'en' || saved === 'bn' || saved === 'hi')) {
+      if (saved && LANGUAGES.some(l => l.code === saved)) {
         return saved
       }
     } catch {}
@@ -28,7 +37,7 @@ export function LanguageProvider({ children }) {
   })
 
   const setLanguage = useCallback((lang) => {
-    if (lang === 'en' || lang === 'bn' || lang === 'hi') {
+    if (LANGUAGES.some(l => l.code === lang)) {
       setLanguageState(lang)
       try {
         localStorage.setItem('krishi_lang', lang)
@@ -39,7 +48,7 @@ export function LanguageProvider({ children }) {
   // Number / Numeral Localizer
   const formatNumber = useCallback((val) => {
     if (val === null || val === undefined || val === '') return ''
-    if (language === 'bn') {
+    if (language === 'bn' || language === 'as') {
       return toBengaliNumerals(val)
     }
     if (typeof val === 'number') {
@@ -84,7 +93,7 @@ export function LanguageProvider({ children }) {
       let result = value
       for (const [pKey, pVal] of Object.entries(params)) {
         let formattedVal = pVal
-        if (language === 'bn' && typeof pVal === 'number') {
+        if ((language === 'bn' || language === 'as') && typeof pVal === 'number') {
           formattedVal = toBengaliNumerals(pVal)
         }
         const regex1 = new RegExp(`\\{${pKey}\\}`, 'g')
@@ -272,11 +281,8 @@ export function LanguageProvider({ children }) {
   // Time slot formatter (e.g. "09:00", "10:00" -> "০৯:০০ – ১০:০০")
   const formatTimeSlot = useCallback((startTime, endTime) => {
     if (!startTime || !endTime) return ''
-    if (language === 'bn') {
+    if (language === 'bn' || language === 'as') {
       return `${toBengaliNumerals(startTime)} – ${toBengaliNumerals(endTime)}`
-    }
-    if (language === 'hi') {
-      return `${startTime} – ${endTime}`
     }
     return `${startTime} – ${endTime}`
   }, [language])

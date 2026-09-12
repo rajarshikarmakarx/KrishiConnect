@@ -40,54 +40,91 @@ SMS_HISTORY: List[Dict[str, Any]] = []
 
 def _format_sms_text(msg_type: str, lang: str, params: Dict[str, Any]) -> str:
     """
-    Format message text according to selected language (bn, hi, en)
+    Format message text according to selected language (en, bn, hi, mr, te, ta, gu, kn, ml, pa, or, as)
     and touchpoint event type.
     """
     lang = (lang or "en").lower().strip()
-    if lang not in ["bn", "hi", "en"]:
+    valid_langs = ["en", "bn", "hi", "mr", "te", "ta", "gu", "kn", "ml", "pa", "or", "as"]
+    if lang not in valid_langs:
         lang = "en"
 
     if msg_type == "OTP":
         otp = params.get("otp", "123456")
-        if lang == "bn":
-            return f"কৃষিকানেক্ট ওটিপি: {otp}। আপনার কৃষক অ্যাকাউন্ট যাচাই করতে এই কোডটি ব্যবহার করুন। মেয়াদ ১০ মিনিট। Govt of India DoCA."
-        elif lang == "hi":
-            return f"कृषिकनेक्ट ओटीपी: {otp}। अपना किसान खाता सत्यापित करने के लिए इस कोड का उपयोग करें। वैधता 10 मिनट। Govt of India DoCA."
-        else:
-            return f"KrishiConnect OTP: {otp}. Use this code to verify your farmer account. Valid for 10 minutes. Govt of India DoCA."
+        templates = {
+            "bn": f"কৃষিকানেক্ট ওটিপি: {otp}। আপনার কৃষক অ্যাকাউন্ট যাচাই করতে এই কোডটি ব্যবহার করুন। মেয়াদ ১০ মিনিট। Govt of India DoCA.",
+            "hi": f"कृषिकनेक्ट ओटीपी: {otp}। अपना किसान खाता सत्यापित करने के लिए इस कोड का उपयोग करें। वैधता 10 मिनट। Govt of India DoCA.",
+            "mr": f"कृषिकनेक्ट ओटीपी: {otp}. आपले शेतकरी खाते पडताळण्यासाठी हा कोड वापरा. वैधता १० मिनिटे. Govt of India DoCA.",
+            "te": f"కృషಿಕనెక్ట్ OTP: {otp}. మీ రైతు ఖాతాను ధృవీకరించడానికి ఈ కోడ్‌ను ఉపయోగించండి. గడువు 10 నిమిషాలు. Govt of India DoCA.",
+            "ta": f"கிருஷிகனெக்ட் OTP: {otp}. உங்கள் உழவர் கணக்கைச் சரிபார்க்க இந்தக் குறியீட்டைப் பயன்படுத்தவும். 10 நிமிடங்கள் செல்லுபடியாகும். Govt of India DoCA.",
+            "gu": f"કૃષિકનેક્ટ OTP: {otp}. તમારું ખેડૂત ખાતું ચકાસવા માટે આ કોડનો ઉપયોગ કરો. માન્યતા 10 મિનિટ. Govt of India DoCA.",
+            "kn": f"ಕೃಷಿಕನೆಕ್ಟ್ OTP: {otp}. ನಿಮ್ಮ ರೈತ ಖಾತೆಯನ್ನು ಪರಿಶೀಲಿಸಲು ಈ ಕೋಡ್ ಬಳಸಿ. ಮಾನ್ಯತೆ 10 ನಿಮಿಷಗಳು. Govt of India DoCA.",
+            "ml": f"കൃഷികണക്ട് OTP: {otp}. നിങ്ങളുടെ കർഷക അക്കൗണ്ട് പരിശോധിക്കാൻ ഈ കോഡ് ഉപയോഗിക്കുക. കാലാവധി 10 മിനിറ്റ്. Govt of India DoCA.",
+            "pa": f"ਕ੍ਰਿਸ਼ੀਕਨੈਕਟ OTP: {otp}। ਆਪਣਾ ਕਿਸਾਨ ਖਾਤਾ ਪ੍ਰਮਾਣਿਤ ਕਰਨ ਲਈ ਇਹ ਕੋਡ ਵਰਤੋ। ਵੈਧਤਾ 10 ਮਿੰਟ। Govt of India DoCA.",
+            "or": f"କୃଷିକନେକ୍ଟ OTP: {otp}। ଆପଣଙ୍କ କୃଷକ ଖାତା ପ୍ରମାଣିତ କରିବା ପାଇଁ ଏହି କୋଡ୍ ବ୍ୟବହାର କରନ୍ତୁ। ବୈଧତା ୧୦ ମିନିଟ୍। Govt of India DoCA.",
+            "as": f"কৃষিকনেক্ট OTP: {otp}। আপোনাৰ কৃষক একাউন্ট পৰীক্ষা কৰিবলৈ এই ক'ড ব্যৱহাৰ কৰক। ম্যাদ ১০ মিনিট। Govt of India DoCA.",
+            "en": f"KrishiConnect OTP: {otp}. Use this code to verify your farmer account. Valid for 10 minutes. Govt of India DoCA."
+        }
+        return templates.get(lang, templates["en"])
 
     elif msg_type == "SLOT_BOOKED":
         token = params.get("token", "A100")
         centre = params.get("centre_name", "Mandi")
         date_str = params.get("date", "Today")
         slot_time = params.get("slot_time", "10:00 AM")
-        if lang == "bn":
-            return f"কৃষিকানেক্ট: {centre}-এ স্লট নিশ্চিত। টোকেন: {token}। তারিখ: {date_str}, সময়: {slot_time}। খতিয়ান রসিদ নিয়ে ১৫ মিনিট আগে আসুন।"
-        elif lang == "hi":
-            return f"কৃषिकनेक्ट: {centre} में स्लॉट बुक हो गया है। टोकन: {token}। तारीख: {date_str}, समय: {slot_time}। खतियान पर्ची के साथ 15 मिनट पहले पहुंचें।"
-        else:
-            return f"KrishiConnect: Slot confirmed at {centre}. Token: {token}. Date: {date_str}, Slot: {slot_time}. Arrive 15m early with Land RoR."
+        templates = {
+            "bn": f"কৃষিকানেক্ট: {centre}-এ স্লট নিশ্চিত। টোকেন: {token}। তারিখ: {date_str}, সময়: {slot_time}। খতিয়ান রসিদ নিয়ে ১৫ মিনিট আগে আসুন।",
+            "hi": f"कृषिकनेक्ट: {centre} में स्लॉट बुक हो गया है। टोकन: {token}। तारीख: {date_str}, समय: {slot_time}। खतियान पर्ची के साथ 15 मिनट पहले पहुंचें।",
+            "mr": f"कृषिकनेक्ट: {centre} येथे स्लॉट निश्चित झाला. टोकन: {token}. तारीख: {date_str}, वेळ: {slot_time}. ७/१२ पावतीसह १५ मिनिटे आधी पोहोचा.",
+            "te": f"కృషికనెక్ట్: {centre} వద్ద స్లాట్ ఖరారైంది. టోకెన్: {token}. తేదీ: {date_str}, సమయం: {slot_time}. భూమి పత్రాలతో 15 నిమిషాల ముందుగా రండి.",
+            "ta": f"கிருஷிகனெக்ட்: {centre}-ல் முன்பதிவு உறுதியானது. டோக்கன்: {token}. தேதி: {date_str}, நேரம்: {slot_time}. பட்டா ஆவணத்துடன் 15 நிமிடம் முன் வரவும்.",
+            "gu": f"કૃષિકનેક્ટ: {centre} પર સ્લોટ કન્ફર્મ થયો. ટોકન: {token}. તારીખ: {date_str}, સમય: {slot_time}. 7/12 દસ્તાવેજ સાથે 15 મિનિટ વહેલા આવો.",
+            "kn": f"ಕೃಷಿಕನೆಕ್ಟ್: {centre} ನಲ್ಲಿ ಸ್ಲಾಟ್ ದೃಢಪಟ್ಟಿದೆ. ಟೋಕನ್: {token}. ದಿನಾಂಕ: {date_str}, ಸಮಯ: {slot_time}. ಪಹಣಿ ದಾಖಲೆಯೊಂದಿಗೆ 15 ನಿಮಿಷ ಮುಂಚಿತವಾಗಿ ಬನ್ನಿ.",
+            "ml": f"കൃഷികണക്ട്: {centre}-ൽ സ്ലോട്ട് സ്ഥിരീകരിച്ചു. ടോക്കൺ: {token}. തീയതി: {date_str}, സമയം: {slot_time}. നികുതി രസീതുമായി 15 മിനിറ്റ് മുമ്പ് എത്തുക.",
+            "pa": f"ਕ੍ਰਿਸ਼ੀਕਨੈਕਟ: {centre} ਵਿਖੇ ਸਲਾਟ ਬੁੱਕ ਹੋ ਗਿਆ। ਟੋਕਨ: {token}। ਮਿਤੀ: {date_str}, ਸਮਾਂ: {slot_time}। ਜ਼ਮੀਨੀ ਫ਼ਰਦ ਸਮੇਤ 15 ਮਿੰਟ ਪਹਿਲਾਂ ਪਹੁੰਚੋ।",
+            "or": f"କୃଷିକନେକ୍ଟ: {centre} ରେ ସ୍ଲଟ୍ ନିଶ୍ଚିତ ହେଲା। ଟୋକନ୍: {token}। ତାରିଖ: {date_str}, ସମୟ: {slot_time}। ଜମି ପଟ୍ଟା ସହିତ ୧୫ ମିନିଟ୍ ପୂର୍ବରୁ ପହଞ୍ଚନ୍ତୁ।",
+            "as": f"কৃষিকনেক্ট: {centre} ত স্লট নিশ্চিত হ'ল। টোকেন: {token}। তাৰিখ: {date_str}, সময়: {slot_time}। মাটিৰ পট্টাসহ ১৫ মিনিট পূৰ্বে উপস্থিত হওক।",
+            "en": f"KrishiConnect: Slot confirmed at {centre}. Token: {token}. Date: {date_str}, Slot: {slot_time}. Arrive 15m early with Land RoR."
+        }
+        return templates.get(lang, templates["en"])
 
     elif msg_type == "TURN_APPROACHING":
         ahead = params.get("farmers_ahead", 1)
         bay = params.get("bay_number", 1)
         token = params.get("token", "A100")
-        if lang == "bn":
-            return f"কৃষিকানেক্ট সতর্কতা: টোকেন {token}, আপনার পালা আসছে! সামনে মাত্র {ahead} জন কৃষক। গাড়ি নিয়ে বে #{bay}-এ প্রস্তুত থাকুন।"
-        elif lang == "hi":
-            return f"कृषिकनेक्ट अलर्ट: टोकन {token}, आपकी बारी आने वाली है! आगे केवल {ahead} किसान हैं। वाहन के साथ बे #{bay} पर तैयार रहें।"
-        else:
-            return f"KrishiConnect Alert: Token {token}, your turn is approaching! Only {ahead} farmer(s) ahead. Proceed to Bay #{bay}."
+        templates = {
+            "bn": f"কৃষিকানেক্ট সতর্কতা: টোকেন {token}, আপনার পালা আসছে! সামনে মাত্র {ahead} জন কৃষক। গাড়ি নিয়ে বে #{bay}-এ প্রস্তুত থাকুন।",
+            "hi": f"कृषिकनेक्ट अलर्ट: टोकन {token}, आपकी बारी आने वाली है! आगे केवल {ahead} किसान हैं। वाहन के साथ बे #{bay} पर तैयार रहें।",
+            "mr": f"कृषिकनेक्ट सूचना: टोकन {token}, आपली पाळी जवळ आली आहे! पुढे फक्त {ahead} शेतकरी आहेत. वाहनासह बे #{bay} जवळ तयार राहा.",
+            "te": f"కృషికనెక్ట్ హెచ్చరిక: టోకెన్ {token}, మీ వంతు వస్తోంది! ముందు {ahead} మంది రైతులు మాత్రమే ఉన్నారు. బే #{bay} వద్ద సిద్ధంగా ఉండండి.",
+            "ta": f"கிருஷிகனெக்ட் எச்சரிக்கை: டோக்கன் {token}, உங்கள் முறை வருகிறது! முன்னால் {ahead} விவசாயிகள் மட்டுமே உள்ளனர். பே #{bay}-க்குச் செல்லவும்.",
+            "gu": f"કૃષિકનેક્ટ એલર્ટ: ટોકન {token}, તમારો વારો નજીક છે! આગળ માત્ર {ahead} ખેડૂત છે. વાહન સાથે બે #{bay} પર તૈયાર રહો.",
+            "kn": f"ಕೃಷಿಕನೆಕ್ಟ್ ಎಚ್ಚರಿಕೆ: ಟೋಕನ್ {token}, ನಿಮ್ಮ ಸರದಿ ಸಮೀಪಿಸುತ್ತಿದೆ! ಮುಂದೆ ಕೇವಲ {ahead} ರೈತರಿದ್ದಾರೆ. ಬೇ #{bay} ಗೆ ತೆರಳಿ.",
+            "ml": f"കൃഷികണക്ട് അലേർട്ട്: ടോക്കൺ {token}, നിങ്ങളുടെ ഊഴം അടുക്കുന്നു! മുന്നിൽ {ahead} കർഷകർ മാത്രം. ബേ #{bay}-ലേക്ക് എത്തുക.",
+            "pa": f"ਕ੍ਰਿਸ਼ੀਕਨੈਕਟ ਅਲਰਟ: ਟੋਕਨ {token}, ਤੁਹਾਡੀ ਵਾਰੀ ਆ ਰਹੀ ਹੈ! ਅੱਗੇ ਸਿਰਫ਼ {ahead} ਕਿਸਾਨ ਹਨ। ਵਾਹਨ ਸਮੇਤ ਬੇ #{bay} 'ਤੇ ਤਿਆਰ ਰਹੋ।",
+            "or": f"କୃଷିକନେକ୍ଟ ସତର୍କତା: ଟୋକନ୍ {token}, ଆପଣଙ୍କ ପାଳି ଆସୁଛି! ଆଗରେ ମାତ୍ର {ahead} ଜଣ ଚାଷୀ ଅଛନ୍ତି। ଗାଡ଼ି ସହିତ ବେ #{bay} ନିକଟରେ ପ୍ରସ୍ତୁତ ରୁହନ୍ତୁ।",
+            "as": f"কৃষিকনেক্ট সতৰ্কবাৰ্তা: টোকেন {token}, আপোনাৰ পাল আহি আছে! আগত মাত্ৰ {ahead} জন কৃষক আছে। বাহনসহ বে #{bay} ত সাজু থাকক।",
+            "en": f"KrishiConnect Alert: Token {token}, your turn is approaching! Only {ahead} farmer(s) ahead. Proceed to Bay #{bay}."
+        }
+        return templates.get(lang, templates["en"])
 
     elif msg_type == "TURN_CALLED":
         counter = params.get("counter", "1")
         token = params.get("token", "A100")
-        if lang == "bn":
-            return f"কৃষিকানেক্ট জরুরি: টোকেন {token} এখন কাউন্টার #{counter}-এ ডাকা হচ্ছে। আদ্রতা ও ওজন পরীক্ষার জন্য অবিলম্বে উপস্থিত হোন।"
-        elif lang == "hi":
-            return f"कृषिकनेक्ट आवश्यक: टोकन {token} को अभी काउंटर #{counter} पर बुलाया गया है। नमी और वजन जांच के लिए तुरंत पहुंचें।"
-        else:
-            return f"KrishiConnect Notice: Token {token} is now being called at Counter #{counter}. Proceed immediately for moisture & weighbridge check."
+        templates = {
+            "bn": f"কৃষিকানেক্ট জরুরি: টোকেন {token} এখন কাউন্টার #{counter}-এ ডাকা হচ্ছে। আর্দ্রতা ও ওজন পরীক্ষার জন্য অবিলম্বে উপস্থিত হোন।",
+            "hi": f"कृषिकनेक्ट आवश्यक: टोकन {token} को अभी काउंटर #{counter} पर बुलाया गया है। नमी और वजन जांच के लिए तुरंत पहुंचें।",
+            "mr": f"कृषिकनेक्ट सूचना: टोकन {token} आता काउंटर #{counter} वर बोलावले आहे. आर्द्रता व वजन तपासणीसाठी त्वरित पोहोचा.",
+            "te": f"కృషికనెక్ట్ అత్యవసరం: టోకెన్ {token} ను కౌంటర్ #{counter} వద్ద పిలుస్తున్నారు. తేమ & తూకం పరీక్షకు వెంటనే వెళ్ళండి.",
+            "ta": f"கிருஷிகனெக்ட் அறிவிப்பு: டோக்கன் {token} இப்போது கவுண்டர் #{counter}-ல் அழைக்கப்படுகிறது. ஈரப்பதம் & எடை ஆய்வுக்கு உடனே செல்லவும்.",
+            "gu": f"કૃષિકનેક્ટ જરૂરી: ટોકન {token} ને કાઉન્ટર #{counter} પર બોલાવાયા છે. ભેજ અને વજન ચકાસણી માટે તાત્કાલિક પહોંચો.",
+            "kn": f"ಕೃಷಿಕನೆಕ್ಟ್ ಸೂಚನೆ: ಟೋಕನ್ {token} ಅನ್ನು ಕೌಂಟರ್ #{counter} ನಲ್ಲಿ ಕರೆಯಲಾಗುತ್ತಿದೆ. ತೇವಾಂಶ ಮತ್ತು ತೂಕ ಪರೀಕ್ಷೆಗೆ ತಕ್ಷಣ ತೆರಳಿ.",
+            "ml": f"കൃഷികണക്ട് അറിയിപ്പ്: ടോക്കൺ {token} കൗണ്ടർ #{counter}-ൽ വിളിക്കുന്നു. ഈർപ്പവും തൂക്കവും പരിശോധിക്കാൻ ഉടൻ എത്തുക.",
+            "pa": f"ਕ੍ਰਿਸ਼ੀਕਨੈਕਟ ਜ਼ਰੂਰੀ: ਟੋਕਨ {token} ਨੂੰ ਕਾਊਂਟਰ #{counter} 'ਤੇ ਬੁਲਾਇਆ ਗਿਆ ਹੈ। ਨਮੀ ਅਤੇ ਤੋਲ ਜਾਂਚ ਲਈ ਤੁਰੰਤ ਪਹੁੰਚੋ।",
+            "or": f"କୃଷିକନେକ୍ଟ ଜରୁରୀ: ଟୋକନ୍ {token} କୁ କାଉଣ୍ଟର #{counter} କୁ ଡକାଯାଇଛି। ଆର୍ଦ୍ରତା ଓ ଓଜନ ଯାଞ୍ଚ ପାଇଁ ତୁରନ୍ତ ପହଞ୍ଚନ୍ତୁ।",
+            "as": f"কৃষিকনেক্ট জৰুৰী: টোকেন {token} ক কাউন্টাৰ #{counter} ত মাতিছে। আৰ্দ্ৰতা আৰু ওজন পৰীক্ষাৰ বাবে তৎকালীনভাৱে উপস্থিত হওক।",
+            "en": f"KrishiConnect Notice: Token {token} is now being called at Counter #{counter}. Proceed immediately for moisture & weighbridge check."
+        }
+        return templates.get(lang, templates["en"])
 
     elif msg_type == "PROCUREMENT_COMPLETED":
         crop = params.get("crop", "Paddy")
@@ -95,12 +132,21 @@ def _format_sms_text(msg_type: str, lang: str, params: Dict[str, Any]) -> str:
         rate = params.get("rate_per_kg", 0)
         amount = params.get("total_amount", 0)
         grade = params.get("grade", "Grade A")
-        if lang == "bn":
-            return f"কৃষিকানেক্ট: {crop} ({grade}) সংগ্রহ সম্পন্ন। ওজন: {qty} কেজি, দর: ₹{rate}/কেজি। মোট: ₹{amount}। PFMS মাধ্যমে DBT পেমেন্ট ব্যাংকে পাঠানো হয়েছে।"
-        elif lang == "hi":
-            return f"কৃषिकनेक्ट: {crop} ({grade}) खरीद पूरी हुई। वजन: {qty} kg, दर: ₹{rate}/kg। कुल: ₹{amount}। PFMS द्वारा डीबीटी भुगतान बैंक में भेजा गया।"
-        else:
-            return f"KrishiConnect: {crop} ({grade}) procurement complete. Net: {qty} kg @ Rs {rate}/kg. Total: Rs {amount}. Direct DBT payment initiated via PFMS."
+        templates = {
+            "bn": f"কৃষিকানেক্ট: {crop} ({grade}) সংগ্রহ সম্পন্ন। ওজন: {qty} কেজি, দর: ₹{rate}/কেজি। মোট: ₹{amount}। PFMS মাধ্যমে DBT পেমেন্ট ব্যাঙ্কে পাঠানো হয়েছে।",
+            "hi": f"कृषिकनेक्ट: {crop} ({grade}) खरीद पूरी हुई। वजन: {qty} kg, दर: ₹{rate}/kg। कुल: ₹{amount}। PFMS द्वारा डीबीटी भुगतान बैंक खाते में भेजा गया।",
+            "mr": f"कृषिकनेक्ट: {crop} ({grade}) खरेदी पूर्ण झाली. निव्वळ वजन: {qty} किलो, दर: ₹{rate}/किलो. एकूण: ₹{amount}. PFMS द्वारे थेट DBT बँकेत पाठवले.",
+            "te": f"కృషికనెక్ట్: {crop} ({grade}) సేకరణ పూర్తయింది. నికర బరువు: {qty} కిలోలు, ధర: ₹{rate}/కిలో. మొత్తం: ₹{amount}. PFMS ద్వారా DBT చెల్లింపు ప్రారంభమైంది.",
+            "ta": f"கிருஷிகனெக்ட்: {crop} ({grade}) கொள்முதல் முடிந்தது. எடை: {qty} கிலோ, விலை: ₹{rate}/கிலோ. மொத்தம்: ₹{amount}. PFMS மூலம் DBT பணம் வங்கிக் கணக்கிற்கு அனுப்பப்பட்டது.",
+            "gu": f"કૃષિકનેક્ટ: {crop} ({grade}) ખરીદી પૂર્ણ થઈ. ચોખ્ખું વજન: {qty} કિલો, ભાવ: ₹{rate}/કિલો. કુલ: ₹{amount}. PFMS દ્વારા DBT બેંકમાં મોકલાયું.",
+            "kn": f"ಕೃಷಿಕನೆಕ್ಟ್: {crop} ({grade}) ಖರೀದಿ ಪೂರ್ಣಗೊಂಡಿದೆ. ತೂಕ: {qty} ಕೆಜಿ, ದರ: ₹{rate}/ಕೆಜಿ. ಒಟ್ಟು: ₹{amount}. PFMS ಮೂಲಕ ನೇರ DBT ಪಾವತಿ ಬ್ಯಾಂಕಿಗೆ ಕಳುಹಿಸಲಾಗಿದೆ.",
+            "ml": f"കൃഷികണക്ട്: {crop} ({grade}) സംഭരണം പൂർത്തിയായി. ഭാരം: {qty} കിലോഗ്രാം, നിരക്ക്: ₹{rate}/കിലോഗ്രാം. ആകെ: ₹{amount}. PFMS വഴി DBT തുക ബാങ്കിലേക്ക് അയച്ചു.",
+            "pa": f"ਕ੍ਰਿਸ਼ੀਕਨੈਕਟ: {crop} ({grade}) ਖ਼ਰੀਦ ਮੁਕੰਮਲ ਹੋਈ। ਵਜ਼ਨ: {qty} ਕਿਲੋ, ਰੇਟ: ₹{rate}/ਕਿਲੋ। ਕੁੱਲ: ₹{amount}। PFMS ਰਾਹੀਂ ਸਿੱਧਾ DBT ਭੁਗਤਾਨ ਬੈਂਕ ਖਾਤੇ ਵਿੱਚ ਭੇਜਿਆ ਗਿਆ।",
+            "or": f"କୃଷିକନେକ୍ଟ: {crop} ({grade}) କ୍ରୟ ସମ୍ପୂର୍ଣ୍ଣ ହେଲା। ଓଜନ: {qty} କି.ଗ୍ରା., ଦର: ₹{rate}/କି.ଗ୍ରା.। ମୋଟ: ₹{amount}। PFMS ମାଧ୍ୟମରେ DBT ରାଶି ବ୍ୟାଙ୍କ ଖାତାକୁ ପଠାଗଲା।",
+            "as": f"কৃষিকনেক্ট: {crop} ({grade}) ক্ৰয় সম্পূৰ্ণ হ'ল। ওজন: {qty} কি.গ্ৰা., দৰ: ₹{rate}/কি.গ্ৰা.। মুঠ: ₹{amount}। PFMS যোগে DBT ধন বেংক একাউন্টলৈ প্ৰেৰণ কৰা হ'ল।",
+            "en": f"KrishiConnect: {crop} ({grade}) procurement complete. Net: {qty} kg @ Rs {rate}/kg. Total: Rs {amount}. Direct DBT payment initiated via PFMS."
+        }
+        return templates.get(lang, templates["en"])
 
     return f"KrishiConnect Notification: {params.get('message', 'Update available')}"
 

@@ -195,7 +195,7 @@ async def verify_otp(data: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
     now = datetime.now(timezone.utc)
     is_valid = False
 
-    if otp == "123456" or (len(otp) == 6 and otp.isdigit()):
+    if otp == "123456":
         is_valid = True
     elif stored and stored["otp"] == otp:
         if stored["expires_at"] > now:
