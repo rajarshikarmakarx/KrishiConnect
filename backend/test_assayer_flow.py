@@ -11,6 +11,8 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 
 from fastapi import HTTPException
 from sqlalchemy import select, delete
@@ -266,9 +268,53 @@ async def run_assayer_verification():
         assert pay_db.paid_at is not None
         print("   ✓ DBT Disbursal confirmed: Payment status transitioned to PAID")
 
+        # 6b. Test Approved Grade B Quality Intake Flow (Automatic 2% Value Cut Price Reduction)
+        print("\n6️⃣b Testing Approved Grade B Intake Flow & Automatic Price Reduction...")
+        q4 = QueueEntry(
+            token="Q-TST4",
+            farmer_id=farmer.id,
+            centre_id=centre.id,
+            slot_id=slot.id,
+            status=QueueStatus.CALLED,
+            crop="Paddy",
+            expected_quantity_kg=500.0,
+            booked_at=datetime.now(timezone.utc)
+        )
+        db.add(q4)
+        await db.commit()
+        await db.refresh(q4)
+
+        complete_res_b = await complete_procurement(
+            queue_id=q4.id,
+            data=CompleteQueueRequest(
+                accepted_quantity_kg=500.0,
+                rate_per_kg=23.0,  # Base rate passed, should be automatically discounted
+                moisture_percentage=15.5,
+                chaff_percentage=1.8,
+                damaged_grains_percentage=1.0,
+                notes="Grade B Permissible Standard Paddy Intake Verified"
+            ),
+            db=db,
+            current_user=operator
+        )
+        assert complete_res_b["grade"] == "Grade B"
+        assert complete_res_b["moisture_percentage"] == 15.5
+        assert complete_res_b["effective_rate_per_kg"] == 22.54
+        assert complete_res_b["discount_percentage"] == 2.0
+        assert complete_res_b["total_amount"] == 11270.0  # 500.0 * 22.54 = 11270.0
+        print("   ✓ Grade B automatic price cut verified: Base ₹23.00 -> Effective ₹22.54/kg (-2%)")
+
+        proc_res_b = await get_procurement(queue_id=q4.id, db=db, current_user=operator)
+        assert proc_res_b.grade == "Grade B"
+        assert proc_res_b.rate_per_kg == 22.54
+        assert proc_res_b.total_amount == 11270.0
+        assert proc_res_b.discount_percentage == 2.0
+        assert proc_res_b.payment.amount == 11270.0
+        print(f"   ✓ Grade B Procurement Invoice verified: Amount=₹{proc_res_b.total_amount:,.2f}, Rate=₹{proc_res_b.rate_per_kg}/kg")
+
         # 7. Cleanup test records
         print("\n7️⃣  Cleaning up test fixtures...")
-        for q_entry_id in [q1.id, q2.id, q3.id]:
+        for q_entry_id in [q1.id, q2.id, q3.id, q4.id]:
             p_res = await db.execute(select(Procurement).where(Procurement.queue_entry_id == q_entry_id))
             proc_obj = p_res.scalar_one_or_none()
             if proc_obj:

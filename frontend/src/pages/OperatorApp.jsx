@@ -154,13 +154,13 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
   const mspRate = crop && MSP_RATES[crop] ? MSP_RATES[crop] : (MSP_RATES['Paddy'] || 23.00)
   const formattedQty = expectedQty != null ? String(Math.round(Number(expectedQty) * 10) / 10) : ''
   const [acceptedQty, setAcceptedQty] = useState(formattedQty)
-  const [rate, setRate] = useState(String(mspRate))
   const [moisture, setMoisture] = useState(initialAssay?.moisture_percentage ?? 13.5)
   const [chaff, setChaff] = useState(initialAssay?.chaff_percentage ?? 0.5)
   const [damaged, setDamaged] = useState(initialAssay?.damaged_grains_percentage ?? 0.0)
   const [notes, setNotes] = useState(initialAssay?.notes || '')
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
+  const [isManualOverride, setIsManualOverride] = useState(false)
 
   const numMoisture = parseFloat(moisture) || 0
   const isSpoiled = numMoisture >= 20.0
@@ -171,20 +171,33 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
   let gradeLabel = 'Grade A (FAQ Standard)'
   let gradeBadgeColor = 'bg-emerald-50 text-emerald-900 border-emerald-300'
   let suggestedRate = mspRate
+  let discountPercent = 0
 
   if (isSpoiled) {
     gradeLabel = 'Rejected · Silo Spoilage Hazard (≥20% Moisture)'
     gradeBadgeColor = 'bg-red-50 text-red-900 border-red-300'
     suggestedRate = 0
+    discountPercent = 100
   } else if (isMarginal) {
     gradeLabel = 'Grade C / High Moisture (17.1-19.9%) · Sun-Drying Needed'
     gradeBadgeColor = 'bg-amber-50 text-amber-900 border-amber-300'
     suggestedRate = Math.round(mspRate * 0.90 * 100) / 100
+    discountPercent = 10
   } else if (isGradeB) {
     gradeLabel = 'Grade B · Permissible Standard'
     gradeBadgeColor = 'bg-blue-50 text-blue-900 border-blue-300'
     suggestedRate = Math.round(mspRate * 0.98 * 100) / 100
+    discountPercent = 2
   }
+
+  const [rate, setRate] = useState(String(suggestedRate))
+
+  // Automatic Gradewise Pricing Model: Keep rate synchronized with assigned grade in real time
+  useEffect(() => {
+    if (!isManualOverride) {
+      setRate(String(suggestedRate))
+    }
+  }, [suggestedRate, isManualOverride])
 
   const total = acceptedQty && rate && !isSpoiled ? (parseFloat(acceptedQty) * parseFloat(rate)).toFixed(2) : null
 
@@ -392,6 +405,44 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
               </span>
             </div>
 
+            {/* Automatic Gradewise Pricing Breakdown */}
+            <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Automatic Gradewise Pricing
+                </span>
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${gradeBadgeColor}`}>
+                  {isGradeB
+                    ? 'Grade B: -2% Statutory Value Cut'
+                    : isMarginal
+                    ? 'Grade C: -10% Sun-Drying Grace'
+                    : isGradeA
+                    ? 'Grade A: 100% Full MSP'
+                    : 'Intake Blocked'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] pt-1 border-t border-slate-100">
+                <div>
+                  <span className="text-slate-500 block">Base Mandi MSP</span>
+                  <span className="font-bold text-slate-800">₹{mspRate.toFixed(2)}/kg</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">Grade Adjustment</span>
+                  <span className={`font-bold ${isGradeB ? 'text-blue-700' : isMarginal ? 'text-amber-700' : 'text-emerald-700'}`}>
+                    {isGradeB
+                      ? `-2% (-₹${(mspRate - suggestedRate).toFixed(2)})`
+                      : isMarginal
+                      ? `-10% (-₹${(mspRate - suggestedRate).toFixed(2)})`
+                      : '0% (Full Rate)'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block">Mandated Rate</span>
+                  <span className="font-extrabold text-emerald-700">₹{suggestedRate.toFixed(2)}/kg</span>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Accepted Weight (kg) *</label>
@@ -407,14 +458,25 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-slate-700">Rate (₹/kg) *</label>
-                  <button
-                    type="button"
-                    onClick={() => setRate(String(suggestedRate > 0 ? suggestedRate : mspRate))}
-                    className="text-[10px] text-emerald-700 hover:underline font-bold"
-                  >
-                    Sync Rate
-                  </button>
+                  <label className="text-xs font-semibold text-slate-700">
+                    Rate (₹/kg) {isManualOverride ? '(Manual)' : '(Auto)'} *
+                  </label>
+                  {isManualOverride ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsManualOverride(false)
+                        setRate(String(suggestedRate))
+                      }}
+                      className="text-[10px] text-blue-700 hover:underline font-bold"
+                    >
+                      Reset to Auto
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-emerald-700 font-bold">
+                      ✓ Gradewise Linked
+                    </span>
+                  )}
                 </div>
                 <input
                   id="rate-per-kg"
@@ -422,7 +484,10 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
                   step="0.01"
                   placeholder="e.g. 23.00"
                   value={rate}
-                  onChange={e => setRate(e.target.value)}
+                  onChange={e => {
+                    setRate(e.target.value)
+                    setIsManualOverride(true)
+                  }}
                   className="input-field font-semibold"
                 />
               </div>

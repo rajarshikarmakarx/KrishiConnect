@@ -686,34 +686,41 @@ export default function AdminApp() {
                   <thead>
                     <tr className="border-b border-slate-200 text-slate-500 text-xs uppercase bg-slate-50/50">
                       <th className="py-3 px-4">Commodity / Crop</th>
-                      <th className="py-3 px-4">Common Grade (₹ / Quintal)</th>
-                      <th className="py-3 px-4">Grade A (₹ / Quintal)</th>
-                      <th className="py-3 px-4 font-bold text-green-700">KrishiConnect Rate (₹ / kg)</th>
-                      <th className="py-3 px-4">Procurement Status</th>
+                      <th className="py-3 px-4">Base MSP (₹ / Qtl)</th>
+                      <th className="py-3 px-4 text-emerald-800 font-bold">Grade A (100% FAQ)</th>
+                      <th className="py-3 px-4 text-blue-800 font-bold">Grade B (-2% Value Cut)</th>
+                      <th className="py-3 px-4">Grade B Cut (₹/kg)</th>
+                      <th className="py-3 px-4">Statutory Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {(mspData?.rates || [
-                      { crop: 'Paddy', common_grade_per_quintal: 2300, a_grade_per_quintal: 2320, per_kg: 23.0 },
-                      { crop: 'Wheat', common_grade_per_quintal: 2275, a_grade_per_quintal: 2275, per_kg: 22.75 },
-                      { crop: 'Mustard', common_grade_per_quintal: 5950, a_grade_per_quintal: 5950, per_kg: 59.50 },
-                      { crop: 'Jute', common_grade_per_quintal: 5335, a_grade_per_quintal: 5335, per_kg: 53.35 },
-                      { crop: 'Maize', common_grade_per_quintal: 2225, a_grade_per_quintal: 2225, per_kg: 22.25 },
-                      { crop: 'Potato', common_grade_per_quintal: 1000, a_grade_per_quintal: 1050, per_kg: 10.25 },
-                      { crop: 'Onion', common_grade_per_quintal: 1800, a_grade_per_quintal: 1850, per_kg: 18.25 },
-                    ]).map((r, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3.5 px-4 font-bold text-slate-900">{r.crop}</td>
-                        <td className="py-3.5 px-4 text-slate-700">₹{r.common_grade_per_quintal.toLocaleString('en-IN')}</td>
-                        <td className="py-3.5 px-4 text-slate-700">₹{r.a_grade_per_quintal.toLocaleString('en-IN')}</td>
-                        <td className="py-3.5 px-4 font-bold text-green-700 text-base">₹{r.per_kg.toFixed(2)}</td>
-                        <td className="py-3.5 px-4">
-                          <span className="bg-green-100 text-green-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">
-                            Active MSP
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                      { crop: 'Paddy', common_grade_per_quintal: 2300, a_grade_per_quintal: 2320, per_kg: 23.0, grade_a_per_kg: 23.0, grade_b_per_kg: 22.54, grade_b_deduction_per_kg: 0.46 },
+                      { crop: 'Wheat', common_grade_per_quintal: 2275, a_grade_per_quintal: 2275, per_kg: 22.75, grade_a_per_kg: 22.75, grade_b_per_kg: 22.29, grade_b_deduction_per_kg: 0.46 },
+                      { crop: 'Mustard', common_grade_per_quintal: 5950, a_grade_per_quintal: 5950, per_kg: 59.50, grade_a_per_kg: 59.50, grade_b_per_kg: 58.31, grade_b_deduction_per_kg: 1.19 },
+                      { crop: 'Jute', common_grade_per_quintal: 5335, a_grade_per_quintal: 5335, per_kg: 53.35, grade_a_per_kg: 53.35, grade_b_per_kg: 52.28, grade_b_deduction_per_kg: 1.07 },
+                      { crop: 'Maize', common_grade_per_quintal: 2225, a_grade_per_quintal: 2225, per_kg: 22.25, grade_a_per_kg: 22.25, grade_b_per_kg: 21.80, grade_b_deduction_per_kg: 0.45 },
+                      { crop: 'Potato', common_grade_per_quintal: 1000, a_grade_per_quintal: 1050, per_kg: 10.25, grade_a_per_kg: 10.25, grade_b_per_kg: 10.04, grade_b_deduction_per_kg: 0.21 },
+                      { crop: 'Onion', common_grade_per_quintal: 1800, a_grade_per_quintal: 1850, per_kg: 18.25, grade_a_per_kg: 18.25, grade_b_per_kg: 17.88, grade_b_deduction_per_kg: 0.37 },
+                    ]).map((r, idx) => {
+                      const gradeARate = r.grade_a_per_kg || r.per_kg
+                      const gradeBRate = r.grade_b_per_kg || (Math.round(r.per_kg * 0.98 * 100) / 100)
+                      const cut = r.grade_b_deduction_per_kg || (Math.round((gradeARate - gradeBRate) * 100) / 100)
+                      return (
+                        <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3.5 px-4 font-bold text-slate-900">{r.crop}</td>
+                          <td className="py-3.5 px-4 text-slate-700">₹{r.common_grade_per_quintal.toLocaleString('en-IN')}</td>
+                          <td className="py-3.5 px-4 font-extrabold text-emerald-700 text-base">₹{gradeARate.toFixed(2)}/kg</td>
+                          <td className="py-3.5 px-4 font-bold text-blue-700">₹{gradeBRate.toFixed(2)}/kg</td>
+                          <td className="py-3.5 px-4 text-slate-500 font-mono text-xs">-₹{cut.toFixed(2)}</td>
+                          <td className="py-3.5 px-4">
+                            <span className="bg-green-100 text-green-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">
+                              Active Gradewise MSP
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -721,11 +728,12 @@ export default function AdminApp() {
               <div className="mt-4 p-4 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 space-y-1">
                 <p className="font-bold flex items-center gap-1.5">
                   <Info className="w-4 h-4" />
-                  Statutory Directives for Procurement Officers:
+                  Statutory Automatic Gradewise Pricing Directives:
                 </p>
                 <p>
-                  Procurement centres are legally mandated to disburse at or above the official MSP rate.
-                  KrishiConnect enforces these rates directly in the Operator procurement modal to prevent underpayment of farmers.
+                  Procurement centres are legally mandated to disburse at or above the official MSP floor price.
+                  KrishiConnect enforces the statutory Food Corporation of India (FCI) value cut schedule:
+                  Grade A produce receives 100% MSP payout, while Grade B produce (within permissible tolerance) automatically applies a 2% value cut adjustment to protect public procurement standards while preventing distress rejection of farmer lots.
                 </p>
               </div>
             </div>

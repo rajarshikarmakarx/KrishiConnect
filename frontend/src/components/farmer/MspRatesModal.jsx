@@ -61,20 +61,41 @@ export default function MspRatesModal({ onClose }) {
           </div>
 
           <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-            {rates.map((r, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors">
-                <div>
-                  <h4 className="font-bold text-slate-900 text-sm">{translateCrop(r.crop)}</h4>
-                  <p className="text-xs text-slate-400">
-                    ₹{formatNumber(r.common_grade_per_quintal.toLocaleString('en-IN'))} {t('msp.per_quintal')}
-                  </p>
+            {rates.map((r, idx) => {
+              const gradeARate = r.grade_a_per_kg || r.per_kg
+              const gradeBRate = r.grade_b_per_kg || (Math.round(r.per_kg * 0.98 * 100) / 100)
+              return (
+                <div key={idx} className="p-3.5 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm">{translateCrop(r.crop)}</h4>
+                      <p className="text-xs text-slate-400">
+                        ₹{formatNumber(r.common_grade_per_quintal.toLocaleString('en-IN'))} {t('msp.per_quintal')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-base font-extrabold text-green-700">₹{formatNumber(gradeARate.toFixed(2))}</span>
+                      <span className="text-xs text-slate-500 ml-1">{t('common.per_kg')}</span>
+                    </div>
+                  </div>
+                  {/* Gradewise Tiers */}
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs bg-slate-50 rounded-xl p-2 border border-slate-100">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-emerald-800 font-semibold flex items-center gap-1 text-[11px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Grade A (100% FAQ):
+                      </span>
+                      <span className="font-bold text-slate-800">₹{formatNumber(gradeARate.toFixed(2))}</span>
+                    </div>
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-blue-800 font-semibold flex items-center gap-1 text-[11px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Grade B (-2% Cut):
+                      </span>
+                      <span className="font-bold text-slate-800">₹{formatNumber(gradeBRate.toFixed(2))}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-lg font-bold text-green-700">₹{formatNumber(r.per_kg.toFixed(2))}</span>
-                  <span className="text-xs text-slate-500 ml-1">{t('common.per_kg')}</span>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 space-y-1">

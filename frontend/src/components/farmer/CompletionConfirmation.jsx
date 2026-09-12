@@ -73,6 +73,12 @@ export default function CompletionConfirmation({ queueEntry }) {
   const displayTotal = proc?.total_amount || (displayAcceptedQty * displayRate)
   const isPaid = proc?.payment?.status === 'PAID'
 
+  const assignedGrade = proc?.assay_record?.grade || proc?.grade || queueEntry?.assay_record?.grade || 'Grade A'
+  const isGradeB = assignedGrade.includes('Grade B') || assignedGrade === 'Grade B'
+  const isGradeC = assignedGrade.includes('Grade C') || assignedGrade === 'Grade C'
+  const baseRate = proc?.base_rate_per_kg || (isGradeB ? Math.round((displayRate / 0.98) * 100) / 100 : isGradeC ? Math.round((displayRate / 0.90) * 100) / 100 : displayRate)
+  const discountPct = proc?.discount_percentage ?? (isGradeB ? 2.0 : isGradeC ? 10.0 : 0.0)
+
   const dbtRefNumber = proc?.payment?.id
     ? `WB-DBT-2025-${String(proc.payment.id).padStart(6, '0')}`
     : `WB-DBT-2025-${String(queueEntry.id).padStart(6, '0')}`
@@ -146,8 +152,18 @@ export default function CompletionConfirmation({ queueEntry }) {
               <span className="font-bold text-green-700">{formatNumber(displayAcceptedQty)} {t('common.kg')}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">{t('completion.statutory_msp_rate')}</span>
-              <span className="font-semibold text-slate-800">₹{formatNumber(displayRate.toFixed(2))} {t('common.per_kg')}</span>
+              <span className="text-slate-500">Base Statutory MSP</span>
+              <span className="font-semibold text-slate-800">₹{formatNumber(baseRate.toFixed(2))} {t('common.per_kg')}</span>
+            </div>
+            {discountPct > 0 && (
+              <div className="flex justify-between text-blue-700 font-medium">
+                <span>Quality Adjustment ({assignedGrade})</span>
+                <span className="font-bold">-{discountPct}% (-₹{formatNumber((baseRate - displayRate).toFixed(2))}/kg)</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-slate-500 font-bold">{t('completion.statutory_msp_rate')}</span>
+              <span className="font-bold text-emerald-700">₹{formatNumber(displayRate.toFixed(2))} {t('common.per_kg')}</span>
             </div>
             <div className="flex justify-between items-center border-t border-slate-200 pt-3 mt-3">
               <span className="font-bold text-slate-900 text-base">{t('completion.total_payout_amount')}</span>

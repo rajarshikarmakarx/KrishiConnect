@@ -46,6 +46,9 @@ from app.models import (
 from app.locations_data import find_village_coordinates
 from app.distance import calculate_distance_and_duration
 from app.timezone_utils import get_local_today, local_date
+from app.pricing import (
+    STATUTORY_BASE_MSP, GRADE_PRICE_CONFIG, calculate_gradewise_price, get_base_msp
+)
 
 ai_router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -350,31 +353,78 @@ async def ai_recommend(
 @ai_router.get("/msp-rates")
 async def msp_rates():
     """
-    West Bengal Minimum Support Price reference table.
+    West Bengal Minimum Support Price reference table with Statutory Gradewise Pricing.
     Season: Kharif 2025-26 (CACP Recommendation, GoI Gazette Aug 2025).
-    Prices in ₹ per quintal (100 kg).
+    Prices in ₹ per quintal (100 kg) and ₹ per kg.
     """
+    crop_gazette = [
+        ("Paddy", 2300, 2320, 23.00),
+        ("Wheat", 2275, 2275, 22.75),
+        ("Mustard", 5950, 5950, 59.50),
+        ("Jute", 5335, 5335, 53.35),
+        ("Maize", 2225, 2225, 22.25),
+        ("Potato", 1000, 1050, 10.25),
+        ("Onion", 1800, 1850, 18.25),
+    ]
+    rates = []
+    for crop, common_qtl, a_qtl, per_kg in crop_gazette:
+        p_a = calculate_gradewise_price(crop, "Grade A", base_rate=per_kg)
+        p_b = calculate_gradewise_price(crop, "Grade B", base_rate=per_kg)
+        p_c = calculate_gradewise_price(crop, "Grade C", base_rate=per_kg)
+        rates.append({
+            "crop": crop,
+            "common_grade_per_quintal": common_qtl,
+            "a_grade_per_quintal": a_qtl,
+            "per_kg": per_kg,
+            "base_msp_per_kg": per_kg,
+            "grade_a_per_kg": p_a["effective_rate_per_kg"],
+            "grade_b_per_kg": p_b["effective_rate_per_kg"],
+            "grade_c_per_kg": p_c["effective_rate_per_kg"],
+            "grade_b_deduction_percent": p_b["discount_percentage"],
+            "grade_c_deduction_percent": p_c["discount_percentage"],
+            "grade_b_deduction_per_kg": p_b["deduction_per_kg"],
+        })
+
     return {
         "season": "Kharif 2025-26",
         "authority": "Commission for Agricultural Costs and Prices (CACP), GoI",
         "state": "West Bengal",
         "effective_from": "2025-10-01",
-        "note": "Rates shown are MSP (floor price). Actual procurement may vary by grade and moisture.",
-        "rates": [
-            {"crop": "Paddy", "common_grade_per_quintal": 2300, "a_grade_per_quintal": 2320, "per_kg": 23.0},
-            {"crop": "Wheat", "common_grade_per_quintal": 2275, "a_grade_per_quintal": 2275, "per_kg": 22.75},
-            {"crop": "Mustard", "common_grade_per_quintal": 5950, "a_grade_per_quintal": 5950, "per_kg": 59.50},
-            {"crop": "Jute", "common_grade_per_quintal": 5335, "a_grade_per_quintal": 5335, "per_kg": 53.35},
-            {"crop": "Maize", "common_grade_per_quintal": 2225, "a_grade_per_quintal": 2225, "per_kg": 22.25},
-            {"crop": "Potato", "common_grade_per_quintal": 1000, "a_grade_per_quintal": 1050, "per_kg": 10.25},
-            {"crop": "Onion", "common_grade_per_quintal": 1800, "a_grade_per_quintal": 1850, "per_kg": 18.25},
-        ],
-        "source": "CACP Price Policy Report, WB ARDB supplemental circular W/SL/2025/08",
+        "pricing_model": "Automatic Gradewise Quality Payout Model (Grade A: 100% MSP, Grade B: 98% Permissible [-2%], Grade C: 90% Sun-Drying [-10%])",
+        "rates": rates,
+        "source": "CACP Price Policy Report & FCI Procurement Value Cut Schedule",
         "disclaimer": (
             "These rates are the government-mandated floor price for farmers. "
-            "Procurement centres must pay at or above MSP. "
-            "In KrishiConnect, operators see these rates inline to prevent underpayment."
+            "KrishiConnect automatically applies statutory grade value cuts (e.g. 2% deduction for Grade B) "
+            "to prevent underpayment or non-compliant disbursements."
         )
+    }
+
+
+@ai_router.get("/calculate-grade-price")
+async def calculate_grade_price_endpoint(
+    crop: str = "Paddy",
+    moisture: float = 13.5,
+    chaff: float = 0.5,
+    damaged: float = 0.0,
+    base_rate: Optional[float] = None
+):
+    """
+    Statutory Gradewise Price Calculator.
+    Assays produce parameters and computes certified Agmark grade and effective payout rate.
+    """
+    from app.api.queue import compute_quality_grade
+    grade, decision, multiplier, reason = compute_quality_grade(crop, moisture, chaff, damaged)
+    price_info = calculate_gradewise_price(crop, grade, base_rate=base_rate)
+    return {
+        "crop": crop,
+        "moisture": moisture,
+        "chaff": chaff,
+        "damaged": damaged,
+        "grade": grade,
+        "decision": decision,
+        "reason": reason,
+        **price_info
     }
 
 

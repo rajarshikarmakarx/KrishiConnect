@@ -27,6 +27,10 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
   const chaff = assay.chaff_percentage ?? 0.5
   const damaged = assay.damaged_grains_percentage ?? 0.0
   const grade = assay.grade || proc.grade || 'Grade A (FAQ Standard)'
+  const isGradeB = grade.includes('Grade B') || grade === 'Grade B'
+  const isGradeC = grade.includes('Grade C') || grade === 'Grade C'
+  const baseMspRate = proc.base_rate_per_kg || (isGradeB ? Math.round((displayRate / 0.98) * 100) / 100 : isGradeC ? Math.round((displayRate / 0.90) * 100) / 100 : displayRate)
+  const discountPercent = proc.discount_percentage ?? (isGradeB ? 2.0 : isGradeC ? 10.0 : 0.0)
 
   const receiptNo = `WB-KRC-2026-${String(queueEntry.id || 1).padStart(6, '0')}`
   const dbtRefNo = proc.payment?.id
@@ -303,7 +307,10 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
                       <td className="p-1.5 border-r border-slate-300 text-center">1</td>
                       <td className="p-1.5 border-r border-slate-300">
                         <span className="font-bold text-slate-900">{translateCrop(displayCrop)}</span>
-                        <span className="text-[10px] text-slate-500 block">Kharif Season 2025-26 · {grade}</span>
+                        <span className="text-[10px] text-slate-500 block">
+                          Kharif Season 2025-26 · {grade}
+                          {discountPercent > 0 && ` (${discountPercent}% Statutory Value Cut)`}
+                        </span>
                       </td>
                       <td className="p-1.5 border-r border-slate-300 text-right text-slate-600">
                         {formatNumber(displayExpectedQty)} {t('invoice.unit_kg')}
@@ -315,6 +322,11 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
                       <td className="p-1.5 border-r border-slate-300 text-right text-slate-900 font-semibold">
                         ₹{formatNumber(displayRate.toFixed(2))}/kg
                         <span className="text-[10px] text-slate-500 block font-normal">₹{formatNumber(ratePerQuintal)}/qtl</span>
+                        {discountPercent > 0 && (
+                          <span className="text-[9px] text-blue-700 block font-semibold">
+                            (Base: ₹{formatNumber(baseMspRate.toFixed(2))} -{discountPercent}%)
+                          </span>
+                        )}
                       </td>
                       <td className="p-1.5 text-right font-black text-slate-900 text-sm">
                         ₹{formatNumber(displayTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }))}

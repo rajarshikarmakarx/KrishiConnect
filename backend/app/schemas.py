@@ -222,7 +222,7 @@ class MyQueueStatus(BaseModel):
 
 class CompleteQueueRequest(BaseModel):
     accepted_quantity_kg: float
-    rate_per_kg: float
+    rate_per_kg: Optional[float] = None
     moisture_percentage: Optional[float] = 13.5
     chaff_percentage: Optional[float] = 0.5
     damaged_grains_percentage: Optional[float] = 0.0
@@ -248,6 +248,8 @@ class ProcurementOut(SchemaModel):
     expected_quantity_kg: float
     accepted_quantity_kg: Optional[float] = None
     rate_per_kg: Optional[float] = None
+    base_rate_per_kg: Optional[float] = None
+    discount_percentage: Optional[float] = None
     total_amount: Optional[float] = None
     notes: Optional[str] = None
     created_at: datetime

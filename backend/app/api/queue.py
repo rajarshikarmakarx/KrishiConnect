@@ -23,6 +23,9 @@ from app.schemas import (
 from app.auth import decode_token
 from app.realtime import manager
 from app.timezone_utils import get_local_today, local_date
+from app.pricing import (
+    STATUTORY_BASE_MSP, GRADE_PRICE_CONFIG, calculate_gradewise_price, get_base_msp
+)
 
 router = APIRouter(prefix="/queue", tags=["queue"])
 
@@ -49,29 +52,39 @@ def generate_token(prefix: str = "A") -> str:
 def compute_quality_grade(crop: str, moisture: float, chaff: float = 0.0, damaged: float = 0.0) -> tuple:
     """
     Computes (grade, decision, suggested_multiplier, reason) based on Govt Mandi & FAQ Quality Norms:
-    - Grade A (FAQ Standard): Moisture <= 14.0%, Chaff <= 1.5%, Damaged <= 2.0% -> 100% MSP rate
-    - Grade B (Permissible Standard): Moisture <= 17.0%, Chaff <= 3.0%, Damaged <= 4.0% -> Standard rate
-    - Grade C (Marginal / Sun-Drying Needed): Moisture 17.1% - 19.9% -> Deferral for sun-drying recommended
-    - Rejected: Moisture >= 20.0% -> Fungal aflatoxin & spoilage hazard
+    - Grade A (FAQ Standard): Moisture <= 14.0%, Chaff <= 1.5%, Damaged <= 2.0% -> 100% MSP rate (multiplier 1.0)
+    - Grade B (Permissible Standard): Moisture <= 17.0%, Chaff <= 3.0%, Damaged <= 4.0% -> Automatic 2% value cut (multiplier 0.98)
+    - Grade C (Marginal / Sun-Drying Needed): Moisture 17.1% - 19.9% -> Mandi sun-drying deferral / 10% value cut (multiplier 0.90)
+    - Rejected: Moisture >= 20.0% -> Fungal aflatoxin & spoilage hazard (multiplier 0.0)
     """
     if moisture >= 20.0:
         return (
             "Rejected",
             "REJECTED",
-            0.0,
+            GRADE_PRICE_CONFIG["Rejected"]["multiplier"],
             f"Excessive moisture ({moisture:.1f}% >= 20.0%) presents high risk of fungal aflatoxin and silo rot. Produce must be rejected or sun-dried."
         )
     elif moisture > 17.0:
         return (
             "Grade C",
             "DEFERRED_SUN_DRYING",
-            0.90,
+            GRADE_PRICE_CONFIG["Grade C"]["multiplier"],
             f"Moisture ({moisture:.1f}%) exceeds FAQ gate standard (17.0%). Mandi yard sun-drying grace recommended."
         )
     elif moisture > 14.0 or chaff > 1.5 or damaged > 2.0:
-        return ("Grade B", "APPROVED", 0.98, None)
+        return (
+            "Grade B",
+            "APPROVED",
+            GRADE_PRICE_CONFIG["Grade B"]["multiplier"],
+            None
+        )
     else:
-        return ("Grade A", "APPROVED", 1.0, None)
+        return (
+            "Grade A",
+            "APPROVED",
+            GRADE_PRICE_CONFIG["Grade A"]["multiplier"],
+            None
+        )
 
 
 async def enrich_entry(entry: QueueEntry, db: AsyncSession, centre_name: str = None,
@@ -646,7 +659,12 @@ async def complete_procurement(
     if not entry.processing_started_at:
         entry.processing_started_at = datetime.now(timezone.utc)
 
-    total = round(data.accepted_quantity_kg * data.rate_per_kg, 2)
+    # Automatic Gradewise Pricing Calculation
+    price_info = calculate_gradewise_price(entry.crop, grade, base_rate=data.rate_per_kg)
+    effective_rate = price_info["effective_rate_per_kg"]
+    base_rate = price_info["base_rate_per_kg"]
+    discount_pct = price_info["discount_percentage"]
+    total = round(data.accepted_quantity_kg * effective_rate, 2)
 
     entry.status = QueueStatus.COMPLETED
     entry.completed_at = datetime.now(timezone.utc)
@@ -664,7 +682,7 @@ async def complete_procurement(
             damaged_grains_percentage=damaged,
             grade=grade,
             decision="APPROVED",
-            suggested_rate_per_kg=data.rate_per_kg,
+            suggested_rate_per_kg=effective_rate,
             notes=data.notes,
             created_at=datetime.now(timezone.utc)
         )
@@ -677,7 +695,7 @@ async def complete_procurement(
         assay.damaged_grains_percentage = damaged
         assay.grade = grade
         assay.decision = "APPROVED"
-        assay.suggested_rate_per_kg = data.rate_per_kg
+        assay.suggested_rate_per_kg = effective_rate
         assay.notes = data.notes
 
     # Update procurement record
@@ -687,7 +705,7 @@ async def complete_procurement(
         proc.assay_record_id = assay.id
         proc.grade = grade
         proc.accepted_quantity_kg = data.accepted_quantity_kg
-        proc.rate_per_kg = data.rate_per_kg
+        proc.rate_per_kg = effective_rate
         proc.total_amount = total
         proc.notes = data.notes
         proc.completed_at = datetime.now(timezone.utc)
@@ -699,7 +717,7 @@ async def complete_procurement(
             grade=grade,
             expected_quantity_kg=entry.expected_quantity_kg,
             accepted_quantity_kg=data.accepted_quantity_kg,
-            rate_per_kg=data.rate_per_kg,
+            rate_per_kg=effective_rate,
             total_amount=total,
             notes=data.notes,
             created_at=datetime.now(timezone.utc),
@@ -724,14 +742,21 @@ async def complete_procurement(
         db.add(payment)
     await db.commit()
 
+    price_desc = f"Quality: {grade} ({moisture}% moisture). Rate: ₹{effective_rate:.2f}/kg"
+    if discount_pct > 0:
+        price_desc += f" (includes statutory {discount_pct:.0f}% {grade} value cut)"
+
     await manager.broadcast_queue_changed(entry.centre_id, "complete")
     await manager.broadcast_farmer_update(entry.farmer_id, {
         "type": "COMPLETED",
         "token": entry.token,
         "amount": total,
         "grade": grade,
+        "base_rate": base_rate,
+        "effective_rate": effective_rate,
+        "discount_percentage": discount_pct,
         "moisture": moisture,
-        "message": f"✅ Procurement complete! Quality: {grade} ({moisture}% moisture). Total: ₹{total:,.0f}. Payment processing."
+        "message": f"✅ Procurement complete! {price_desc}. Total: ₹{total:,.0f}. Payment processing."
     })
 
     return {
@@ -739,6 +764,10 @@ async def complete_procurement(
         "token": entry.token,
         "total_amount": total,
         "grade": grade,
+        "base_rate_per_kg": base_rate,
+        "effective_rate_per_kg": effective_rate,
+        "rate_per_kg": effective_rate,
+        "discount_percentage": discount_pct,
         "moisture_percentage": moisture
     }
 
@@ -839,10 +868,7 @@ async def record_quality_action(
     }
 
 
-MSP_FALLBACK_RATES = {
-    "Paddy": 23.0, "Wheat": 21.5, "Mustard": 45.0,
-    "Jute": 38.0, "Potato": 12.0, "Onion": 18.0
-}
+MSP_FALLBACK_RATES = STATUTORY_BASE_MSP
 
 
 @router.get("/{queue_id}/procurement", response_model=ProcurementOut)
@@ -868,20 +894,28 @@ async def get_procurement(
     r = await db.execute(select(Procurement).where(Procurement.queue_entry_id == queue_id))
     proc = r.scalar_one_or_none()
 
+    # Load AssayRecord if attached to procurement or queue entry
+    assay_out = None
+    r_assay = await db.execute(select(AssayRecord).where(AssayRecord.queue_entry_id == entry.id))
+    assay = r_assay.scalar_one_or_none()
+
     # Auto-generate procurement record if missing for this entry
     if not proc:
-        rate = MSP_FALLBACK_RATES.get(entry.crop, 23.0)
+        grade_val = assay.grade if assay else "Grade A"
+        price_calc = calculate_gradewise_price(entry.crop, grade_val)
+        rate = price_calc["effective_rate_per_kg"]
         qty = entry.expected_quantity_kg or 100.0
         total = round(qty * rate, 2)
         proc = Procurement(
             queue_entry_id=entry.id,
+            assay_record_id=assay.id if assay else None,
             crop=entry.crop,
-            grade="Grade A",
+            grade=grade_val,
             expected_quantity_kg=qty,
             accepted_quantity_kg=qty,
             rate_per_kg=rate,
             total_amount=total,
-            notes="Verified Standard Grade A",
+            notes=f"Verified Standard {grade_val}",
             created_at=entry.booked_at or datetime.now(timezone.utc),
             completed_at=entry.completed_at or datetime.now(timezone.utc)
         )
@@ -889,9 +923,11 @@ async def get_procurement(
         await db.flush()
 
     # Ensure accepted_quantity_kg and rate_per_kg are populated
-    if proc.accepted_quantity_kg is None:
-        proc.accepted_quantity_kg = proc.expected_quantity_kg or 100.0
-        proc.rate_per_kg = proc.rate_per_kg or MSP_FALLBACK_RATES.get(entry.crop, 23.0)
+    if proc.accepted_quantity_kg is None or proc.rate_per_kg is None:
+        grade_val = proc.grade or (assay.grade if assay else "Grade A")
+        price_calc = calculate_gradewise_price(entry.crop, grade_val)
+        proc.accepted_quantity_kg = proc.accepted_quantity_kg or proc.expected_quantity_kg or 100.0
+        proc.rate_per_kg = proc.rate_per_kg or price_calc["effective_rate_per_kg"]
         proc.total_amount = round(proc.accepted_quantity_kg * proc.rate_per_kg, 2)
         await db.commit()
 
@@ -920,18 +956,14 @@ async def get_procurement(
             paid_at=payment.paid_at
         )
 
-    # Load AssayRecord if attached to procurement or queue entry
-    assay_out = None
-    if proc.assay_record_id:
-        r_assay = await db.execute(select(AssayRecord).where(AssayRecord.id == proc.assay_record_id))
-        assay = r_assay.scalar_one_or_none()
-        if assay:
-            assay_out = AssayRecordOut.model_validate(assay) if hasattr(AssayRecordOut, 'model_validate') else AssayRecordOut.from_orm(assay)
-    else:
-        r_assay = await db.execute(select(AssayRecord).where(AssayRecord.queue_entry_id == entry.id))
-        assay = r_assay.scalar_one_or_none()
-        if assay:
-            assay_out = AssayRecordOut.model_validate(assay) if hasattr(AssayRecordOut, 'model_validate') else AssayRecordOut.from_orm(assay)
+    if proc.assay_record_id and not assay:
+        r_assay_proc = await db.execute(select(AssayRecord).where(AssayRecord.id == proc.assay_record_id))
+        assay = r_assay_proc.scalar_one_or_none()
+
+    if assay:
+        assay_out = AssayRecordOut.model_validate(assay) if hasattr(AssayRecordOut, 'model_validate') else AssayRecordOut.from_orm(assay)
+
+    grade_calc = calculate_gradewise_price(proc.crop, proc.grade or "Grade A")
 
     return ProcurementOut(
         id=proc.id,
@@ -941,6 +973,8 @@ async def get_procurement(
         expected_quantity_kg=proc.expected_quantity_kg,
         accepted_quantity_kg=proc.accepted_quantity_kg,
         rate_per_kg=proc.rate_per_kg,
+        base_rate_per_kg=grade_calc["base_rate_per_kg"],
+        discount_percentage=grade_calc["discount_percentage"],
         total_amount=proc.total_amount,
         notes=proc.notes,
         created_at=proc.created_at,

@@ -68,9 +68,15 @@ export default function ProcurementStatus({ queueEntry }) {
               <span className="text-slate-500">{t('procurement.accepted')}</span>
               <span className="font-medium">{formatNumber(proc.accepted_quantity_kg)} {t('common.kg')}</span>
             </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-500">Certified Grade</span>
+              <span className="font-bold text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                {proc.grade || 'Grade A'}
+              </span>
+            </div>
             <div className="flex justify-between">
               <span className="text-slate-500">{t('procurement.rate')}</span>
-              <span className="font-medium">₹{formatNumber(proc.rate_per_kg)} {t('common.per_kg')}</span>
+              <span className="font-medium text-slate-800">₹{formatNumber(proc.rate_per_kg)} {t('common.per_kg')}</span>
             </div>
             <div className="flex justify-between border-t border-slate-200 pt-2 mt-2">
               <span className="font-bold text-slate-800">{t('procurement.total_amount')}</span>

@@ -94,12 +94,13 @@ def _format_sms_text(msg_type: str, lang: str, params: Dict[str, Any]) -> str:
         qty = params.get("accepted_quantity_kg", 0)
         rate = params.get("rate_per_kg", 0)
         amount = params.get("total_amount", 0)
+        grade = params.get("grade", "Grade A")
         if lang == "bn":
-            return f"কৃষিকানেক্ট: {crop} সংগ্রহ সম্পন্ন। ওজন: {qty} কেজি, দর: ₹{rate}/কেজি। মোট: ₹{amount}। PFMS মাধ্যমে DBT পেমেন্ট ব্যাংকে পাঠানো হয়েছে।"
+            return f"কৃষিকানেক্ট: {crop} ({grade}) সংগ্রহ সম্পন্ন। ওজন: {qty} কেজি, দর: ₹{rate}/কেজি। মোট: ₹{amount}। PFMS মাধ্যমে DBT পেমেন্ট ব্যাংকে পাঠানো হয়েছে।"
         elif lang == "hi":
-            return f"কৃषिकनेक्ट: {crop} खरीद पूरी हुई। वजन: {qty} kg, दर: ₹{rate}/kg। कुल: ₹{amount}। PFMS द्वारा डीबीटी भुगतान बैंक में भेजा गया।"
+            return f"কৃषिकनेक्ट: {crop} ({grade}) खरीद पूरी हुई। वजन: {qty} kg, दर: ₹{rate}/kg। कुल: ₹{amount}। PFMS द्वारा डीबीटी भुगतान बैंक में भेजा गया।"
         else:
-            return f"KrishiConnect: {crop} procurement complete. Net: {qty} kg @ Rs {rate}/kg. Total: Rs {amount}. Direct DBT payment initiated via PFMS."
+            return f"KrishiConnect: {crop} ({grade}) procurement complete. Net: {qty} kg @ Rs {rate}/kg. Total: Rs {amount}. Direct DBT payment initiated via PFMS."
 
     return f"KrishiConnect Notification: {params.get('message', 'Update available')}"
 

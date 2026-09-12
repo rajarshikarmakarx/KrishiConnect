@@ -9,13 +9,14 @@ from datetime import datetime, date, timedelta, timezone
 from app.database import AsyncSessionLocal, init_db
 from app.models import (
     User, ProcurementCentre, CentreCounter, TimeSlot,
-    QueueEntry, Procurement, Payment, Notification,
+    QueueEntry, Procurement, Payment, Notification, AssayRecord,
     UserRole, QueueStatus, PaymentStatus, CentreStatus
 )
 from app.auth import get_password_hash
+from app.pricing import STATUTORY_BASE_MSP, calculate_gradewise_price
 
 CROPS = ["Paddy", "Wheat", "Mustard", "Jute", "Potato", "Onion"]
-CROP_RATES = {"Paddy": 23.0, "Wheat": 21.5, "Mustard": 45.0, "Jute": 38.0, "Potato": 12.0, "Onion": 18.0}
+CROP_RATES = STATUTORY_BASE_MSP
 
 VILLAGES = [
     "Amtala", "Baruipur", "Rajpur", "Sonarpur", "Joka", "Thakurpukur",
@@ -234,12 +235,29 @@ async def seed(reset: bool = False):
             slot.booked_count += 1
 
             accepted = round(qty_kg * random.uniform(0.92, 0.99), 1)
-            rate = CROP_RATES[crop]
+            grade = "Grade B" if random.random() < 0.25 else "Grade A"
+            price_info = calculate_gradewise_price(crop, grade)
+            rate = price_info["effective_rate_per_kg"]
             total = round(accepted * rate, 2)
+
+            assay = AssayRecord(
+                queue_entry=entry,
+                crop=crop,
+                moisture_percentage=15.2 if grade == "Grade B" else 13.2,
+                chaff_percentage=1.8 if grade == "Grade B" else 0.6,
+                damaged_grains_percentage=1.0 if grade == "Grade B" else 0.0,
+                grade=grade,
+                decision="APPROVED",
+                suggested_rate_per_kg=rate,
+                notes=f"Statutory {grade} Assay Verified",
+                created_at=entry.processing_started_at
+            )
 
             proc = Procurement(
                 queue_entry=entry,
+                assay_record=assay,
                 crop=crop,
+                grade=grade,
                 expected_quantity_kg=qty_kg,
                 accepted_quantity_kg=accepted,
                 rate_per_kg=rate,
@@ -256,6 +274,7 @@ async def seed(reset: bool = False):
                 paid_at=now - timedelta(hours=i)
             )
             db.add(entry)
+            db.add(assay)
             db.add(proc)
             db.add(payment)
             token_num += 1
@@ -446,7 +465,9 @@ async def _seed_history(db, centres, farmers):
                 completed_dt = proc_start + timedelta(minutes=proc_duration)
 
                 accepted = round(qty_kg * random.uniform(0.88, 0.99), 1)
-                rate = CROP_RATES.get(crop, 20.0)
+                grade = "Grade B" if random.random() < 0.25 else "Grade A"
+                price_info = calculate_gradewise_price(crop, grade)
+                rate = price_info["effective_rate_per_kg"]
                 total_amount = round(accepted * rate, 2)
 
                 entry = QueueEntry(
@@ -463,9 +484,24 @@ async def _seed_history(db, centres, farmers):
                     completed_at=completed_dt,
                 )
 
-                proc = Procurement(
+                assay = AssayRecord(
                     queue_entry=entry,
                     crop=crop,
+                    moisture_percentage=15.1 if grade == "Grade B" else 13.0,
+                    chaff_percentage=1.7 if grade == "Grade B" else 0.5,
+                    damaged_grains_percentage=1.2 if grade == "Grade B" else 0.0,
+                    grade=grade,
+                    decision="APPROVED",
+                    suggested_rate_per_kg=rate,
+                    notes=f"Historical {grade} intake",
+                    created_at=proc_start
+                )
+
+                proc = Procurement(
+                    queue_entry=entry,
+                    assay_record=assay,
+                    crop=crop,
+                    grade=grade,
                     expected_quantity_kg=qty_kg,
                     accepted_quantity_kg=accepted,
                     rate_per_kg=rate,
@@ -483,6 +519,7 @@ async def _seed_history(db, centres, farmers):
                 )
 
                 db.add(entry)
+                db.add(assay)
                 db.add(proc)
                 db.add(payment)
                 token_counter += 1
