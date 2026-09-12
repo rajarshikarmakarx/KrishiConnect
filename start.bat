@@ -56,7 +56,7 @@ set "VENV_PY=%~dp0backend\venv\Scripts\python.exe"
 set "VENV_PIP=%~dp0backend\venv\Scripts\pip.exe"
 
 echo      Checking backend dependencies...
-"%VENV_PY%" -c "import fastapi, uvicorn, sqlalchemy, jose, bcrypt" >nul 2>&1
+"%VENV_PY%" -c "import fastapi, uvicorn, sqlalchemy, jose, bcrypt, tzdata" >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     echo      Installing backend packages (this may take a minute on first run)...
     "%VENV_PIP%" install --disable-pip-version-check -r requirements.txt
