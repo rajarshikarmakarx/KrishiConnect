@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../AuthContext'
 import { useNotifications } from '../NotificationContext'
 import { useTranslation } from '../i18n'
-import { Wheat, MapPin, Clock, Users, Star, ChevronRight, History, Bell, LogOut, X, CheckCircle, Ticket, User, ChevronDown, Settings, Scale } from 'lucide-react'
+import { Wheat, MapPin, ChevronRight, History, LogOut, Ticket, User, ChevronDown, Settings, Scale } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
 import NotificationCenter from '../components/NotificationCenter'
@@ -35,19 +35,26 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
         id="btn-profile-menu"
         onClick={() => setOpen(o => !o)}
         aria-label="User Profile"
-        className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors border border-white/20 cursor-pointer shrink-0"
+        className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/20 cursor-pointer shrink-0 active:scale-95 shadow-xs"
       >
-        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-          <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+        <div className="w-7 h-7 sm:w-7.5 sm:h-7.5 bg-gradient-to-br from-green-400 to-emerald-600 rounded-lg flex items-center justify-center shrink-0 shadow-xs">
+          <User className="w-4 h-4 text-white" />
         </div>
-        <span className="hidden sm:inline text-sm font-medium text-white max-w-[120px] truncate">{user.full_name}</span>
-        <ChevronDown className={`hidden sm:inline w-3.5 h-3.5 text-white/70 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <div className="hidden sm:flex flex-col text-left leading-none min-w-0">
+          <span className="text-xs sm:text-sm font-bold text-white max-w-[140px] md:max-w-[180px] lg:max-w-[220px] truncate">
+            {user.full_name}
+          </span>
+          <span className="text-[10px] text-green-200/90 font-medium hidden md:inline truncate mt-0.5">
+            {user.village ? translateLocation(`${user.village}, ${user.district}`) : t('nav.farmer_role')}
+          </span>
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-white/80 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-fade-in origin-top-right">
           <div className="bg-gradient-to-br from-green-700 to-green-800 p-4">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-2 shadow-inner">
               <User className="w-5 h-5 text-white" />
             </div>
             <p className="font-bold text-white text-sm">{user.full_name}</p>
@@ -56,7 +63,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
           <div className="p-3 space-y-1 border-b border-slate-100">
             {user.village && (
               <div className="flex items-center gap-2 px-2 py-1 text-xs text-slate-500">
-                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                 <span className="truncate">{translateLocation(`${user.village}, ${user.district}`)}</span>
               </div>
             )}
@@ -270,55 +277,71 @@ export default function FarmerApp() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col w-full max-w-full overflow-x-hidden">
       {/* Header */}
-      <header className="gov-header text-white px-3 sm:px-4 py-3 sm:py-4 safe-bottom sticky top-0 z-30 shadow-md w-full">
-        <div className="max-w-2xl mx-auto w-full">
-          <div className="flex items-center justify-between gap-1.5 sm:gap-3 w-full min-w-0">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 shadow-sm shrink-0">
-                <Wheat className="w-4 h-4 sm:w-5 sm:h-5 text-green-200" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-base sm:text-lg font-bold leading-tight truncate">{t('common.app_name')}</h1>
-                <p className="hidden sm:block text-green-300 text-xs truncate">{t('common.app_tagline')}</p>
-              </div>
+      <header className="gov-header text-white px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 safe-bottom sticky top-0 z-30 shadow-md w-full">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3 sm:gap-6 min-w-0">
+          {/* Brand & Gov Emblem */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white/15 rounded-xl sm:rounded-2xl flex items-center justify-center border border-white/25 shadow-inner backdrop-blur-sm shrink-0">
+              <Wheat className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300 drop-shadow-sm" />
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              <LanguageSwitcher dark={true} />
-              <button
-                onClick={() => setShowMspModal(true)}
-                className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-semibold border border-amber-400/30 transition-colors cursor-pointer shrink-0"
-                title={t('msp.title')}
-              >
-                <Scale className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                <span className="hidden sm:inline">{t('nav.govt_msp_rates')}</span>
-                <span className="sm:hidden font-bold">MSP</span>
-              </button>
-              <NotificationCenter dark={true} />
-              <ProfileMenu
-                user={user}
-                logout={logout}
-                onEditProfile={() => setShowProfileEdit(true)}
-                onOpenMsp={() => setShowMspModal(true)}
-              />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-xl font-extrabold tracking-tight text-white whitespace-nowrap leading-none select-none">
+                  {t('common.app_name')}
+                </h1>
+                <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-400/20 text-amber-200 border border-amber-400/30">
+                  {t('common.gov_portal_badge')}
+                </span>
+              </div>
+              <p className="hidden sm:block text-green-200/90 text-xs font-medium truncate mt-1 leading-none">
+                {t('common.app_tagline')}
+              </p>
             </div>
+          </div>
+
+          {/* Right Action Items */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-3.5 shrink-0">
+            <LanguageSwitcher dark={true} />
+            <button
+              id="btn-msp-rates-header"
+              onClick={() => setShowMspModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-100 text-xs font-semibold border border-amber-400/40 transition-all cursor-pointer shrink-0 shadow-xs active:scale-95"
+              title={t('msp.title')}
+            >
+              <Scale className="w-4 h-4 text-amber-300 shrink-0" />
+              <span className="hidden sm:inline font-semibold">{t('nav.govt_msp_rates')}</span>
+              <span className="sm:hidden font-bold">MSP</span>
+            </button>
+            <NotificationCenter dark={true} />
+            <ProfileMenu
+              user={user}
+              logout={logout}
+              onEditProfile={() => setShowProfileEdit(true)}
+              onOpenMsp={() => setShowMspModal(true)}
+            />
           </div>
         </div>
       </header>
 
       {/* Active queue banner */}
       {activeQueue && activeQueue.queue_entry.status !== 'COMPLETED' && (
-        <div className="bg-green-700 text-white px-4 py-3 border-b border-green-600 shadow-inner">
-          <div className="max-w-2xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="live-dot" />
-              <div>
-                <span className="font-mono font-bold text-lg">{activeQueue.queue_entry.token}</span>
-                <span className="text-green-200 text-sm ml-2">
+        <div className="bg-green-700/95 text-white px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 border-b border-green-600 shadow-inner w-full">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="live-dot shrink-0" />
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                <span className="font-mono font-black text-base sm:text-lg bg-white/15 px-2.5 py-0.5 rounded-lg border border-white/20">
+                  {activeQueue.queue_entry.token}
+                </span>
+                <span className="text-green-100 text-xs sm:text-sm font-medium truncate">
                   · {formatNumber(activeQueue.farmers_ahead)} {t('queue.farmers_ahead')} · ~{formatNumber(Math.round(activeQueue.estimated_wait_minutes))} {t('common.min')}
                 </span>
               </div>
             </div>
-            <button onClick={() => setTab('queue')} className="text-green-200 hover:text-white text-sm font-semibold flex items-center gap-1 cursor-pointer">
+            <button
+              onClick={() => setTab('queue')}
+              className="text-white hover:text-amber-200 text-xs sm:text-sm font-bold flex items-center gap-1 cursor-pointer bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl border border-white/20 transition-colors shrink-0"
+            >
               {t('common.view')} <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -326,7 +349,7 @@ export default function FarmerApp() {
       )}
 
       {/* Content */}
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-4">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-5 sm:py-6">
         {tab === 'centres' && (
           <CentreList
             centres={centres}
@@ -371,22 +394,26 @@ export default function FarmerApp() {
       </main>
 
       {/* Bottom Nav */}
-      <nav className="bg-white border-t border-slate-200 px-4 py-2 safe-bottom sticky bottom-0 z-20 shadow-lg">
-        <div className="max-w-2xl mx-auto flex">
+      <nav className="bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2 safe-bottom sticky bottom-0 z-20 shadow-lg">
+        <div className="max-w-md sm:max-w-lg mx-auto flex items-center justify-around">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               id={`tab-${id}`}
               onClick={() => setTab(id)}
-              className={`flex-1 flex flex-col items-center gap-1 py-2 transition-colors cursor-pointer ${
-                tab === id ? 'text-green-700 font-bold' : 'text-slate-400 font-medium'
+              className={`flex-1 flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition-all cursor-pointer ${
+                tab === id
+                  ? 'text-green-700 font-bold bg-green-50/80 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 font-medium hover:bg-slate-50'
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="text-xs">{label}</span>
-              {id === 'queue' && activeQueue && (
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-              )}
+              <div className="relative">
+                <Icon className="w-5 h-5" />
+                {id === 'queue' && activeQueue && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full ring-2 ring-white" />
+                )}
+              </div>
+              <span className="text-xs leading-none">{label}</span>
             </button>
           ))}
         </div>

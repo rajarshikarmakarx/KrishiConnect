@@ -92,15 +92,15 @@ export default function NotificationCenter({ className = '', dark = false, heade
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notifications"
-        className={`relative p-1.5 sm:p-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 cursor-pointer shrink-0 ${
+        className={`relative p-2 sm:p-2.5 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 cursor-pointer shrink-0 active:scale-95 ${
           isDarkHeader
-            ? 'text-white/85 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20'
+            ? 'text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 shadow-xs backdrop-blur-sm'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 bg-white'
         } ${isOpen ? (isDarkHeader ? 'bg-white/25 text-white ring-2 ring-white/30' : 'bg-slate-100 text-slate-900 ring-2 ring-slate-200') : ''}`}
       >
         <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4.5 min-w-[18px] px-1 items-center justify-center rounded-full bg-amber-500 text-[10px] font-extrabold text-white shadow-md ring-2 ring-white">
+          <span className="absolute -top-1 -right-1 flex h-4.5 min-w-[18px] px-1 items-center justify-center rounded-full bg-amber-500 text-[10px] font-extrabold text-white shadow-md ring-2 ring-emerald-800">
             {unreadCount > 99 ? '99+' : formatNumber(unreadCount)}
             <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping" />
           </span>

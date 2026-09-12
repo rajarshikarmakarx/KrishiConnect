@@ -43,19 +43,26 @@ function OperatorProfileMenu({ user, logout, centreName }) {
         id="btn-profile-menu"
         onClick={() => setOpen(o => !o)}
         aria-label="Operator Profile"
-        className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors border border-white/20 cursor-pointer shrink-0"
+        className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/20 cursor-pointer shrink-0 active:scale-95 shadow-xs"
       >
-        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-          <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+        <div className="w-7 h-7 sm:w-7.5 sm:h-7.5 bg-gradient-to-br from-slate-600 to-slate-800 rounded-lg flex items-center justify-center shrink-0 shadow-xs">
+          <User className="w-4 h-4 text-white" />
         </div>
-        <span className="hidden sm:inline text-sm font-medium text-white max-w-[120px] truncate">{user.full_name}</span>
-        <ChevronDown className={`hidden sm:inline w-3.5 h-3.5 text-white/70 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <div className="hidden sm:flex flex-col text-left leading-none min-w-0">
+          <span className="text-xs sm:text-sm font-bold text-white max-w-[140px] md:max-w-[180px] lg:max-w-[220px] truncate">
+            {user.full_name}
+          </span>
+          <span className="text-[10px] text-green-200/90 font-medium hidden md:inline truncate mt-0.5">
+            Procurement Officer
+          </span>
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-white/80 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden animate-fade-in origin-top-right">
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4">
-            <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center mb-2">
+            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mb-2 shadow-inner">
               <User className="w-5 h-5 text-white" />
             </div>
             <p className="font-bold text-white text-sm">{user.full_name}</p>
@@ -63,7 +70,7 @@ function OperatorProfileMenu({ user, logout, centreName }) {
           </div>
           <div className="p-3 space-y-1 border-b border-slate-100">
             <div className="flex items-center gap-2 px-2 py-1 text-xs text-slate-500">
-              <Building2 className="w-3.5 h-3.5 shrink-0" />
+              <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-400" />
               <span className="truncate">{centreName || 'Assigned Centre'}</span>
             </div>
           </div>
@@ -699,21 +706,32 @@ export default function OperatorApp() {
   return (
     <div className="min-h-screen bg-slate-50 w-full max-w-full overflow-x-hidden flex flex-col">
       {/* Header */}
-      <header className="gov-header text-white px-3 sm:px-4 py-3 sm:py-4 sticky top-0 z-30 shadow-md w-full">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-2 sm:gap-4 w-full min-w-0">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-0.5 sm:mb-1 min-w-0">
-              <Wheat className="w-4 h-4 sm:w-5 sm:h-5 text-green-300 shrink-0" />
-              <h1 className="font-bold text-base sm:text-lg truncate">{queue?.centre_name || 'Procurement Centre'}</h1>
+      <header className="gov-header text-white px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 sticky top-0 z-30 shadow-md w-full">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-6 w-full min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white/15 rounded-xl sm:rounded-2xl flex items-center justify-center border border-white/25 shadow-inner backdrop-blur-sm shrink-0">
+              <Wheat className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300 drop-shadow-sm" />
             </div>
-            <p className="hidden sm:block text-green-300 text-xs truncate">Procurement Officer Dashboard · Real-time Counter Manager</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="font-extrabold text-base sm:text-xl text-white tracking-tight truncate">
+                  {queue?.centre_name || 'Procurement Centre'}
+                </h1>
+                <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/30 text-emerald-200 border border-emerald-400/30">
+                  Officer Desk
+                </span>
+              </div>
+              <p className="hidden sm:block text-green-200/90 text-xs font-medium truncate mt-1 leading-none">
+                Real-time Counter Manager & Gate Assayer Portal
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-            <div className="flex items-center gap-1 sm:gap-1.5 text-xs bg-black/20 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-white/10 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-3.5 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-1.5 text-xs bg-black/20 px-2.5 py-1.5 rounded-xl border border-white/15 shrink-0">
               {reconnecting ? (
                 <><WifiOff className="w-3.5 h-3.5 text-yellow-300 shrink-0" /><span className="text-yellow-200 hidden sm:inline">Reconnecting</span></>
               ) : (
-                <><div className="live-dot shrink-0" /><span className="text-green-200 font-semibold text-[11px] sm:text-xs">LIVE</span></>
+                <><div className="live-dot shrink-0" /><span className="text-green-200 font-bold text-[11px] sm:text-xs">LIVE</span></>
               )}
             </div>
             <NotificationCenter dark={true} />
@@ -722,7 +740,7 @@ export default function OperatorApp() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-5 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 w-full">
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="Waiting" value={queue?.waiting_count || 0} color="slate" />
