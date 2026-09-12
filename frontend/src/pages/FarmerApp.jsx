@@ -124,6 +124,10 @@ export default function FarmerApp() {
   const [showProfileEdit, setShowProfileEdit] = useState(false)
   const [showMspModal, setShowMspModal] = useState(false)
   const [showQualityStandardsModal, setShowQualityStandardsModal] = useState(false)
+  // Track transactions that transitioned to COMPLETED during the CURRENT login session
+  // so the completion confirmation screen is only shown in-session and resets to empty on relogin.
+  const [sessionCompletedEntryId, setSessionCompletedEntryId] = useState(null)
+  const activeEntryIdRef = useRef(null)
 
   const TABS = [
     { id: 'centres', label: t('nav.centres'), icon: MapPin },
@@ -143,15 +147,40 @@ export default function FarmerApp() {
     }
   }, [user, t])
 
+  // Track whether the initial load has already run so we only auto-switch to
+  // the queue tab once (on first mount after login), never on realtime-triggered
+  // refreshes triggered by WebSocket activity while the user is on another tab.
+  const initialQueueLoadDone = useRef(false)
+
   const loadActiveQueue = useCallback(async () => {
+    const isInitialLoad = !initialQueueLoadDone.current
     try {
       const data = await api.getMyActiveQueue()
       setActiveQueue(data)
-      if (data) setTab('queue')
+
+      const entryId = data?.queue_entry?.id
+      const status = data?.queue_entry?.status
+
+      if (isInitialLoad) {
+        // On first mount: if entry is actively in-progress, track it
+        if (data && status !== 'COMPLETED') {
+          activeEntryIdRef.current = entryId
+          setTab('queue')
+        }
+      } else {
+        // On subsequent realtime updates: if an entry that was active in this session
+        // completes, record it as completed in this session
+        if (status === 'COMPLETED' && (activeEntryIdRef.current === entryId || entryId === sessionCompletedEntryId)) {
+          setSessionCompletedEntryId(entryId)
+        } else if (status && status !== 'COMPLETED') {
+          activeEntryIdRef.current = entryId
+        }
+      }
     } catch {} finally {
+      if (isInitialLoad) initialQueueLoadDone.current = true
       setLoadingQueue(false)
     }
-  }, [])
+  }, [sessionCompletedEntryId])
 
   useEffect(() => { loadCentres(); loadActiveQueue() }, [])
 
@@ -162,6 +191,9 @@ export default function FarmerApp() {
     useCallback((data) => {
       if (data.type === 'PAYMENT_PAID') {
         setNewToken(null)
+        if (data.queue_id || activeEntryIdRef.current) {
+          setSessionCompletedEntryId(data.queue_id || activeEntryIdRef.current)
+        }
         toast.success(t('toasts.dbt_paid_toast'), {
           id: 'farmer-payment-paid',
           duration: 4000,
@@ -175,6 +207,9 @@ export default function FarmerApp() {
         loadActiveQueue()
       } else if (data.type === 'COMPLETED') {
         setNewToken(null)
+        if (data.queue_id || activeEntryIdRef.current) {
+          setSessionCompletedEntryId(data.queue_id || activeEntryIdRef.current)
+        }
         toast.success(t('toasts.proc_completed_toast'), {
           id: 'farmer-proc-completed',
           duration: 3500
@@ -265,6 +300,8 @@ export default function FarmerApp() {
   useCentreQueue(activeQueue?.queue_entry?.centre_id, loadActiveQueue)
 
   const handleBookingSuccess = (entry) => {
+    activeEntryIdRef.current = entry.id
+    setSessionCompletedEntryId(null)
     setNewToken(entry)
     setShowBooking(false)
     setActiveQueue(null)
@@ -382,16 +419,18 @@ export default function FarmerApp() {
             <div className="flex justify-center py-16">
               <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : activeQueue?.queue_entry?.status === 'COMPLETED' ? (
+          ) : activeQueue?.queue_entry?.status === 'COMPLETED' && sessionCompletedEntryId === activeQueue.queue_entry.id ? (
             <div className="space-y-4">
               <CompletionConfirmation queueEntry={activeQueue.queue_entry} />
             </div>
           ) : newToken ? (
             <div className="space-y-4">
               <BookingToken entry={newToken} onContinue={() => setNewToken(null)} />
-              {activeQueue && <LiveQueueScreen queueStatus={activeQueue} onRefresh={loadActiveQueue} />}
+              {activeQueue && activeQueue.queue_entry?.status !== 'COMPLETED' && (
+                <LiveQueueScreen queueStatus={activeQueue} onRefresh={loadActiveQueue} />
+              )}
             </div>
-          ) : activeQueue ? (
+          ) : activeQueue && activeQueue.queue_entry?.status !== 'COMPLETED' ? (
             <div className="space-y-4">
               <LiveQueueScreen queueStatus={activeQueue} onRefresh={loadActiveQueue} />
               {activeQueue.queue_entry.status === 'PROCESSING' && (
@@ -429,6 +468,9 @@ export default function FarmerApp() {
               <div className="relative">
                 <Icon className="w-5 h-5" />
                 {id === 'queue' && activeQueue && (
+                  activeQueue.queue_entry?.status !== 'COMPLETED' ||
+                  sessionCompletedEntryId === activeQueue.queue_entry?.id
+                ) && (
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full ring-2 ring-white" />
                 )}
               </div>

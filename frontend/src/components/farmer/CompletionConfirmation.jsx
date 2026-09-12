@@ -236,81 +236,87 @@ export default function CompletionConfirmation({ queueEntry }) {
           </div>
         )}
 
-        {/* Payment Status & Govt DBT Confirmation Card */}
-        <div className={`rounded-2xl p-5 border-2 shadow-sm transition-all duration-500 ${
-          isPaid
-            ? 'bg-emerald-50/95 border-emerald-400 ring-2 ring-emerald-200 shadow-emerald-100'
-            : 'bg-amber-50/90 border-amber-300'
-        }`}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className={`rounded-xl p-2.5 mt-0.5 ${isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                {isPaid ? <ShieldCheck className="w-6 h-6 text-emerald-700" /> : <IndianRupee className="w-6 h-6 text-amber-700" />}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-extrabold text-slate-900 text-xl">
-                    ₹{formatNumber((proc?.payment?.amount || displayTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 }))}
+        {/* Payment Status & Govt DBT Confirmation Card — hidden until procurement
+            data arrives to avoid flickering amber "payout in pipeline" state
+            when the payment has already been settled (Bug 3). */}
+        {proc === null ? (
+          <div className="rounded-2xl p-5 border-2 border-slate-200 bg-slate-50 animate-pulse h-24" />
+        ) : (
+          <div className={`rounded-2xl p-5 border-2 shadow-sm transition-all duration-500 ${
+            isPaid
+              ? 'bg-emerald-50/95 border-emerald-400 ring-2 ring-emerald-200 shadow-emerald-100'
+              : 'bg-amber-50/90 border-amber-300'
+          }`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className={`rounded-xl p-2.5 mt-0.5 ${isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                  {isPaid ? <ShieldCheck className="w-6 h-6 text-emerald-700" /> : <IndianRupee className="w-6 h-6 text-amber-700" />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-extrabold text-slate-900 text-xl">
+                      ₹{formatNumber((proc?.payment?.amount || displayTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 }))}
+                    </p>
+                    <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                      isPaid ? 'bg-emerald-600 text-white shadow-sm' : 'bg-amber-500 text-white animate-pulse'
+                    }`}>
+                      {isPaid ? (
+                        <>
+                          <Sparkles className="w-3 h-3" />
+                          {t('completion.direct_payout_settled')}
+                        </>
+                      ) : (
+                        t('completion.payout_in_pipeline')
+                      )}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 font-medium mt-0.5">
+                    {isPaid ? t('completion.dbt_credited') : t('completion.payment_processing')}
                   </p>
-                  <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
-                    isPaid ? 'bg-emerald-600 text-white shadow-sm' : 'bg-amber-500 text-white animate-pulse'
-                  }`}>
-                    {isPaid ? (
-                      <>
-                        <Sparkles className="w-3 h-3" />
-                        {t('completion.direct_payout_settled')}
-                      </>
-                    ) : (
-                      t('completion.payout_in_pipeline')
-                    )}
+                </div>
+              </div>
+              {!isPaid && (
+                <button
+                  onClick={loadProcurement}
+                  disabled={loading}
+                  className="text-xs text-amber-700 hover:text-amber-900 flex items-center gap-1 font-medium bg-amber-100/70 hover:bg-amber-200/70 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                  title={t('common.sync')}
+                >
+                  <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                  <span>{t('common.sync')}</span>
+                </button>
+              )}
+            </div>
+
+            {isPaid ? (
+              <div className="mt-4 pt-3.5 border-t border-emerald-200/80 space-y-2 text-xs animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-emerald-900 gap-1 bg-white/80 p-2.5 rounded-xl border border-emerald-200">
+                  <span className="font-semibold text-emerald-800 flex items-center gap-1.5">
+                    <FileCheck className="w-4 h-4 text-emerald-600" />
+                    {t('completion.dbt_ref_id')}
+                  </span>
+                  <span className="font-mono font-bold text-slate-900">{dbtRefNumber}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-600 px-1 pt-1">
+                  <span>{t('completion.disbursed_via')}</span>
+                  <span className="font-medium text-slate-800">
+                    {proc?.payment?.paid_at
+                      ? new Date(proc.payment.paid_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+                      : t('common.just_now')}
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 font-medium mt-0.5">
-                  {isPaid ? t('completion.dbt_credited') : t('completion.payment_processing')}
+                <p className="text-[11px] text-emerald-800 bg-emerald-100/60 p-2 rounded-lg font-medium text-center">
+                  {t('completion.treasury_notice')}
                 </p>
               </div>
-            </div>
-            {!isPaid && (
-              <button
-                onClick={loadProcurement}
-                disabled={loading}
-                className="text-xs text-amber-700 hover:text-amber-900 flex items-center gap-1 font-medium bg-amber-100/70 hover:bg-amber-200/70 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-                title={t('common.sync')}
-              >
-                <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-                <span>{t('common.sync')}</span>
-              </button>
+            ) : (
+              <div className="mt-3 pt-3 border-t border-amber-200 text-xs text-amber-800 text-center flex items-center justify-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <span>{t('completion.officer_issuing_notice')}</span>
+              </div>
             )}
           </div>
-
-          {isPaid ? (
-            <div className="mt-4 pt-3.5 border-t border-emerald-200/80 space-y-2 text-xs animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-emerald-900 gap-1 bg-white/80 p-2.5 rounded-xl border border-emerald-200">
-                <span className="font-semibold text-emerald-800 flex items-center gap-1.5">
-                  <FileCheck className="w-4 h-4 text-emerald-600" />
-                  {t('completion.dbt_ref_id')}
-                </span>
-                <span className="font-mono font-bold text-slate-900">{dbtRefNumber}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-600 px-1 pt-1">
-                <span>{t('completion.disbursed_via')}</span>
-                <span className="font-medium text-slate-800">
-                  {proc?.payment?.paid_at
-                    ? new Date(proc.payment.paid_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
-                    : t('common.just_now')}
-                </span>
-              </div>
-              <p className="text-[11px] text-emerald-800 bg-emerald-100/60 p-2 rounded-lg font-medium text-center">
-                {t('completion.treasury_notice')}
-              </p>
-            </div>
-          ) : (
-            <div className="mt-3 pt-3 border-t border-amber-200 text-xs text-amber-800 text-center flex items-center justify-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-              <span>{t('completion.officer_issuing_notice')}</span>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Notes */}
         {(proc?.notes || queueEntry.notes) && (

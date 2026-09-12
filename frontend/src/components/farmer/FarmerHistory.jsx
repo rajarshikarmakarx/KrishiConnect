@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, MapPin, CheckCircle, FileText } from 'lucide-react'
+import { Calendar, MapPin, CheckCircle, FileText, Loader2 } from 'lucide-react'
 import api from '../../api'
 import { useAuth } from '../../AuthContext'
 import { useTranslation } from '../../i18n'
@@ -11,12 +11,35 @@ export default function FarmerHistory() {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedInvoiceEntry, setSelectedInvoiceEntry] = useState(null)
+  // Full procurement data (with payment, assay, accepted qty, rate) for the invoice
+  const [selectedProcurement, setSelectedProcurement] = useState(null)
+  const [loadingInvoice, setLoadingInvoice] = useState(false)
 
   useEffect(() => {
     api.getMyQueue().then(data => {
       setEntries(data.filter(e => ['COMPLETED', 'CANCELLED', 'REJECTED', 'DEFERRED_SUN_DRYING'].includes(e.status)))
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
+
+  // Fetch full procurement details (accepted qty, real rate, payment, assay)
+  // before opening the invoice so numbers match what the operator actually entered.
+  const openInvoice = async (entry) => {
+    setLoadingInvoice(true)
+    setSelectedInvoiceEntry(entry)
+    try {
+      const proc = await api.getProcurement(entry.id)
+      setSelectedProcurement(proc || null)
+    } catch {
+      setSelectedProcurement(null)
+    } finally {
+      setLoadingInvoice(false)
+    }
+  }
+
+  const closeInvoice = () => {
+    setSelectedInvoiceEntry(null)
+    setSelectedProcurement(null)
+  }
 
   if (loading) return (
     <div className="space-y-3 animate-pulse">
@@ -84,10 +107,14 @@ export default function FarmerHistory() {
             <div className="flex items-center gap-2">
               {entry.status === 'COMPLETED' && (
                 <button
-                  onClick={() => setSelectedInvoiceEntry(entry)}
-                  className="text-xs bg-green-50 hover:bg-green-100 text-green-800 font-bold px-2.5 py-1 rounded-lg border border-green-200 transition-colors flex items-center gap-1 cursor-pointer"
+                  onClick={() => openInvoice(entry)}
+                  disabled={loadingInvoice && selectedInvoiceEntry?.id === entry.id}
+                  className="text-xs bg-green-50 hover:bg-green-100 text-green-800 font-bold px-2.5 py-1 rounded-lg border border-green-200 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-60 disabled:cursor-wait"
                 >
-                  <FileText className="w-3.5 h-3.5" />
+                  {loadingInvoice && selectedInvoiceEntry?.id === entry.id
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <FileText className="w-3.5 h-3.5" />
+                  }
                   <span>{t('invoice.view_invoice_btn')}</span>
                 </button>
               )}
@@ -97,12 +124,12 @@ export default function FarmerHistory() {
       ))}
 
       {/* Invoice Modal for selected completed history entry */}
-      {selectedInvoiceEntry && (
+      {selectedInvoiceEntry && !loadingInvoice && (
         <PrintInvoiceModal
           isOpen={!!selectedInvoiceEntry}
-          onClose={() => setSelectedInvoiceEntry(null)}
+          onClose={closeInvoice}
           queueEntry={selectedInvoiceEntry}
-          procurement={null}
+          procurement={selectedProcurement}
           farmer={user}
         />
       )}
