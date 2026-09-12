@@ -27,7 +27,6 @@ export default function EnamSurgeForecaster() {
   const handleTriggerAction = (actionId, title) => {
     setActionStates(prev => ({ ...prev, [actionId]: true }))
     toast.success(`Protocol Activated: ${title}! Mandi queue parameters updated.`, {
-      icon: '⚡',
       duration: 5000
     })
   }

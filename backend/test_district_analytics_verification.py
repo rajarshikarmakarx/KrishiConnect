@@ -15,7 +15,6 @@ import asyncio
 import os
 import sys
 from datetime import datetime, timezone, timedelta
-from zoneinfo import ZoneInfo
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent

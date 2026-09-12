@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import { Printer, X, Scale, QrCode } from 'lucide-react'
+import { Printer, X, Scale, QrCode, Landmark, CheckCircle2, Clock } from 'lucide-react'
 import { useTranslation } from '../../i18n'
 import { numberToIndianWords } from '../../utils/numberToWords'
 
@@ -132,22 +132,22 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:static print:overflow-visible">
       {/* Container Dialog */}
-      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:border-none print:w-full print:rounded-none">
+      <div className="bg-white dark:bg-[#0a101d] w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[96vh] print:max-h-none print:shadow-none print:border-none print:w-full print:rounded-none">
 
         {/* Modal Action Bar (Hidden on Print) */}
-        <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between flex-shrink-0 print:hidden">
+        <div className="bg-gradient-to-r from-emerald-50 via-teal-50/40 to-emerald-50/10 dark:from-[#0a101d] dark:via-[#0e1626] dark:to-[#0a101d] px-5 py-3.5 flex items-center justify-between flex-shrink-0 print:hidden border-b border-emerald-100/80 dark:border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-green-500/20 border border-green-400/40 flex items-center justify-center text-green-300">
-              <Scale className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center text-emerald-700 dark:text-emerald-300 shadow-inner">
+              <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <h3 className="font-bold text-sm tracking-tight">{t('invoice.form_j_title')}</h3>
-              <p className="text-[11px] text-slate-400">{receiptNo} · {translateCentreName(queueEntry.centre_name)}</p>
+              <h3 className="font-bold text-sm tracking-tight text-slate-900 dark:text-white font-display">{t('invoice.form_j_title')}</h3>
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">{receiptNo} · {translateCentreName(queueEntry.centre_name)}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-slate-300 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-white/10 dark:hover:bg-white/20 dark:text-slate-300 dark:hover:text-white rounded-full transition-colors cursor-pointer"
             aria-label={t('common.close')}
           >
             <X className="w-4 h-4" />
@@ -175,7 +175,7 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
                 <div className="flex-1 px-2">
                   {/* Government Emblem Symbol */}
                   <div className="w-9 h-9 mx-auto mb-1 rounded-full border-2 border-green-800 flex items-center justify-center bg-green-50 text-green-900 font-bold text-base shadow-xs">
-                    🏛️
+                    <Landmark className="w-5 h-5 text-green-900" />
                   </div>
                   <h1 className="text-sm sm:text-base font-black tracking-wider uppercase text-slate-900">
                     {t('invoice.govt_wb')}
@@ -353,8 +353,18 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
                 </div>
                 <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
                   <span className="text-[10px] text-slate-500 block font-medium">{t('invoice.payment_status')}</span>
-                  <span className={`font-bold text-[11px] block ${isPaid ? 'text-green-800' : 'text-amber-800'}`}>
-                    {isPaid ? `✓ ${t('invoice.status_paid')}` : `⏳ ${t('invoice.status_processing')}`}
+                  <span className={`font-bold text-[11px] flex items-center gap-1 ${isPaid ? 'text-green-800' : 'text-amber-800'}`}>
+                    {isPaid ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-700" />
+                        <span>{t('invoice.status_paid')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="w-3.5 h-3.5 text-amber-600" />
+                        <span>{t('invoice.status_processing')}</span>
+                      </>
+                    )}
                   </span>
                 </div>
                 <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
@@ -415,20 +425,20 @@ export default function PrintInvoiceModal({ isOpen, onClose, queueEntry, procure
         </div>
 
         {/* Modal Bottom Footer (Hidden on Print) */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between flex-shrink-0 print:hidden">
-          <p className="text-xs text-slate-500 font-medium">
-            💡 {t('invoice.legal_disclaimer')}
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-between flex-shrink-0 print:hidden">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            {t('invoice.legal_disclaimer')}
           </p>
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="btn-secondary py-2 px-4 text-xs font-semibold cursor-pointer"
+              className="btn-secondary py-2 px-5 text-xs font-semibold rounded-full cursor-pointer"
             >
               {t('invoice.close_btn')}
             </button>
             <button
               onClick={handlePrint}
-              className="bg-green-700 hover:bg-green-800 text-white font-bold py-2.5 px-6 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-colors active:scale-95"
+              className="btn-primary font-bold py-2.5 px-6 rounded-full text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-700/20 transition-all active:scale-95"
             >
               <Printer className="w-4 h-4" />
               <span>{t('invoice.print_invoice_btn')}</span>

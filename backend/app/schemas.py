@@ -167,6 +167,12 @@ class QualityActionRequest(BaseModel):
     notes: Optional[str] = None
 
 
+class BumpQueueRequest(BaseModel):
+    reason: str
+    priority_level: Optional[int] = 1
+    call_now: Optional[bool] = False
+
+
 class QueueEntryOut(SchemaModel):
     id: int
     token: str
@@ -180,6 +186,12 @@ class QueueEntryOut(SchemaModel):
     status: str
     crop: str
     expected_quantity_kg: float
+    is_bumped: bool = False
+    bump_priority: int = 0
+    bump_reason: Optional[str] = None
+    bumped_at: Optional[datetime] = None
+    bumped_by_id: Optional[int] = None
+    bumped_by_name: Optional[str] = None
     booked_at: datetime
     called_at: Optional[datetime] = None
     processing_started_at: Optional[datetime] = None

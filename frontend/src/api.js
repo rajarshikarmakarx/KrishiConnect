@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 function getToken() {
-  return localStorage.getItem('krishi_token')
+  return localStorage.getItem('krishi_token') || sessionStorage.getItem('krishi_token')
 }
 
 function authHeaders() {
@@ -17,9 +17,16 @@ function authHeaders() {
  * Deduplicated toast notification via fixed id prevents notification stacking.
  */
 export function clearSession(detail = 'Session expired') {
-  const hadSession = !!localStorage.getItem('krishi_token') || !!localStorage.getItem('krishi_user')
+  const hadSession = !!localStorage.getItem('krishi_token') ||
+                     !!localStorage.getItem('krishi_user') ||
+                     !!sessionStorage.getItem('krishi_token') ||
+                     !!sessionStorage.getItem('krishi_user')
+
   localStorage.removeItem('krishi_token')
   localStorage.removeItem('krishi_user')
+  localStorage.removeItem('krishi_remember_until')
+  sessionStorage.removeItem('krishi_token')
+  sessionStorage.removeItem('krishi_user')
 
   if (hadSession) {
     window.dispatchEvent(new CustomEvent('krishi:auth-expired', { detail: { message: detail } }))
@@ -113,6 +120,7 @@ export const api = {
 
   // Queue operations (operator & assayer)
   cancelBooking: (queueId) => request('POST', `/queue/${queueId}/cancel`),
+  bumpQueueEntry: (queueId, data) => request('POST', `/queue/${queueId}/bump`, data),
   callNext: (centreId) => request('POST', `/queue/centre/${centreId}/call-next`),
   callSpecific: (queueId) => request('POST', `/queue/${queueId}/call`),
   startProcessing: (queueId) => request('POST', `/queue/${queueId}/start`),
@@ -130,7 +138,6 @@ export const api = {
   getDistrictAnalytics: () => request('GET', '/analytics/district'),
   getSystemHealth: () => request('GET', '/analytics/system-health'),
   getImpactMetrics: () => request('GET', '/analytics/impact'),
-  getEnamSurge: () => request('GET', '/analytics/enam-surge'),
 
   // AI & Transparency Layer
   getAiEta: (centreId) => request('GET', `/ai/eta/${centreId}`),

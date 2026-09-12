@@ -2,9 +2,11 @@
 KrishiConnect Auth Router
 """
 import os
+import secrets
 import random
+import asyncio
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -15,7 +17,7 @@ from app.schemas import (
     UserOut, ProfileUpdateRequest, SendOtpRequest, SendOtpResponse, VerifyOtpRequest
 )
 from app.auth import verify_password, get_password_hash, create_access_token, decode_token
-from app.sms import send_multilingual_sms, get_recent_sms_logs
+from app.sms import send_multilingual_sms, get_recent_sms_logs, set_farmer_language, get_farmer_language, get_twilio_latest_otp
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -114,12 +116,19 @@ async def register_operator(
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    data: LoginRequest,
+    accept_language: Optional[str] = Header(None, alias="Accept-Language"),
+    db: AsyncSession = Depends(get_db)
+):
     result = await db.execute(select(User).where(User.mobile == data.mobile))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid mobile number or password")
+
+    if accept_language and user.role == UserRole.FARMER:
+        set_farmer_language(user.mobile, accept_language)
 
     token = create_access_token({"sub": str(user.id), "role": user.role})
     return TokenResponse(
@@ -133,36 +142,42 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/send-otp", response_model=SendOtpResponse)
 async def send_otp(data: SendOtpRequest):
     """
-    Generate and dispatch a demo OTP for mobile authentication.
-    For hackathon & prototype speed, uses master code 123456 or a 6-digit code.
+    Generate and dispatch a unique 6-digit OTP for mobile authentication.
     """
-    mobile = data.mobile.strip()
-    if not mobile or len(mobile) < 10:
+    clean_mobile = data.mobile.replace("+91", "").replace("-", "").replace(" ", "").strip()
+    if not clean_mobile or len(clean_mobile) < 10 or not clean_mobile.isdigit():
         raise HTTPException(status_code=400, detail="Please enter a valid 10-digit mobile number")
 
-    # Generate OTP (123456 for standard demo accounts or random 6-digit code)
-    if mobile in ["9876543210", "9000000001", "9000000002", "9000000003"] or mobile.endswith("0000"):
-        otp = "123456"
-    else:
-        otp = "123456"  # Consistent demo OTP for seamless hackathon evaluations
+    # Generate unique random 6-digit OTP every time
+    otp = f"{secrets.randbelow(900000) + 100000}"
 
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-    OTP_STORE[mobile] = {
+    OTP_STORE[clean_mobile] = {
         "otp": otp,
         "expires_at": expires_at
     }
 
-    # Dispatch real SMS via Fast2SMS / multilingual SMS service
+    # Record farmer's selected language
+    if data.lang:
+        set_farmer_language(clean_mobile, data.lang)
+
+    # Dispatch real SMS via SMS gateway
     sms_res = await send_multilingual_sms(
-        mobile=mobile,
+        mobile=clean_mobile,
         msg_type="OTP",
         params={"otp": otp},
         lang=data.lang or "en"
     )
 
+    # If Twilio trial account delivered its own code via 'sms_2fa' template, synchronize it
+    twilio_otp = sms_res.get("twilio_otp")
+    if twilio_otp:
+        OTP_STORE[clean_mobile]["twilio_otp"] = twilio_otp
+        otp = twilio_otp
+
     return SendOtpResponse(
-        message=f"OTP sent successfully in {data.lang or 'en'}.",
-        mobile=mobile,
+        message=f"OTP sent successfully to +91 {clean_mobile}.",
+        mobile=clean_mobile,
         otp=otp,
         dev_mode=True,
         sms_text=sms_res.get("dispatched_text"),
@@ -177,47 +192,66 @@ async def get_sms_logs():
 
 
 @router.post("/verify-otp", response_model=TokenResponse)
-async def verify_otp(data: VerifyOtpRequest, db: AsyncSession = Depends(get_db)):
+async def verify_otp(
+    data: VerifyOtpRequest,
+    accept_language: Optional[str] = Header(None, alias="Accept-Language"),
+    db: AsyncSession = Depends(get_db)
+):
     """
     Verify the mobile OTP and issue an access token.
     Auto-provisions demo Farmer if mobile is not yet registered.
     """
-    mobile = data.mobile.strip()
+    clean_mobile = data.mobile.replace("+91", "").replace("-", "").replace(" ", "").strip()
     otp = data.otp.strip()
 
-    if not mobile or len(mobile) < 10:
+    if accept_language:
+        set_farmer_language(clean_mobile, accept_language)
+
+    if not clean_mobile or len(clean_mobile) < 10:
         raise HTTPException(status_code=400, detail="Invalid mobile number")
     if not otp:
         raise HTTPException(status_code=400, detail="OTP is required")
 
-    # Check OTP validity (accepts physical SMS verification code, master 123456, or stored OTP)
-    stored = OTP_STORE.get(mobile)
+    stored = OTP_STORE.get(clean_mobile)
     now = datetime.now(timezone.utc)
-    is_valid = False
 
-    if otp == "123456" or (len(otp) == 6 and otp.isdigit()):
-        is_valid = True
-    elif stored and stored["otp"] == otp:
-        if stored["expires_at"] > now:
+    if not stored:
+        raise HTTPException(
+            status_code=400,
+            detail="No active OTP found for this mobile number. Please click 'Get OTP'."
+        )
+
+    if stored["expires_at"] < now:
+        del OTP_STORE[clean_mobile]
+        raise HTTPException(
+            status_code=400,
+            detail="OTP has expired. Please click 'Get OTP' to receive a new one."
+        )
+
+    # Check match against generated OTP, stored twilio_otp, or fresh carrier verification
+    is_valid = (otp == stored.get("otp")) or (otp == stored.get("twilio_otp"))
+    if not is_valid:
+        # Check if Twilio trial delivered this code to the physical SIM
+        latest_carrier_otp = await asyncio.to_thread(get_twilio_latest_otp, clean_mobile)
+        if latest_carrier_otp and latest_carrier_otp == otp:
             is_valid = True
-        else:
-            raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+            OTP_STORE[clean_mobile]["twilio_otp"] = latest_carrier_otp
 
     if not is_valid:
-        raise HTTPException(status_code=400, detail="Invalid OTP code entered.")
+        raise HTTPException(status_code=400, detail="Invalid OTP code entered. Please check your SMS.")
 
     # Find existing user by mobile
-    result = await db.execute(select(User).where(User.mobile == mobile))
+    result = await db.execute(select(User).where(User.mobile == clean_mobile))
     user = result.scalar_one_or_none()
 
     # Auto-provision farmer account if new mobile
     if not user:
         user = User(
-            full_name=f"Farmer ({mobile[-4:]})",
-            mobile=mobile,
+            full_name=f"Farmer ({clean_mobile[-4:]})",
+            mobile=clean_mobile,
             village="Demo Village",
             district="Demo District",
-            farmer_id=f"FARM-{mobile[-4:]}",
+            farmer_id=f"FARM-{clean_mobile[-4:]}",
             hashed_password=get_password_hash("demo1234"),
             role=UserRole.FARMER
         )
@@ -226,8 +260,8 @@ async def verify_otp(data: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
         await db.refresh(user)
 
     # Clean up OTP from store after successful verification
-    if mobile in OTP_STORE:
-        del OTP_STORE[mobile]
+    if clean_mobile in OTP_STORE:
+        del OTP_STORE[clean_mobile]
 
     token = create_access_token({"sub": str(user.id), "role": user.role})
     return TokenResponse(

@@ -70,23 +70,23 @@ export default function LanguageSwitcher({
         type="button"
         onClick={() => setOpen(!open)}
         aria-label="Change Language"
-        className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 border ${
           isHeader
-            ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-xs'
-            : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs'
-        } ${open ? (isHeader ? 'bg-white/25 ring-2 ring-white/30' : 'bg-slate-50 ring-2 ring-emerald-500/20') : ''}`}
+            ? 'bg-white/10 hover:bg-white/20 text-white border-white/20 shadow-xs'
+            : 'bg-white/10 hover:bg-white/20 text-white border-white/20 shadow-xs'
+        } ${open ? 'bg-white/25 ring-2 ring-white/30' : ''}`}
       >
-        <Globe className={`w-3.5 h-3.5 shrink-0 ${isHeader ? 'text-green-200' : 'text-slate-500'}`} />
+        <Globe className="w-3.5 h-3.5 shrink-0 text-emerald-300" />
         <span className="sm:hidden font-bold">{SHORT_CODES[language] || currentLangObj.code.toUpperCase()}</span>
-        <span className="hidden sm:inline">{currentLangObj.native}</span>
-        <ChevronDown className={`w-3 h-3 shrink-0 transition-transform ${isHeader ? 'text-white/70' : 'text-slate-400'} ${open ? 'rotate-180' : ''}`} />
+        <span className="hidden sm:inline text-white font-medium">{currentLangObj.native}</span>
+        <ChevronDown className={`w-3 h-3 shrink-0 transition-transform text-white/70 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
         <div
-          className="absolute right-0 mt-2 w-44 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white text-slate-900 shadow-xl border border-slate-100 z-50 overflow-hidden py-1 animate-fade-in origin-top-right"
+          className="absolute right-0 mt-2 w-48 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white/95 dark:bg-[#0a101d] text-slate-900 dark:text-white shadow-2xl border border-slate-200/90 dark:border-white/10 backdrop-blur-xl z-50 overflow-hidden py-1 animate-fade-in origin-top-right"
         >
-          <div className="px-3 py-1.5 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="px-3.5 py-2 border-b border-slate-100 dark:border-white/10 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             Select Language / ভাষা
           </div>
           {LANGUAGES.map((lang) => {
@@ -102,18 +102,20 @@ export default function LanguageSwitcher({
                 }}
                 className={`w-full px-3.5 py-2.5 text-left text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
                   isActive
-                    ? 'bg-emerald-50/90 text-emerald-800 font-bold'
-                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 font-bold'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">{lang.flag}</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-6 h-5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold font-mono flex items-center justify-center border border-slate-200 dark:border-slate-700 shrink-0">
+                    {lang.badge || lang.code.toUpperCase()}
+                  </span>
                   <div>
-                    <p className="leading-tight">{lang.native}</p>
-                    <p className="text-[10px] text-slate-400 font-normal">{lang.label}</p>
+                    <p className="leading-tight font-semibold">{lang.native}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">{lang.label}</p>
                   </div>
                 </div>
-                {isActive && <Check className="w-4 h-4 text-emerald-600" />}
+                {isActive && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
               </button>
             )
           })}

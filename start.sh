@@ -1,30 +1,40 @@
 #!/usr/bin/env bash
 # =============================================================================
-# KrishiConnect - One-Click Startup Script
-# Automatically sets up Python virtual environment, installs backend & frontend
-# dependencies, initializes/seeds the database, and launches dev servers.
+# KrishiConnect - Cross-Platform Startup Script (Linux, macOS, WSL, Git Bash)
 # =============================================================================
 set -e
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 echo "🌾 =========================================================="
-echo "🌾 Starting KrishiConnect Smart Procurement Platform"
+echo "🌾 Starting KrishiConnect Smart Agricultural Platform"
 echo "🌾 =========================================================="
 echo ""
 
-# ── Dependency Checks ────────────────────────────────────────────────────────
-command -v python3 >/dev/null 2>&1 || {
-  echo "❌ Python 3 is required but not found in PATH. Please install Python 3."
+# ── 1. Dependency Checks ──────────────────────────────────────────────────────
+PY_BIN=""
+if command -v python3 >/dev/null 2>&1; then
+  PY_BIN="python3"
+elif command -v python >/dev/null 2>&1; then
+  PY_BIN="python"
+elif command -v py >/dev/null 2>&1; then
+  PY_BIN="py"
+else
+  echo "❌ Python is required but not found in PATH. Please install Python 3.10+."
   exit 1
-}
+fi
 
-command -v npm >/dev/null 2>&1 || {
-  echo "❌ Node.js & npm are required but not found in PATH. Please install Node.js."
-  exit 1
-}
+PKG_MGR="pnpm"
+if ! command -v pnpm >/dev/null 2>&1; then
+  if command -v npm >/dev/null 2>&1; then
+    PKG_MGR="npm"
+  else
+    echo "❌ Node.js and pnpm (or npm) are required but not found in PATH."
+    exit 1
+  fi
+fi
 
-# ── Backend Setup & Launch ───────────────────────────────────────────────────
+# ── 2. Backend Setup & Launch ─────────────────────────────────────────────────
 echo "⚙️  Configuring Backend Service..."
 cd "$ROOT/backend"
 
@@ -34,36 +44,45 @@ if [ ! -f ".env" ] && [ -f ".env.example" ]; then
   cp .env.example .env
 fi
 
-# Create virtual environment if missing
-if [ ! -d "venv" ]; then
-  echo "📦 Creating Python virtual environment in backend/venv..."
-  python3 -m venv venv
-fi
-
 # Determine python and pip executables (handles Linux, macOS, Git Bash / WSL on Windows)
+VENV_PYTHON=""
+VENV_PIP=""
+
 if [ -f "$ROOT/backend/venv/bin/python" ]; then
-  PYTHON_BIN="$ROOT/backend/venv/bin/python"
-  PIP_BIN="$ROOT/backend/venv/bin/pip"
+  VENV_PYTHON="$ROOT/backend/venv/bin/python"
+  VENV_PIP="$ROOT/backend/venv/bin/pip"
+elif [ -f "$ROOT/../backend/venv/bin/python" ]; then
+  echo "ℹ️  Using shared virtual environment from parent backend..."
+  VENV_PYTHON="$ROOT/../backend/venv/bin/python"
+  VENV_PIP="$ROOT/../backend/venv/bin/pip"
 elif [ -f "$ROOT/backend/venv/Scripts/python.exe" ]; then
-  PYTHON_BIN="$ROOT/backend/venv/Scripts/python.exe"
-  PIP_BIN="$ROOT/backend/venv/Scripts/pip.exe"
-elif [ -f "$ROOT/backend/venv/Scripts/python" ]; then
-  PYTHON_BIN="$ROOT/backend/venv/Scripts/python"
-  PIP_BIN="$ROOT/backend/venv/Scripts/pip"
+  VENV_PYTHON="$ROOT/backend/venv/Scripts/python.exe"
+  VENV_PIP="$ROOT/backend/venv/Scripts/pip.exe"
+elif [ -f "$ROOT/../backend/venv/Scripts/python.exe" ]; then
+  echo "ℹ️  Using shared virtual environment from parent backend..."
+  VENV_PYTHON="$ROOT/../backend/venv/Scripts/python.exe"
+  VENV_PIP="$ROOT/../backend/venv/Scripts/pip.exe"
 else
-  PYTHON_BIN="python3"
-  PIP_BIN="pip3"
+  echo "📦 Creating Python virtual environment in backend/venv..."
+  "$PY_BIN" -m venv venv
+  if [ -f "venv/bin/python" ]; then
+    VENV_PYTHON="$ROOT/backend/venv/bin/python"
+    VENV_PIP="$ROOT/backend/venv/bin/pip"
+  else
+    VENV_PYTHON="$ROOT/backend/venv/Scripts/python.exe"
+    VENV_PIP="$ROOT/backend/venv/Scripts/pip.exe"
+  fi
 fi
 
-# Check if essential packages are installed, else install requirements.txt
-if ! "$PYTHON_BIN" -c "import fastapi, uvicorn, sqlalchemy, jose" 2>/dev/null; then
+# Install dependencies if needed
+if ! "$VENV_PYTHON" -c "import fastapi, uvicorn, sqlalchemy, jose" 2>/dev/null; then
   echo "📦 Installing backend Python dependencies..."
-  "$PIP_BIN" install --disable-pip-version-check -r requirements.txt
+  "$VENV_PIP" install --disable-pip-version-check -r requirements.txt
 fi
 
 # Ensure database is initialized & seeded
 echo "🌱 Ensuring database and seed data are ready..."
-PYTHONPATH=. "$PYTHON_BIN" -c "
+"$VENV_PYTHON" -c "
 import asyncio
 from app.database import init_db
 from app.seed import seed
@@ -76,24 +95,29 @@ asyncio.run(main())
 "
 
 echo "🚀 Launching FastAPI backend server on http://localhost:8000 ..."
-PYTHONPATH=. "$PYTHON_BIN" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
+"$VENV_PYTHON" run.py &
 BACKEND_PID=$!
 
-# ── Frontend Setup & Launch ──────────────────────────────────────────────────
+# ── 3. Frontend Setup & Launch ────────────────────────────────────────────────
 echo ""
-echo "⚙️  Configuring Frontend Service..."
+echo "⚙️  Configuring Frontend Service ($PKG_MGR)..."
 cd "$ROOT/frontend"
 
+# Ensure .env exists
+if [ ! -f ".env" ] && [ -f ".env.example" ]; then
+  cp .env.example .env
+fi
+
 if [ ! -d "node_modules" ]; then
-  echo "📦 Installing frontend npm dependencies..."
-  npm install
+  echo "📦 Installing frontend dependencies ($PKG_MGR)..."
+  $PKG_MGR install
 fi
 
 echo "🚀 Launching Vite frontend server on http://localhost:5173 ..."
-npm run dev &
+$PKG_MGR dev &
 FRONTEND_PID=$!
 
-# ── Summary Banner ───────────────────────────────────────────────────────────
+# ── 4. Summary Banner ─────────────────────────────────────────────────────────
 echo ""
 echo "=========================================================="
 echo "✅ KrishiConnect Platform is up and running!"
@@ -101,12 +125,6 @@ echo "=========================================================="
 echo "   🌾 Farmer Portal:       http://localhost:5173/"
 echo "   🏢 Mandi Officer/Admin: http://localhost:5173/admin"
 echo "   🔌 Backend API Docs:    http://localhost:8000/docs"
-echo "=========================================================="
-echo ""
-echo "📌 Demo Credentials:"
-echo "   - Farmer Mobile OTP:    Any 10-digit mobile (OTP: 123456)"
-echo "   - Operator (Mandi):     Mobile: 9000000001 | Password: operator123"
-echo "   - District Admin:       Mobile: 9000000000 | Password: admin123"
 echo "=========================================================="
 echo ""
 echo "Press Ctrl+C to stop all servers."

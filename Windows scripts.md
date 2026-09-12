@@ -29,7 +29,7 @@ What start.bat automatically handles in 60 seconds:
 - Creates the Windows virtual environment backend\venv\.
 - Installs all backend packages from backend\require
 - Initializes the tables and pre-seeds demo mandis, historical queue data, and farmer accounts.
-- Installs frontend node_modules via npm install.
+- Installs frontend node_modules via pnpm install.
 - Launches the FastAPI backend on http://localhost:8000.
 - Launches the Vite React frontend on http://localho
 - Automatically opens your default browser directly to the Farmer Portal.

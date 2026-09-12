@@ -30,21 +30,21 @@ export default function MspRatesModal({ onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+      <div className="relative bg-white dark:bg-[#0a101d] rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden border border-slate-200/80 dark:border-white/10 animate-fade-in">
         {/* Header */}
-        <div className="bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 p-5 text-white flex items-start justify-between flex-shrink-0">
+        <div className="bg-gradient-to-r from-emerald-50 via-teal-50/40 to-emerald-50/10 dark:from-[#0a101d] dark:via-[#0e1626] dark:to-[#0a101d] p-5 flex items-start justify-between flex-shrink-0 border-b border-emerald-100/80 dark:border-white/10">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Scale className="w-5 h-5 text-amber-400" />
-              <h3 className="font-bold text-lg">{t('msp.title')}</h3>
+              <Scale className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white font-display">{t('msp.title')}</h3>
             </div>
-            <p className="text-green-200 text-xs">
+            <p className="text-emerald-700 dark:text-emerald-400 text-xs font-medium">
               {data?.season || t('msp.kharif_season')} · {t('msp.wb_mandated')}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors cursor-pointer"
+            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-white/10 dark:hover:bg-white/20 dark:text-slate-300 dark:hover:text-white rounded-full transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -52,47 +52,47 @@ export default function MspRatesModal({ onClose }) {
 
         {/* Content */}
         <div className="p-5 overflow-y-auto space-y-4">
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-3 flex items-center gap-3 text-xs text-green-900">
-            <ShieldCheck className="w-5 h-5 text-green-700 flex-shrink-0" />
+          <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl p-3 flex items-center gap-3 text-xs text-emerald-900 dark:text-emerald-200">
+            <ShieldCheck className="w-5 h-5 text-emerald-700 dark:text-emerald-400 flex-shrink-0" />
             <div>
               <p className="font-bold">{t('msp.guarantee_title')}</p>
-              <p className="text-green-700">{t('msp.guarantee_desc')}</p>
+              <p className="text-emerald-700 dark:text-emerald-300/80">{t('msp.guarantee_desc')}</p>
             </div>
           </div>
 
-          <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
             {rates.map((r, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors">
+              <div key={idx} className="flex items-center justify-between p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <div>
-                  <h4 className="font-bold text-slate-900 text-sm">{translateCrop(r.crop)}</h4>
-                  <p className="text-xs text-slate-400">
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">{translateCrop(r.crop)}</h4>
+                  <p className="text-xs text-slate-400 dark:text-slate-400">
                     ₹{formatNumber(r.common_grade_per_quintal.toLocaleString('en-IN'))} {t('msp.per_quintal')}
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-green-700">₹{formatNumber(r.per_kg.toFixed(2))}</span>
-                  <span className="text-xs text-slate-500 ml-1">{t('common.per_kg')}</span>
+                  <span className="text-lg font-bold text-emerald-700 dark:text-emerald-400">₹{formatNumber(r.per_kg.toFixed(2))}</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">{t('common.per_kg')}</span>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 space-y-1">
+          <div className="p-3 bg-amber-50 dark:bg-amber-500/10 rounded-xl border border-amber-200 dark:border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 space-y-1">
             <p className="font-bold flex items-center gap-1">
               <Info className="w-3.5 h-3.5" />
               {t('msp.faq_standards_title')}
             </p>
-            <p className="text-[11px] text-amber-700 leading-relaxed">
+            <p className="text-[11px] text-amber-700 dark:text-amber-300/80 leading-relaxed">
               {t('msp.faq_standards_desc')}
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end flex-shrink-0">
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end flex-shrink-0">
           <button
             onClick={onClose}
-            className="btn-primary py-2 px-6 text-sm cursor-pointer"
+            className="btn-primary py-2.5 px-6 rounded-full text-sm font-bold shadow-lg shadow-emerald-700/20 cursor-pointer"
           >
             {t('msp.got_it')}
           </button>

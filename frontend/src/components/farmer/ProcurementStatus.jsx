@@ -33,63 +33,71 @@ export default function ProcurementStatus({ queueEntry }) {
   const isPaid = proc.payment?.status === 'PAID'
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-slate-100">
-        <h3 className="font-bold text-slate-900">{t('procurement.title')}</h3>
+    <div className="bg-white dark:bg-[#0a101d] rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-sm overflow-hidden transition-all">
+      <div className="px-5 py-4 border-b border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5">
+        <h3 className="font-bold text-slate-900 dark:text-white font-display">{t('procurement.title')}</h3>
       </div>
       <div className="p-5 space-y-4">
         {/* Progress steps */}
         <div className="flex items-center justify-between">
           {steps.map((step, i) => (
             <div key={i} className="flex flex-col items-center flex-1">
-              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${step.done ? 'bg-green-600 border-green-600' : 'border-slate-300 bg-white'}`}>
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${step.done ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs' : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-transparent'}`}>
                 {step.done && <CheckCircle className="w-4 h-4 text-white" />}
               </div>
               {i < steps.length - 1 && (
-                <div className={`absolute h-0.5 w-full ${step.done ? 'bg-green-600' : 'bg-slate-200'}`} style={{display:'none'}} />
+                <div className={`absolute h-0.5 w-full ${step.done ? 'bg-emerald-600' : 'bg-slate-200 dark:bg-slate-800'}`} style={{display:'none'}} />
               )}
-              <p className="text-[10px] sm:text-xs text-slate-500 mt-1 text-center leading-tight">{step.label}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1 text-center leading-tight">{step.label}</p>
             </div>
           ))}
         </div>
 
         {/* Procurement details */}
         {proc.accepted_quantity_kg && (
-          <div className="bg-slate-50 rounded-xl p-4 space-y-2 text-sm">
+          <div className="bg-slate-50/80 dark:bg-slate-800/40 rounded-2xl p-4 space-y-2 text-sm border border-slate-200/60 dark:border-slate-800 shadow-2xs">
             <div className="flex justify-between">
-              <span className="text-slate-500">{t('procurement.crop')}</span>
-              <span className="font-medium">{translateCrop(proc.crop)}</span>
+              <span className="text-slate-500 dark:text-slate-400">{t('procurement.crop')}</span>
+              <span className="font-bold text-slate-900 dark:text-white">{translateCrop(proc.crop)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">{t('procurement.expected')}</span>
-              <span className="font-medium">{formatNumber(proc.expected_quantity_kg)} {t('common.kg')}</span>
+              <span className="text-slate-500 dark:text-slate-400">{t('procurement.expected')}</span>
+              <span className="font-medium text-slate-700 dark:text-slate-300">{formatNumber(proc.expected_quantity_kg)} {t('common.kg')}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">{t('procurement.accepted')}</span>
-              <span className="font-medium">{formatNumber(proc.accepted_quantity_kg)} {t('common.kg')}</span>
+              <span className="text-slate-500 dark:text-slate-400">{t('procurement.accepted')}</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatNumber(proc.accepted_quantity_kg)} {t('common.kg')}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">{t('procurement.rate')}</span>
-              <span className="font-medium">₹{formatNumber(proc.rate_per_kg)} {t('common.per_kg')}</span>
+              <span className="text-slate-500 dark:text-slate-400">{t('procurement.rate')}</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">₹{formatNumber(proc.rate_per_kg)} {t('common.per_kg')}</span>
             </div>
-            <div className="flex justify-between border-t border-slate-200 pt-2 mt-2">
-              <span className="font-bold text-slate-800">{t('procurement.total_amount')}</span>
-              <span className="font-bold text-green-700 text-base">₹{formatNumber(proc.total_amount?.toLocaleString('en-IN'))}</span>
+            <div className="flex justify-between items-center border-t border-slate-200/70 dark:border-slate-800 pt-2.5 mt-2.5">
+              <span className="font-bold text-slate-900 dark:text-slate-100">{t('procurement.total_amount')}</span>
+              <span className="font-black font-display text-emerald-600 dark:text-emerald-400 text-lg">₹{formatNumber(proc.total_amount?.toLocaleString('en-IN'))}</span>
             </div>
           </div>
         )}
 
         {/* Payment status */}
         {proc.payment && (
-          <div className={`flex items-center justify-between p-4 rounded-xl border ${isPaid ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+          <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+            isPaid
+              ? 'bg-emerald-500/10 dark:bg-emerald-950/25 border-emerald-500/30'
+              : 'bg-amber-500/10 dark:bg-amber-950/25 border-amber-500/30'
+          }`}>
             <div className="flex items-center gap-2">
-              <IndianRupee className={`w-5 h-5 ${isPaid ? 'text-green-600' : 'text-amber-600'}`} />
+              <IndianRupee className={`w-5 h-5 ${isPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`} />
               <div>
-                <p className="font-bold text-slate-900">₹{formatNumber(proc.payment.amount?.toLocaleString('en-IN'))}</p>
-                <p className="text-xs text-slate-500">{t('procurement.payment')}</p>
+                <p className="font-bold text-slate-900 dark:text-white">₹{formatNumber(proc.payment.amount?.toLocaleString('en-IN'))}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t('procurement.payment')}</p>
               </div>
             </div>
-            <span className={`text-sm font-bold px-3 py-1 rounded-full ${isPaid ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+              isPaid
+                ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30'
+                : 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30'
+            }`}>
               {isPaid ? t('procurement.paid_badge') : t('procurement.processing_badge')}
             </span>
           </div>

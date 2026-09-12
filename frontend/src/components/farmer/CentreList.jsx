@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { MapPin, Clock, Users, Building2, ChevronRight, Star, TrendingDown, Sparkles, Navigation, AlertTriangle, Info } from 'lucide-react'
+import { MapPin, Clock, Users, Building2, ChevronRight, Star, TrendingDown, Sparkles, Navigation, AlertTriangle, Info, X } from 'lucide-react'
 import { useTranslation } from '../../i18n'
+import { useAuth } from '../../AuthContext'
+import MandiRouteMap from './MandiRouteMap'
 
 function StatusBadge({ status }) {
   const { t } = useTranslation()
@@ -13,26 +15,26 @@ function StatusBadge({ status }) {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${map[status] || map.OPEN}`}>{labelMap[status] || status}</span>
 }
 
-function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
+function CentreCard({ centre, onSelect, onPreviewRoute, isRecommended, isLongDistance }) {
   const { t, translateCentreName, translateLocation, translateReason, formatNumber } = useTranslation()
   const eta = Math.round(centre.estimated_wait_minutes)
   const roundtripTravelMins = Math.round(centre.distance_km * 2 * 3.0)
   const totalDoorToDoor = roundtripTravelMins + eta
 
   return (
-    <div className={`bg-white rounded-2xl border shadow-sm card-hover overflow-hidden transition-all ${
+    <div className={`bg-white dark:bg-slate-900 rounded-3xl border shadow-sm card-hover overflow-hidden transition-all ${
       isRecommended && !isLongDistance
-        ? 'border-green-400 ring-2 ring-green-100 shadow-md'
+        ? 'border-emerald-500/50 dark:border-emerald-500/50 ring-2 ring-emerald-500/10 shadow-md'
         : isLongDistance
-        ? 'border-amber-200 hover:border-amber-300'
-        : 'border-slate-100'
+        ? 'border-amber-200 dark:border-amber-500/30 hover:border-amber-300'
+        : 'border-slate-100 dark:border-slate-800'
     }`}>
       {isRecommended && !isLongDistance && (
-        <div className="bg-gradient-to-r from-green-800 to-green-700 text-white px-4 py-2 flex items-center gap-2 text-sm font-semibold">
-          <Star className="w-4 h-4 fill-amber-300 text-amber-300" />
+        <div className="bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 px-4 py-2 flex items-center gap-2 text-xs sm:text-sm font-bold border-b border-emerald-100 dark:border-emerald-500/20">
+          <Star className="w-4 h-4 fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400" />
           <span>{t('centres.smart_pick_badge')}</span>
           {centre.recommendation_reasons?.length > 0 && (
-            <span className="ml-auto text-green-200 font-normal text-xs bg-black/20 px-2 py-0.5 rounded-full">
+            <span className="ml-auto text-emerald-800 dark:text-emerald-200 font-semibold text-xs bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 px-2.5 py-0.5 rounded-full">
               {translateReason(centre.recommendation_reasons[0])}
             </span>
           )}
@@ -40,10 +42,10 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
       )}
 
       {isRecommended && isLongDistance && (
-        <div className="bg-gradient-to-r from-amber-700 to-amber-600 text-white px-4 py-2 flex items-center gap-2 text-sm font-semibold">
-          <AlertTriangle className="w-4 h-4 text-amber-200" />
+        <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 px-4 py-2 flex items-center gap-2 text-xs sm:text-sm font-bold border-b border-amber-200/80 dark:border-amber-500/20">
+          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           <span>{t('centres.nearest_regional_badge')}</span>
-          <span className="ml-auto text-amber-100 font-normal text-xs bg-black/20 px-2 py-0.5 rounded-full">
+          <span className="ml-auto text-amber-800 dark:text-amber-200 font-semibold text-xs bg-amber-100 dark:bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-500/30">
             {t('centres.km_away', { distance: formatNumber(centre.distance_km) })}
           </span>
         </div>
@@ -52,24 +54,24 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
       <div className="p-5">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+            <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2 font-display">
               {translateCentreName(centre.name)}
               {isRecommended && !isLongDistance && (
-                <span className="text-[10px] bg-green-100 text-green-800 font-bold px-1.5 py-0.5 rounded-md border border-green-200">
+                <span className="text-[10px] bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-500/30">
                   {t('common.top_match')}
                 </span>
               )}
               {isLongDistance && (
-                <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-md border border-amber-200 flex items-center gap-1">
+                <span className="text-[10px] bg-amber-50 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-500/30 flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" />
                   {t('common.regional')}
                 </span>
               )}
             </h3>
-            <div className="flex items-center gap-1 text-slate-500 text-sm mt-0.5">
-              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 text-sm mt-0.5">
+              <MapPin className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
               <span>{translateLocation(centre.location)}</span>
-              <span className={`ml-1 font-medium ${isLongDistance ? 'text-amber-700 font-semibold' : 'text-slate-500'}`}>
+              <span className={`ml-1 font-medium ${isLongDistance ? 'text-amber-700 dark:text-amber-400 font-semibold' : 'text-slate-500 dark:text-slate-400'}`}>
                 · {t('centres.km_away', { distance: formatNumber(centre.distance_km) })}
               </span>
             </div>
@@ -78,36 +80,38 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
         </div>
 
         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
-          <div className="text-center p-2 sm:p-3 bg-slate-50 rounded-xl">
-            <div className="text-xl sm:text-2xl font-bold text-slate-800">{formatNumber(centre.waiting_count)}</div>
-            <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
-              <Users className="w-3 h-3 shrink-0" /><span>{t('common.waiting')}</span>
+          <div className="text-center p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200/70 dark:border-slate-800 transition-all">
+            <div className="text-xl sm:text-2xl font-black font-display text-slate-900 dark:text-slate-100">{formatNumber(centre.waiting_count)}</div>
+            <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center justify-center gap-1 font-medium">
+              <Users className="w-3 h-3 shrink-0 text-slate-400 dark:text-slate-500" /><span>{t('common.waiting')}</span>
             </div>
           </div>
-          <div className="text-center p-2 sm:p-3 bg-slate-50 rounded-xl">
-            <div className="text-xl sm:text-2xl font-bold text-green-700">{formatNumber(centre.active_counters)}</div>
-            <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
-              <Building2 className="w-3 h-3 shrink-0" /><span>{t('common.counters')}</span>
+          <div className="text-center p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200/70 dark:border-slate-800 transition-all">
+            <div className="text-xl sm:text-2xl font-black font-display text-emerald-700 dark:text-emerald-400">{formatNumber(centre.active_counters)}</div>
+            <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center justify-center gap-1 font-medium">
+              <Building2 className="w-3 h-3 shrink-0 text-emerald-500" /><span>{t('common.counters')}</span>
             </div>
           </div>
-          <div className="text-center p-2 sm:p-3 bg-amber-50 rounded-xl">
-            <div className="text-xl sm:text-2xl font-bold text-amber-700">~{formatNumber(eta)} {t('common.min')}</div>
-            <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 flex items-center justify-center gap-1">
-              <Clock className="w-3 h-3 shrink-0" /><span>{t('common.est_wait')}</span>
+          <div className="text-center p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200/70 dark:border-slate-800 transition-all">
+            <div className="text-xl sm:text-2xl font-black font-display text-amber-600 dark:text-amber-400">~{formatNumber(eta)} {t('common.min')}</div>
+            <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center justify-center gap-1 font-medium">
+              <Clock className="w-3 h-3 shrink-0 text-amber-500" /><span>{t('common.est_wait')}</span>
             </div>
           </div>
         </div>
 
         {/* Door-to-door trip indicator */}
-        <div className={`flex items-center justify-between text-xs px-3 py-2 rounded-xl mb-4 border ${
-          isLongDistance ? 'bg-amber-50/70 border-amber-200 text-amber-900' : 'bg-slate-50/80 border-slate-100 text-slate-500'
+        <div className={`flex items-center justify-between text-xs px-3 py-2.5 rounded-2xl mb-4 border transition-all ${
+          isLongDistance
+            ? 'bg-amber-500/10 border-amber-500/20 text-amber-800 dark:text-amber-300'
+            : 'bg-slate-50 dark:bg-slate-800/30 border-slate-200/70 dark:border-slate-800 text-slate-700 dark:text-slate-300'
         }`}>
-          <span className="flex items-center gap-1.5 font-medium">
-            <Navigation className={`w-3.5 h-3.5 ${isLongDistance ? 'text-amber-600' : 'text-blue-600'}`} />
+          <span className="flex items-center gap-1.5 font-semibold">
+            <Navigation className={`w-3.5 h-3.5 ${isLongDistance ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'}`} />
             {t('centres.door_to_door_time')}
           </span>
           <span className="font-bold">
-            ~{formatNumber(totalDoorToDoor)} {t('common.min')} <span className={`font-normal ${isLongDistance ? 'text-amber-700' : 'text-slate-400'}`}>{t('centres.door_to_door_breakdown', { travel: formatNumber(roundtripTravelMins), wait: formatNumber(eta) })}</span>
+            ~{formatNumber(totalDoorToDoor)} {t('common.min')} <span className={`font-normal ${isLongDistance ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>{t('centres.door_to_door_breakdown', { travel: formatNumber(roundtripTravelMins), wait: formatNumber(eta) })}</span>
           </span>
         </div>
 
@@ -116,10 +120,10 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
             {centre.recommendation_reasons.map((r, i) => (
               <span
                 key={i}
-                className={`text-xs px-2 py-1 rounded-lg border flex items-center gap-1 ${
+                className={`text-xs px-2.5 py-1 rounded-full border flex items-center gap-1 font-medium ${
                   isLongDistance
-                    ? 'bg-amber-50 text-amber-800 border-amber-200'
-                    : 'bg-green-50 text-green-700 border-green-100'
+                    ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30'
+                    : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
                 }`}
               >
                 <TrendingDown className="w-3 h-3 shrink-0" />{translateReason(r)}
@@ -128,13 +132,21 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-          <span className="text-sm text-slate-500">{t('centres.slots_available_today', { count: formatNumber(centre.available_slots_today) })}</span>
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 gap-2">
+          <button
+            type="button"
+            onClick={() => onPreviewRoute?.(centre)}
+            className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-200 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 border border-emerald-200/80 dark:border-emerald-500/30 py-2 px-3.5 rounded-full flex items-center gap-1.5 transition-colors cursor-pointer"
+            title={t('map.view_route')}
+          >
+            <Navigation className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>{t('map.view_route')}</span>
+          </button>
           <button
             id={`btn-select-centre-${centre.id}`}
             onClick={() => onSelect(centre)}
             disabled={centre.status !== 'OPEN' || centre.available_slots_today === 0}
-            className="btn-primary py-2 px-4 text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="btn-primary py-2 px-4 text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0 rounded-full font-bold shadow-md shadow-emerald-700/20"
           >
             {t('centres.book_slot')} <ChevronRight className="w-4 h-4" />
           </button>
@@ -145,7 +157,9 @@ function CentreCard({ centre, onSelect, isRecommended, isLongDistance }) {
 }
 
 export default function CentreList({ centres, loading, onSelect, userLocation }) {
+  const { user } = useAuth()
   const { t, translateLocation, formatNumber } = useTranslation()
+  const [previewCentre, setPreviewCentre] = useState(null)
 
   if (loading) return (
     <div className="space-y-4 animate-pulse">
@@ -210,6 +224,7 @@ export default function CentreList({ centres, loading, onSelect, userLocation })
               key={c.id}
               centre={c}
               onSelect={onSelect}
+              onPreviewRoute={(targetCentre) => setPreviewCentre(targetCentre)}
               isRecommended={i === 0}
               isLongDistance={false}
             />
@@ -235,10 +250,56 @@ export default function CentreList({ centres, loading, onSelect, userLocation })
               key={c.id}
               centre={c}
               onSelect={onSelect}
+              onPreviewRoute={(targetCentre) => setPreviewCentre(targetCentre)}
               isRecommended={hasNoNearbyCentres && i === 0}
               isLongDistance={true}
             />
           ))}
+        </div>
+      )}
+
+      {/* Route Preview Modal */}
+      {previewCentre && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setPreviewCentre(null)} />
+          <div className="relative bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl shadow-2xl max-h-[92vh] overflow-y-auto animate-slide-up">
+            <div className="sticky top-0 bg-white z-20 px-5 py-3.5 border-b border-slate-100 flex items-center justify-between rounded-t-3xl sm:rounded-t-2xl">
+              <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                <Navigation className="w-4 h-4 text-emerald-600" />
+                <span>{t('map.mandi_route_preview')}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setPreviewCentre(null)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                aria-label={t('common.close')}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-5 space-y-4">
+              <MandiRouteMap
+                centre={previewCentre}
+                farmerVillage={user?.village}
+                farmerDistrict={user?.district}
+                defaultExpanded={true}
+              />
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const c = previewCentre
+                    setPreviewCentre(null)
+                    onSelect(c)
+                  }}
+                  disabled={previewCentre.status !== 'OPEN' || previewCentre.available_slots_today === 0}
+                  className="btn-primary w-full py-3 text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                >
+                  {t('centres.book_slot')} <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

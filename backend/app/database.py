@@ -17,7 +17,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
     db_path = BASE_DIR / "krishiconnect.db"
-    DATABASE_URL = f"sqlite+aiosqlite:///{db_path}"
+    DATABASE_URL = f"sqlite+aiosqlite:///{db_path.as_posix()}"
 else:
     # Convert postgres:// or postgresql:// to postgresql+asyncpg://
     if DATABASE_URL.startswith("postgres://"):
@@ -27,7 +27,7 @@ else:
     elif DATABASE_URL.startswith("sqlite+aiosqlite:///."):
         rel_path = DATABASE_URL[len("sqlite+aiosqlite:///."):]
         abs_path = (BASE_DIR / rel_path.lstrip("/")).resolve()
-        DATABASE_URL = f"sqlite+aiosqlite:///{abs_path}"
+        DATABASE_URL = f"sqlite+aiosqlite:///{abs_path.as_posix()}"
 
 # Engine options
 engine_kwargs = {
@@ -78,4 +78,19 @@ async def init_db():
                 await conn.execute(text("ALTER TABLE procurements ADD COLUMN IF NOT EXISTS assay_record_id INTEGER REFERENCES assay_records(id);"))
                 await conn.execute(text("ALTER TABLE procurements ADD COLUMN IF NOT EXISTS grade VARCHAR(50);"))
             except Exception as e:
+                pass
+
+        # Ensure priority bump audit columns exist in queue_entries
+        bump_migration_stmts = [
+            "ALTER TABLE queue_entries ADD COLUMN is_bumped BOOLEAN DEFAULT 0;",
+            "ALTER TABLE queue_entries ADD COLUMN bump_priority INTEGER DEFAULT 0;",
+            "ALTER TABLE queue_entries ADD COLUMN bump_reason VARCHAR(500);",
+            "ALTER TABLE queue_entries ADD COLUMN bumped_at TIMESTAMP;",
+            "ALTER TABLE queue_entries ADD COLUMN bumped_by_id INTEGER REFERENCES users(id);"
+        ]
+        for stmt in bump_migration_stmts:
+            try:
+                await conn.execute(text(stmt))
+            except Exception:
+                # Column already exists or dialect variance
                 pass

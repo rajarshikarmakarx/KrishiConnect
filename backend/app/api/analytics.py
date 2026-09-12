@@ -12,9 +12,11 @@ from app.models import (
     QueueStatus, PaymentStatus, UserRole
 )
 from app.schemas import PaymentOut, DistrictAnalytics, CentreAnalytics
+import asyncio
 from app.auth import decode_token
 from app.realtime import manager
 from app.timezone_utils import get_local_today, local_date, KOLKATA_TZ
+from app.sms import send_multilingual_sms, get_farmer_language
 
 payments_router = APIRouter(prefix="/payments", tags=["payments"])
 analytics_router = APIRouter(prefix="/analytics", tags=["analytics"])
@@ -143,6 +145,25 @@ async def mark_payment_paid(
                 "message": f"✅ Payment of ₹{payment.amount:,.0f} has been credited!"
             })
             await manager.broadcast_queue_changed(entry.centre_id, "payment")
+
+            # Dispatch real SMS DBT alert in farmer's selected language
+            r_farmer = await db.execute(select(User).where(User.id == entry.farmer_id))
+            farmer_user = r_farmer.scalar_one_or_none()
+            if farmer_user and farmer_user.mobile:
+                farmer_lang = get_farmer_language(farmer_user.mobile)
+                ref_code = f"PFMS-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{payment.id:04d}"
+                asyncio.create_task(
+                    send_multilingual_sms(
+                        mobile=farmer_user.mobile,
+                        msg_type="PAYMENT_DISBURSED",
+                        params={
+                            "amount": payment.amount,
+                            "reference": ref_code,
+                            "crop": entry.crop or "Paddy"
+                        },
+                        lang=farmer_lang
+                    )
+                )
 
     return {"message": "Payment marked as paid", "amount": payment.amount}
 

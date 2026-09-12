@@ -53,15 +53,14 @@ docker compose logs -f backend
 docker compose down
 
 
-### OPTION C: Manual Startup (Separate Terminals)
-# Terminal 1 — Backend:
+### OPTION C: Manual Startup (Separate Terminals) — Cross-Platform (Windows & Linux)
+# Terminal 1 — Backend (Works identically on Windows & Linux):
 cd backend
-source venv/bin/activate    # On Windows: venv\Scripts\activate
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+python run.py               # Linux: python3 run.py (or python run.py)
 
 # Terminal 2 — Frontend:
 cd frontend
-npm run dev                 # Launches on http://localhost:5173
+pnpm dev                    # Launches on http://localhost:5173
 
 
 --------------------------------------------------------------------------------

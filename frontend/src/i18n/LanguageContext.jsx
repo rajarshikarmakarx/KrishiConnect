@@ -9,9 +9,9 @@ import {
 } from './locations'
 
 export const LANGUAGES = [
-  { code: 'en', label: 'English', native: 'English', flag: '🇬🇧' },
-  { code: 'bn', label: 'Bengali', native: 'বাংলা', flag: '🌾' },
-  { code: 'hi', label: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
+  { code: 'en', label: 'English', native: 'English', badge: 'EN' },
+  { code: 'bn', label: 'Bengali', native: 'বাংলা', badge: 'BN' },
+  { code: 'hi', label: 'Hindi', native: 'हिन्दी', badge: 'HI' },
 ]
 
 const LanguageContext = createContext(null)
