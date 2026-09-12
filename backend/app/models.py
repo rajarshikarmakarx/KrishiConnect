@@ -8,7 +8,7 @@ from datetime import datetime, date, timezone
 from typing import Optional
 from sqlalchemy import (
     Column, Integer, String, Float, DateTime, Date, Time,
-    Boolean, Enum as SAEnum, ForeignKey, Text, func
+    Boolean, Enum as SAEnum, ForeignKey, Text, func, Index
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -106,6 +106,9 @@ class CentreCounter(Base):
 
 class TimeSlot(Base):
     __tablename__ = "time_slots"
+    __table_args__ = (
+        Index("ix_timeslot_centre_date", "centre_id", "date"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     centre_id = Column(Integer, ForeignKey("procurement_centres.id"), nullable=False)
@@ -122,6 +125,11 @@ class TimeSlot(Base):
 
 class QueueEntry(Base):
     __tablename__ = "queue_entries"
+    __table_args__ = (
+        Index("ix_queue_centre_status", "centre_id", "status"),
+        Index("ix_queue_centre_booked", "centre_id", "booked_at"),
+        Index("ix_queue_farmer_status", "farmer_id", "status"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     token = Column(String(10), nullable=False, index=True)  # e.g. A127
@@ -173,6 +181,9 @@ class AssayRecord(Base):
 
 class Procurement(Base):
     __tablename__ = "procurements"
+    __table_args__ = (
+        Index("ix_procurement_completed", "completed_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     queue_entry_id = Column(Integer, ForeignKey("queue_entries.id"), unique=True, nullable=False)
@@ -194,6 +205,9 @@ class Procurement(Base):
 
 class Payment(Base):
     __tablename__ = "payments"
+    __table_args__ = (
+        Index("ix_payment_status", "status"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     procurement_id = Column(Integer, ForeignKey("procurements.id"), unique=True, nullable=False)

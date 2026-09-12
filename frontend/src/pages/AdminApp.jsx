@@ -173,8 +173,17 @@ export default function AdminApp() {
     }
   }, [addNotification])
 
-  // Listen for district-wide queue updates via WebSocket
-  const { connected } = useAdminQueue(loadAll)
+  // Debounce WebSocket triggers to eliminate thundering herd re-fetches
+  const debounceTimerRef = useRef(null)
+  const debouncedLoadAll = useCallback(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = setTimeout(() => {
+      loadAll()
+    }, 300)
+  }, [loadAll])
+
+  // Listen for district-wide queue updates via WebSocket with debouncing
+  const { connected } = useAdminQueue(debouncedLoadAll)
 
   useEffect(() => { loadAll() }, [loadAll])
 

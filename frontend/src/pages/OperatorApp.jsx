@@ -641,7 +641,15 @@ export default function OperatorApp() {
     }
   }, [centreId])
 
-  const { connected, reconnecting } = useCentreQueue(centreId, loadQueue)
+  const debounceTimerRef = useRef(null)
+  const debouncedLoadQueue = useCallback(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = setTimeout(() => {
+      loadQueue()
+    }, 250)
+  }, [loadQueue])
+
+  const { connected, reconnecting } = useCentreQueue(centreId, debouncedLoadQueue)
 
   useEffect(() => { loadQueue() }, [loadQueue])
 

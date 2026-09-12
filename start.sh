@@ -56,7 +56,7 @@ else
 fi
 
 # Check if essential packages are installed, else install requirements.txt
-if ! "$PYTHON_BIN" -c "import fastapi, uvicorn, sqlalchemy, jose, tzdata" 2>/dev/null; then
+if ! "$PYTHON_BIN" -c "import fastapi, uvicorn, sqlalchemy, jose, tzdata, redis" 2>/dev/null; then
   echo "📦 Installing backend Python dependencies..."
   "$PIP_BIN" install --disable-pip-version-check -r requirements.txt
 fi

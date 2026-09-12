@@ -16,11 +16,15 @@ from app.schemas import (
 )
 from app.auth import verify_password, get_password_hash, create_access_token, decode_token
 from app.sms import send_multilingual_sms, get_recent_sms_logs
+from app.redis_client import redis_manager
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# In-memory OTP storage for demo/hackathon authentication
+# In-memory OTP fallback storage for demo/hackathon authentication
 OTP_STORE: Dict[str, Dict[str, Any]] = {}
+OTP_TTL_SECONDS = 600       # 10 minutes
+RATE_LIMIT_WINDOW = 600     # 10 minutes
+MAX_OTP_PER_WINDOW = 5      # Maximum 5 OTP requests per 10 minutes per mobile number
 
 # Secret required to call the operator-registration endpoint.
 OPERATOR_REG_SECRET = os.getenv("OPERATOR_REG_SECRET")
@@ -135,10 +139,25 @@ async def send_otp(data: SendOtpRequest):
     """
     Generate and dispatch a demo OTP for mobile authentication.
     For hackathon & prototype speed, uses master code 123456 or a 6-digit code.
+    Enforces Redis sliding-window rate limiting to prevent SMS spam.
     """
     mobile = data.mobile.strip()
     if not mobile or len(mobile) < 10:
         raise HTTPException(status_code=400, detail="Please enter a valid 10-digit mobile number")
+
+    # Sliding-window rate limiting via Redis
+    if redis_manager.is_available:
+        rate_key = f"ratelimit:otp:{mobile}"
+        count = await redis_manager.incr(rate_key)
+        if count == 1:
+            await redis_manager.expire(rate_key, RATE_LIMIT_WINDOW)
+        if count > MAX_OTP_PER_WINDOW:
+            ttl_left = await redis_manager.ttl(rate_key)
+            mins_left = max(1, ttl_left // 60)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many OTP requests. Please wait {mins_left} minute(s) before requesting again."
+            )
 
     # Generate OTP (123456 for standard demo accounts or random 6-digit code)
     if mobile in ["9876543210", "9000000001", "9000000002", "9000000003"] or mobile.endswith("0000"):
@@ -146,11 +165,15 @@ async def send_otp(data: SendOtpRequest):
     else:
         otp = "123456"  # Consistent demo OTP for seamless hackathon evaluations
 
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-    OTP_STORE[mobile] = {
-        "otp": otp,
-        "expires_at": expires_at
-    }
+    # Store in Redis with TTL or fallback to memory
+    if redis_manager.is_available:
+        await redis_manager.set(f"auth:otp:{mobile}", otp, ex=OTP_TTL_SECONDS)
+    else:
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=OTP_TTL_SECONDS)
+        OTP_STORE[mobile] = {
+            "otp": otp,
+            "expires_at": expires_at
+        }
 
     # Dispatch real SMS via Fast2SMS / multilingual SMS service
     sms_res = await send_multilingual_sms(
@@ -191,17 +214,26 @@ async def verify_otp(data: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
         raise HTTPException(status_code=400, detail="OTP is required")
 
     # Check OTP validity (accepts physical SMS verification code, master 123456, or stored OTP)
-    stored = OTP_STORE.get(mobile)
-    now = datetime.now(timezone.utc)
     is_valid = False
 
     if otp == "123456":
         is_valid = True
-    elif stored and stored["otp"] == otp:
-        if stored["expires_at"] > now:
+    elif redis_manager.is_available:
+        stored_otp = await redis_manager.get(f"auth:otp:{mobile}")
+        if stored_otp and stored_otp == otp:
             is_valid = True
-        else:
-            raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+            await redis_manager.delete(f"auth:otp:{mobile}")
+        elif not stored_otp:
+            raise HTTPException(status_code=400, detail="OTP has expired or was not requested. Please request a new one.")
+    else:
+        stored = OTP_STORE.get(mobile)
+        now = datetime.now(timezone.utc)
+        if stored and stored["otp"] == otp:
+            if stored["expires_at"] > now:
+                is_valid = True
+                del OTP_STORE[mobile]
+            else:
+                raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
 
     if not is_valid:
         raise HTTPException(status_code=400, detail="Invalid OTP code entered.")
@@ -226,7 +258,9 @@ async def verify_otp(data: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
         await db.refresh(user)
 
     # Clean up OTP from store after successful verification
-    if mobile in OTP_STORE:
+    if redis_manager.is_available:
+        await redis_manager.delete(f"auth:otp:{mobile}")
+    elif mobile in OTP_STORE:
         del OTP_STORE[mobile]
 
     token = create_access_token({"sub": str(user.id), "role": user.role})

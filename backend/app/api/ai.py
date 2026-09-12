@@ -1,43 +1,22 @@
 """
-KrishiConnect AI Layer
+KrishiConnect AI Layer (Redis Accelerated)
 ─────────────────────────────────────────────────────────────────────────────
 Answers the evaluator's hardest question: "What does AI actually do here
 that a simpler rule-based system could not?"
 
 Endpoints
-  GET /ai/eta/{centre_id}          — EMA-based wait-time predictor
-  GET /ai/recommend                — Weighted multi-signal centre scorer
-  GET /ai/msp-rates                — Live WB MSP reference rates
+  GET /ai/eta/{centre_id}          — EMA-based wait-time predictor (Redis Cached)
+  GET /ai/recommend                — Weighted multi-signal centre scorer (Redis Cached)
+  GET /ai/msp-rates                — Live WB MSP reference rates (Static Cached)
+  GET /ai/quality-standards        — Statutory Agmark & Mandi Produce Standards (Static Cached)
   GET /ai/data-info                — Full data-transparency manifest
-
-AI Components
-  1. EMA Wait-Time Predictor
-     Rather than the fixed formula (waiting * avg_processing / counters),
-     we run an Exponential Moving Average over the last 7 days of actual
-     measured wait times, weighted by recency (α = 0.35). The live queue
-     load feeds into the prediction only as an adjustment delta. This
-     learns from real throughput variance across shifts and crops — something
-     a static formula cannot do.
-
-  2. Weighted Centre Recommender
-     Five signals contribute to a normalised score [0–1]:
-       a. EMA-predicted door-to-door time (travel + EMA wait)
-       b. Queue pressure index  (live load / counter capacity)
-       c. Slot scarcity         (available / total slots today)
-       d. Historical throughput (7-day avg farmers served / hour)
-       e. Village proximity     (dynamic road distance & village match)
-     Weights are tuned to SIH scoring rubric (impact on farmer time).
-
-  3. MSP Rate Oracle
-     Returns current WB Minimum Support Prices with the CACP season,
-     giving operators an in-app reference instead of printing circulars.
 """
 
-from datetime import date, datetime, timedelta
-from typing import Optional, List
+from datetime import date, datetime, timedelta, timezone
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, and_
 from app.database import get_db
 from app.models import (
     ProcurementCentre, CentreCounter, QueueEntry, TimeSlot,
@@ -45,10 +24,11 @@ from app.models import (
 )
 from app.locations_data import find_village_coordinates
 from app.distance import calculate_distance_and_duration
-from app.timezone_utils import get_local_today, local_date
+from app.timezone_utils import get_local_today, get_date_range_utc, get_local_today_range_utc, KOLKATA_TZ
 from app.pricing import (
     STATUTORY_BASE_MSP, GRADE_PRICE_CONFIG, calculate_gradewise_price, get_base_msp
 )
+from app.redis_client import redis_manager
 
 ai_router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -64,44 +44,54 @@ W_SLOT = 0.15    # slot availability
 W_THRU = 0.12    # historical throughput
 W_PROX = 0.08    # village proximity
 
+# ── Cache TTLs ──────────────────────────────────────────────────────────────
+AI_ETA_TTL = 60           # 60s
+AI_RECOMMEND_TTL = 15     # 15s
+STATIC_DATA_TTL = 86400   # 24 hours
+
 
 # ── Internal helpers ─────────────────────────────────────────────────────────
 
 async def _ema_wait_minutes(db: AsyncSession, centre_id: int) -> float:
     """
-    Compute EMA of measured wait times over the past LOOKBACK_DAYS days.
+    Compute EMA of measured wait times over the past LOOKBACK_DAYS days in a single index-range scan.
     Wait time = processing_started_at - booked_at (in minutes).
-    Days with no data inherit the previous day's EMA (keeps signal stable).
     """
     today = get_local_today()
-    daily_avgs: List[Optional[float]] = []
+    start_date = today - timedelta(days=LOOKBACK_DAYS - 1)
+    start_utc, _ = get_date_range_utc(start_date)
+    _, end_utc = get_date_range_utc(today)
 
-    for offset in range(LOOKBACK_DAYS - 1, -1, -1):  # oldest → newest
-        day = today - timedelta(days=offset)
-        r = await db.execute(
-            select(QueueEntry.booked_at, QueueEntry.processing_started_at).where(
-                QueueEntry.centre_id == centre_id,
-                QueueEntry.status == QueueStatus.COMPLETED,
-                local_date(QueueEntry.completed_at) == day,
-                QueueEntry.processing_started_at.is_not(None)
-            )
+    r = await db.execute(
+        select(QueueEntry.booked_at, QueueEntry.processing_started_at, QueueEntry.completed_at).where(
+            QueueEntry.centre_id == centre_id,
+            QueueEntry.status == QueueStatus.COMPLETED,
+            QueueEntry.completed_at >= start_utc,
+            QueueEntry.completed_at < end_utc,
+            QueueEntry.processing_started_at.is_not(None)
         )
-        rows = r.all()
-        if rows:
-            waits = [
-                (row[1] - row[0]).total_seconds() / 60
-                for row in rows
-                if row[1] and row[0] and (row[1] - row[0]).total_seconds() > 0
-            ]
-            daily_avgs.append(sum(waits) / len(waits) if waits else None)
-        else:
-            daily_avgs.append(None)
+    )
+    rows = r.all()
 
-    # Run EMA; skip None days (inherit last value)
+    # Bucket waits by IST local date
+    daily_waits: Dict[date, List[float]] = {}
+    for booked, started, completed in rows:
+        if booked and started and completed:
+            diff_min = (started - booked).total_seconds() / 60
+            if diff_min > 0:
+                completed_ist_date = completed.astimezone(KOLKATA_TZ).date() if completed.tzinfo else completed.date()
+                if completed_ist_date not in daily_waits:
+                    daily_waits[completed_ist_date] = []
+                daily_waits[completed_ist_date].append(diff_min)
+
+    # Run EMA across historical window: oldest → newest
     ema = FALLBACK_WAIT_MIN
-    for val in daily_avgs:
-        if val is not None:
-            ema = EMA_ALPHA * val + (1 - EMA_ALPHA) * ema
+    for offset in range(LOOKBACK_DAYS - 1, -1, -1):
+        day = today - timedelta(days=offset)
+        waits = daily_waits.get(day)
+        if waits:
+            avg_day_wait = sum(waits) / len(waits)
+            ema = EMA_ALPHA * avg_day_wait + (1 - EMA_ALPHA) * ema
 
     return round(ema, 1)
 
@@ -157,12 +147,14 @@ async def _available_slots(db: AsyncSession, centre_id: int) -> tuple[int, int]:
 async def _historical_throughput(db: AsyncSession, centre_id: int) -> float:
     """Average farmers served per hour over the last 7 days."""
     today = get_local_today()
-    cutoff = today - timedelta(days=LOOKBACK_DAYS)
+    cutoff_date = today - timedelta(days=LOOKBACK_DAYS)
+    start_utc, _ = get_date_range_utc(cutoff_date)
+
     r = await db.execute(
         select(func.count(QueueEntry.id)).where(
             QueueEntry.centre_id == centre_id,
             QueueEntry.status == QueueStatus.COMPLETED,
-            local_date(QueueEntry.completed_at) >= cutoff
+            QueueEntry.completed_at >= start_utc
         )
     )
     total_completed = r.scalar() or 0
@@ -176,14 +168,14 @@ async def _historical_throughput(db: AsyncSession, centre_id: int) -> float:
 @ai_router.get("/eta/{centre_id}")
 async def ai_eta(centre_id: int, db: AsyncSession = Depends(get_db)):
     """
-    EMA-based wait time prediction for a given centre.
-    Returns:
-      - ema_wait_minutes: historical EMA prediction
-      - live_adjustment_minutes: delta from current queue pressure
-      - predicted_wait_minutes: final prediction (EMA + live delta)
-      - confidence: 'high' | 'medium' | 'low' based on data richness
-      - model_info: explains what the model is doing (for demo narration)
+    EMA-based wait time prediction for a given centre with Redis caching.
     """
+    cache_key = f"ai:eta:{centre_id}"
+    if redis_manager.is_available:
+        cached = await redis_manager.get_json(cache_key)
+        if cached:
+            return cached
+
     ema_wait = await _ema_wait_minutes(db, centre_id)
     pressure = await _live_pressure(db, centre_id)
 
@@ -193,37 +185,41 @@ async def ai_eta(centre_id: int, db: AsyncSession = Depends(get_db)):
 
     predicted = round(ema_wait + live_delta * 0.5, 1)  # blend, not replace
 
-    # Confidence based on how many historical days have data
+    # Confidence based on historical completed records
     today = get_local_today()
+    start_utc, _ = get_date_range_utc(today - timedelta(days=LOOKBACK_DAYS))
     r = await db.execute(
-        select(func.count(local_date(QueueEntry.completed_at).distinct())).where(
+        select(func.count(QueueEntry.id)).where(
             QueueEntry.centre_id == centre_id,
             QueueEntry.status == QueueStatus.COMPLETED,
-            local_date(QueueEntry.completed_at) >= today - timedelta(days=LOOKBACK_DAYS)
+            QueueEntry.completed_at >= start_utc
         )
     )
-    days_with_data = r.scalar() or 0
-    confidence = "high" if days_with_data >= 5 else "medium" if days_with_data >= 2 else "low"
+    records_count = r.scalar() or 0
+    confidence = "high" if records_count >= 15 else "medium" if records_count >= 5 else "low"
 
-    return {
+    response = {
         "centre_id": centre_id,
         "ema_wait_minutes": ema_wait,
         "live_adjustment_minutes": round(live_delta * 0.5, 1),
         "predicted_wait_minutes": predicted,
         "live_waiting": pressure["waiting"],
         "live_counters": pressure["counters"],
-        "days_with_historical_data": days_with_data,
+        "historical_records_7d": records_count,
         "confidence": confidence,
         "model": "EMA(α=0.35, 7-day window) + live queue pressure delta",
         "model_info": (
             "Exponential Moving Average over past 7 days of measured wait times. "
             "Recent days weighted more heavily (α=0.35). "
             "Live queue depth adds a half-weighted delta so real-time spikes "
-            "don't override the learned baseline. "
-            "Outperforms a fixed formula when throughput varies by day-of-week, "
-            "crop type, or shift changes — variance a rule cannot capture."
+            "don't override the learned baseline."
         )
     }
+
+    if redis_manager.is_available:
+        await redis_manager.set_json(cache_key, response, expire_seconds=AI_ETA_TTL)
+
+    return response
 
 
 @ai_router.get("/recommend")
@@ -233,11 +229,14 @@ async def ai_recommend(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Multi-signal centre recommender.
-    Returns all centres ranked by a weighted composite score,
-    with per-signal breakdowns so the evaluator can inspect the AI's reasoning.
-    Dynamically computes road distance and travel time from the farmer's village.
+    Multi-signal centre recommender with Redis cache-aside.
     """
+    cache_key = f"ai:recommend:{village or '_'}:{district or '_'}"
+    if redis_manager.is_available:
+        cached = await redis_manager.get_json(cache_key)
+        if cached:
+            return cached
+
     r = await db.execute(select(ProcurementCentre))
     centres = r.scalars().all()
 
@@ -335,7 +334,7 @@ async def ai_recommend(
     if results:
         results[0]["recommended"] = True
 
-    return {
+    response_payload = {
         "recommended_centre_id": results[0]["centre_id"] if results else None,
         "centres": results,
         "model_info": (
@@ -343,20 +342,27 @@ async def ai_recommend(
             "door-to-door time (40%), queue pressure (25%), "
             "slot availability (15%), historical throughput (12%), "
             "village proximity (8%). "
-            "Weights prioritise farmer's total time cost — the SIH KPI. "
-            "A rule-based system would use a single threshold (e.g. 'nearest open centre'), "
-            "missing cross-centre load balancing that this multi-signal model captures."
+            "Weights prioritise farmer's total time cost — the SIH KPI."
         )
     }
+
+    if redis_manager.is_available:
+        await redis_manager.set_json(cache_key, response_payload, expire_seconds=AI_RECOMMEND_TTL)
+
+    return response_payload
 
 
 @ai_router.get("/msp-rates")
 async def msp_rates():
     """
-    West Bengal Minimum Support Price reference table with Statutory Gradewise Pricing.
-    Season: Kharif 2025-26 (CACP Recommendation, GoI Gazette Aug 2025).
-    Prices in ₹ per quintal (100 kg) and ₹ per kg.
+    West Bengal Minimum Support Price reference table with Statutory Gradewise Pricing (Cached).
     """
+    cache_key = "static:msp_rates"
+    if redis_manager.is_available:
+        cached = await redis_manager.get_json(cache_key)
+        if cached:
+            return cached
+
     crop_gazette = [
         ("Paddy", 2300, 2320, 23.00),
         ("Wheat", 2275, 2275, 22.75),
@@ -385,7 +391,7 @@ async def msp_rates():
             "grade_b_deduction_per_kg": p_b["deduction_per_kg"],
         })
 
-    return {
+    response = {
         "season": "Kharif 2025-26",
         "authority": "Commission for Agricultural Costs and Prices (CACP), GoI",
         "state": "West Bengal",
@@ -399,6 +405,11 @@ async def msp_rates():
             "to prevent underpayment or non-compliant disbursements."
         )
     }
+
+    if redis_manager.is_available:
+        await redis_manager.set_json(cache_key, response, expire_seconds=STATIC_DATA_TTL)
+
+    return response
 
 
 @ai_router.get("/calculate-grade-price")
@@ -434,7 +445,6 @@ async def data_info(db: AsyncSession = Depends(get_db)):
     Full data-transparency manifest — answers the evaluator's first question:
     'Where exactly is your input/training data coming from?'
     """
-    # Pull live record counts for credibility
     r = await db.execute(select(func.count(QueueEntry.id)))
     total_queue = r.scalar() or 0
 
@@ -498,10 +508,15 @@ async def data_info(db: AsyncSession = Depends(get_db)):
 @ai_router.get("/quality-standards")
 async def quality_standards():
     """
-    Statutory Agmark & Mandi Produce Quality Standards (FAQ Norms).
-    Based on Directorate of Marketing & Inspection (DMI) and WBAMB Mandated Specifications.
+    Statutory Agmark & Mandi Produce Quality Standards (FAQ Norms) (Cached).
     """
-    return {
+    cache_key = "static:quality_standards"
+    if redis_manager.is_available:
+        cached = await redis_manager.get_json(cache_key)
+        if cached:
+            return cached
+
+    response = {
         "season": "Kharif 2025-26 & RMS 2026-27",
         "authority": "Directorate of Marketing & Inspection (DMI) & WB State Agricultural Marketing Board",
         "jurisdiction": "West Bengal, India",
@@ -647,3 +662,7 @@ async def quality_standards():
         ]
     }
 
+    if redis_manager.is_available:
+        await redis_manager.set_json(cache_key, response, expire_seconds=STATIC_DATA_TTL)
+
+    return response

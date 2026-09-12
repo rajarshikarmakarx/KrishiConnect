@@ -8,11 +8,15 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from contextlib import asynccontextmanager
 from app.database import init_db
 from app.seed import seed
+from app.redis_client import redis_manager
+from app.realtime import manager as ws_manager
 from app.api.auth import router as auth_router
 from app.api.centres import router as centres_router
 from app.api.queue import router as queue_router
@@ -27,7 +31,22 @@ async def lifespan(app: FastAPI):
     # Initialize database and seed data
     await init_db()
     await seed()
+
+    # Initialize Redis connection and start real-time pub/sub mesh
+    await redis_manager.init()
+    pubsub_task = asyncio.create_task(ws_manager.start_pubsub_listener())
+
     yield
+
+    # Cleanup background tasks and close Redis pool
+    pubsub_task.cancel()
+    try:
+        await pubsub_task
+    except asyncio.CancelledError:
+        pass
+    except Exception:
+        pass
+    await redis_manager.close()
 
 
 app = FastAPI(
@@ -56,6 +75,9 @@ app.add_middleware(
     CORSMiddleware,
     **cors_kwargs
 )
+
+# GZip compression for responses > 1KB (reduces network payload sizes by ~70-80%)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Include routers
 app.include_router(auth_router)

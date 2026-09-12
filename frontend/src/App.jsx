@@ -1,14 +1,27 @@
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import { Toaster, ToastBar, toast } from 'react-hot-toast'
 import { X } from 'lucide-react'
 import { LanguageProvider, useTranslation } from './i18n'
 import { AuthProvider, useAuth } from './AuthContext'
 import { NotificationProvider } from './NotificationContext'
-import AuthPage from './pages/AuthPage'
-import AdminAuthPage from './pages/AdminAuthPage'
-import FarmerApp from './pages/FarmerApp'
-import OperatorApp from './pages/OperatorApp'
-import AdminApp from './pages/AdminApp'
+
+const AuthPage = lazy(() => import('./pages/AuthPage'))
+const AdminAuthPage = lazy(() => import('./pages/AdminAuthPage'))
+const FarmerApp = lazy(() => import('./pages/FarmerApp'))
+const OperatorApp = lazy(() => import('./pages/OperatorApp'))
+const AdminApp = lazy(() => import('./pages/AdminApp'))
+
+function PageFallback({ dark = false }) {
+  return (
+    <div className={`min-h-screen flex items-center justify-center ${dark ? 'bg-slate-900 text-white' : 'bg-slate-50'}`}>
+      <div className="text-center">
+        <div className={`w-10 h-10 border-3 ${dark ? 'border-green-500' : 'border-green-700'} border-t-transparent rounded-full animate-spin mx-auto mb-3`} />
+        <p className={`text-xs font-medium ${dark ? 'text-slate-400' : 'text-slate-600'}`}>Loading...</p>
+      </div>
+    </div>
+  )
+}
 
 function FarmerRoute() {
   const { user, loading } = useAuth()
@@ -25,7 +38,13 @@ function FarmerRoute() {
     )
   }
 
-  if (!user) return <AuthPage />
+  if (!user) {
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <AuthPage />
+      </Suspense>
+    )
+  }
 
   // Officers and admins belong at /admin — redirect them cleanly
   if (user.role !== 'farmer') {
@@ -34,7 +53,9 @@ function FarmerRoute() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <FarmerApp />
+      <Suspense fallback={<PageFallback />}>
+        <FarmerApp />
+      </Suspense>
     </div>
   )
 }
@@ -53,7 +74,13 @@ function AdminRoute() {
     )
   }
 
-  if (!user) return <AdminAuthPage />
+  if (!user) {
+    return (
+      <Suspense fallback={<PageFallback dark />}>
+        <AdminAuthPage />
+      </Suspense>
+    )
+  }
 
   if (user.role === 'farmer') {
     return (
@@ -77,8 +104,10 @@ function AdminRoute() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {user.role === 'operator' && <OperatorApp />}
-      {user.role === 'admin' && <AdminApp />}
+      <Suspense fallback={<PageFallback />}>
+        {user.role === 'operator' && <OperatorApp />}
+        {user.role === 'admin' && <AdminApp />}
+      </Suspense>
     </div>
   )
 }

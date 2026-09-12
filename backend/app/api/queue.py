@@ -22,7 +22,7 @@ from app.schemas import (
 )
 from app.auth import decode_token
 from app.realtime import manager
-from app.timezone_utils import get_local_today, local_date
+from app.timezone_utils import get_local_today, get_local_today_range_utc
 from app.pricing import (
     STATUTORY_BASE_MSP, GRADE_PRICE_CONFIG, calculate_gradewise_price, get_base_msp
 )
@@ -175,14 +175,15 @@ async def book_slot(
     if current_user.role != UserRole.FARMER:
         raise HTTPException(status_code=403, detail="Only farmers can book slots")
 
-    # Check for existing active booking at this centre today
-    today = get_local_today()
+    # Check for existing active booking at this centre today using index range query
+    start_utc, end_utc = get_local_today_range_utc()
     result = await db.execute(
         select(QueueEntry).where(
             QueueEntry.farmer_id == current_user.id,
             QueueEntry.centre_id == data.centre_id,
             QueueEntry.status.in_([QueueStatus.WAITING, QueueStatus.CALLED, QueueStatus.PROCESSING]),
-            local_date(QueueEntry.booked_at) == today
+            QueueEntry.booked_at >= start_utc,
+            QueueEntry.booked_at < end_utc
         )
     )
     existing = result.scalar_one_or_none()
@@ -205,7 +206,8 @@ async def book_slot(
             select(QueueEntry).where(
                 QueueEntry.centre_id == data.centre_id,
                 QueueEntry.token == token,
-                local_date(QueueEntry.booked_at) == today
+                QueueEntry.booked_at >= start_utc,
+                QueueEntry.booked_at < end_utc
             )
         )
         if not r.scalar_one_or_none():
@@ -226,7 +228,7 @@ async def book_slot(
     await db.commit()
     await db.refresh(entry)
 
-    # Broadcast queue change
+    # Broadcast queue change & invalidate Redis caches
     await manager.broadcast_queue_changed(data.centre_id, "booking")
 
     r = await db.execute(select(ProcurementCentre).where(ProcurementCentre.id == data.centre_id))
@@ -339,6 +341,8 @@ async def get_centre_queue(centre_id: int, db: AsyncSession = Depends(get_db)):
     )
     active_entries = result.scalars().all()
 
+    start_utc, end_utc = get_local_today_range_utc()
+
     # Counts
     r = await db.execute(
         select(func.count(QueueEntry.id)).where(
@@ -360,7 +364,8 @@ async def get_centre_queue(centre_id: int, db: AsyncSession = Depends(get_db)):
         select(func.count(QueueEntry.id)).where(
             QueueEntry.centre_id == centre_id,
             QueueEntry.status == QueueStatus.COMPLETED,
-            local_date(QueueEntry.completed_at) == get_local_today()
+            QueueEntry.completed_at >= start_utc,
+            QueueEntry.completed_at < end_utc
         )
     )
     completed_count = r.scalar() or 0
@@ -369,7 +374,8 @@ async def get_centre_queue(centre_id: int, db: AsyncSession = Depends(get_db)):
         select(func.count(QueueEntry.id)).where(
             QueueEntry.centre_id == centre_id,
             QueueEntry.status == QueueStatus.CANCELLED,
-            local_date(QueueEntry.cancelled_at) == get_local_today()
+            QueueEntry.cancelled_at >= start_utc,
+            QueueEntry.cancelled_at < end_utc
         )
     )
     cancelled_count = r.scalar() or 0
@@ -868,9 +874,6 @@ async def record_quality_action(
     }
 
 
-MSP_FALLBACK_RATES = STATUTORY_BASE_MSP
-
-
 @router.get("/{queue_id}/procurement", response_model=ProcurementOut)
 async def get_procurement(
     queue_id: int,
@@ -931,19 +934,21 @@ async def get_procurement(
         proc.total_amount = round(proc.accepted_quantity_kg * proc.rate_per_kg, 2)
         await db.commit()
 
+    # Fetch payment record
     r2 = await db.execute(select(Payment).where(Payment.procurement_id == proc.id))
     payment = r2.scalar_one_or_none()
 
-    # Auto-generate payment record if missing
-    if not payment:
+    # Auto-create pending payment if missing for completed procurement
+    if not payment and proc.total_amount and proc.total_amount > 0:
         payment = Payment(
             procurement_id=proc.id,
-            amount=proc.total_amount or round((proc.accepted_quantity_kg or 100.0) * (proc.rate_per_kg or 23.0), 2),
+            amount=proc.total_amount,
             status=PaymentStatus.PROCESSING,
-            created_at=datetime.now(timezone.utc)
+            created_at=proc.completed_at or datetime.now(timezone.utc)
         )
         db.add(payment)
         await db.commit()
+        await db.refresh(payment)
 
     payment_out = None
     if payment:
@@ -982,3 +987,4 @@ async def get_procurement(
         payment=payment_out,
         assay_record=assay_out
     )
+

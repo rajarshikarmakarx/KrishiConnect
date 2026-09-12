@@ -4,7 +4,25 @@
 # =============================================================================
 
 services:
-  # Backend API & WebSocket Service (FastAPI + AsyncPG/SQLite)
+  # Redis In-Memory Cache & Pub/Sub Message Broker
+  redis:
+    image: redis:7.2-alpine
+    container_name: krishiconnect-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - krishiconnect-net
+
+  # Backend API & WebSocket Service (FastAPI + AsyncPG/SQLite + Redis)
   backend:
     build:
       context: ./backend
@@ -18,11 +36,15 @@ services:
     environment:
       - PORT=8000
       - DATABASE_URL=${DATABASE_URL:-postgresql://postgres.amkdhrvxfziywgafpbdz:uzairbalochx@aws-0-ap-south-1.pooler.supabase.com:5432/postgres}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - SECRET_KEY=${SECRET_KEY:-krishiconnect-secret-key-2026-hackathon-demo}
       - ALGORITHM=${ALGORITHM:-HS256}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-10080}
       - OPERATOR_REG_SECRET=${OPERATOR_REG_SECRET:-krishi-admin-2026}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:80,http://localhost}
+    depends_on:
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
@@ -49,6 +71,10 @@ services:
         condition: service_healthy
     networks:
       - krishiconnect-net
+
+volumes:
+  redis-data:
+    driver: local
 
 networks:
   krishiconnect-net:

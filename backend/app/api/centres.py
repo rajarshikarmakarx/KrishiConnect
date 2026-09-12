@@ -1,21 +1,25 @@
 """
 KrishiConnect Centres Router
 Dynamic geographic distance calculation and intelligent centre recommendations.
+Redis cache-aside with sub-millisecond response times and batched aggregation queries.
 """
 from datetime import date
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, case
 from app.database import get_db
 from app.models import ProcurementCentre, CentreCounter, TimeSlot, QueueEntry, QueueStatus, User
 from app.schemas import CentreOut, CentreDetailOut, SlotOut, CounterOut
 from app.auth import decode_token
 from app.locations_data import find_village_coordinates
 from app.distance import calculate_distance_and_duration
-from app.timezone_utils import get_local_today, local_date
+from app.timezone_utils import get_local_today, get_local_today_range_utc
+from app.redis_client import redis_manager
 
 router = APIRouter(prefix="/centres", tags=["centres"])
+
+CENTRE_CACHE_TTL = 15  # 15 seconds TTL for dynamic centre stats
 
 
 async def get_current_user_optional(authorization: str = Header(None), db: AsyncSession = Depends(get_db)) -> Optional[User]:
@@ -34,8 +38,15 @@ async def get_current_user_optional(authorization: str = Header(None), db: Async
 
 
 async def compute_centre_stats(db: AsyncSession, centre: ProcurementCentre) -> dict:
-    """Compute live stats for a centre"""
+    """Compute live stats for a single centre with Redis cache-aside."""
+    cache_key = f"centre:stats:{centre.id}"
+    if redis_manager.is_available:
+        cached = await redis_manager.get_json(cache_key)
+        if cached:
+            return cached
+
     today = get_local_today()
+    start_utc, end_utc = get_local_today_range_utc()
 
     # Waiting count
     r = await db.execute(
@@ -55,12 +66,13 @@ async def compute_centre_stats(db: AsyncSession, centre: ProcurementCentre) -> d
     )
     processing_count = r.scalar() or 0
 
-    # Completed today
+    # Completed today (index-seek range scan)
     r = await db.execute(
         select(func.count(QueueEntry.id)).where(
             QueueEntry.centre_id == centre.id,
             QueueEntry.status == QueueStatus.COMPLETED,
-            local_date(QueueEntry.completed_at) == today
+            QueueEntry.completed_at >= start_utc,
+            QueueEntry.completed_at < end_utc
         )
     )
     completed_count = r.scalar() or 0
@@ -87,7 +99,7 @@ async def compute_centre_stats(db: AsyncSession, centre: ProcurementCentre) -> d
     # ETA calculation
     eta = (waiting_count * centre.avg_processing_minutes) / max(active_counters, 1)
 
-    return {
+    stats = {
         "waiting_count": waiting_count,
         "processing_count": processing_count,
         "completed_count": completed_count,
@@ -95,6 +107,98 @@ async def compute_centre_stats(db: AsyncSession, centre: ProcurementCentre) -> d
         "available_slots_today": int(available_slots),
         "estimated_wait_minutes": round(eta, 1)
     }
+
+    if redis_manager.is_available:
+        await redis_manager.set_json(cache_key, stats, expire_seconds=CENTRE_CACHE_TTL)
+
+    return stats
+
+
+async def batch_compute_all_centre_stats(db: AsyncSession, centres: List[ProcurementCentre]) -> Dict[int, dict]:
+    """
+    Batched aggregation query across all centres.
+    Reduces 5N individual queries down to 3 fast grouped queries.
+    """
+    if not centres:
+        return {}
+
+    centre_ids = [c.id for c in centres]
+    today = get_local_today()
+    start_utc, end_utc = get_local_today_range_utc()
+
+    # 1. Batched Queue Status Aggregation
+    queue_res = await db.execute(
+        select(
+            QueueEntry.centre_id,
+            func.count(case((QueueEntry.status == QueueStatus.WAITING, 1))).label("waiting_count"),
+            func.count(case((QueueEntry.status == QueueStatus.PROCESSING, 1))).label("processing_count"),
+            func.count(case((
+                and_(
+                    QueueEntry.status == QueueStatus.COMPLETED,
+                    QueueEntry.completed_at >= start_utc,
+                    QueueEntry.completed_at < end_utc
+                ), 1
+            ))).label("completed_count")
+        )
+        .where(QueueEntry.centre_id.in_(centre_ids))
+        .group_by(QueueEntry.centre_id)
+    )
+    queue_stats_map = {row.centre_id: row for row in queue_res.all()}
+
+    # 2. Batched Active Counters
+    counters_res = await db.execute(
+        select(
+            CentreCounter.centre_id,
+            func.count(CentreCounter.id).label("active_counters")
+        )
+        .where(
+            CentreCounter.centre_id.in_(centre_ids),
+            CentreCounter.is_active == True
+        )
+        .group_by(CentreCounter.centre_id)
+    )
+    counters_map = {row.centre_id: row.active_counters for row in counters_res.all()}
+
+    # 3. Batched Available Slots
+    slots_res = await db.execute(
+        select(
+            TimeSlot.centre_id,
+            func.sum(TimeSlot.total_capacity - TimeSlot.booked_count).label("avail")
+        )
+        .where(
+            TimeSlot.centre_id.in_(centre_ids),
+            TimeSlot.date == today,
+            TimeSlot.is_active == True
+        )
+        .group_by(TimeSlot.centre_id)
+    )
+    slots_map = {row.centre_id: max(0, row.avail or 0) for row in slots_res.all()}
+
+    out = {}
+    for centre in centres:
+        q = queue_stats_map.get(centre.id)
+        waiting = q.waiting_count if q else 0
+        processing = q.processing_count if q else 0
+        completed = q.completed_count if q else 0
+        active_counters = counters_map.get(centre.id, 1) or 1
+        available_slots = int(slots_map.get(centre.id, 0))
+        eta = (waiting * centre.avg_processing_minutes) / max(active_counters, 1)
+
+        stats = {
+            "waiting_count": waiting,
+            "processing_count": processing,
+            "completed_count": completed,
+            "active_counters": active_counters,
+            "available_slots_today": available_slots,
+            "estimated_wait_minutes": round(eta, 1)
+        }
+        out[centre.id] = stats
+
+        # Cache individual centre stats as well
+        if redis_manager.is_available:
+            await redis_manager.set_json(f"centre:stats:{centre.id}", stats, expire_seconds=CENTRE_CACHE_TTL)
+
+    return out
 
 
 def compute_recommendation_score(stats: dict, distance_km: float, user_village: Optional[str] = None, centre_location: Optional[str] = None) -> tuple[float, list]:
@@ -178,21 +282,36 @@ async def list_centres(
     current_user: Optional[User] = Depends(get_current_user_optional),
     db: AsyncSession = Depends(get_db)
 ):
+    user_village = village if isinstance(village, str) else (current_user.village if current_user else None)
+    user_district = district if isinstance(district, str) else (current_user.district if current_user else None)
+    user_id = current_user.id if current_user else "anon"
+
+    cache_key = f"centres:list:{user_village or '_'}:{user_district or '_'}:{user_id}"
+
+    # Check Redis Cache
+    if redis_manager.is_available:
+        cached_list = await redis_manager.get_json(cache_key)
+        if cached_list:
+            return [CentreOut(**item) for item in cached_list]
+
     result = await db.execute(select(ProcurementCentre))
     centres = result.scalars().all()
 
-    user_village = village if isinstance(village, str) else (current_user.village if current_user else None)
-    user_district = district if isinstance(district, str) else (current_user.district if current_user else None)
-
     # Look up farmer coordinates if village or district is available
     farmer_coords = find_village_coordinates(user_village, user_district) if (user_village or user_district) else None
+
+    # Batched single-pass stats retrieval
+    stats_map = await batch_compute_all_centre_stats(db, centres)
 
     out = []
     best_score = -9999
     best_idx = 0
 
     for i, centre in enumerate(centres):
-        stats = await compute_centre_stats(db, centre)
+        stats = stats_map.get(centre.id, {
+            "waiting_count": 0, "processing_count": 0, "completed_count": 0,
+            "active_counters": 1, "available_slots_today": 0, "estimated_wait_minutes": 0.0
+        })
 
         # Dynamic distance calculation if coordinates available
         if farmer_coords:
@@ -231,6 +350,15 @@ async def list_centres(
         out[best_idx].recommendation_reasons = (out[best_idx].recommendation_reasons or [])
 
     out.sort(key=lambda x: x.recommendation_score or 0, reverse=True)
+
+    # Store in Redis
+    if redis_manager.is_available:
+        await redis_manager.set_json(
+            cache_key,
+            [item.model_dump() for item in out],
+            expire_seconds=CENTRE_CACHE_TTL
+        )
+
     return out
 
 
