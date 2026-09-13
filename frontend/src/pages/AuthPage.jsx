@@ -62,9 +62,6 @@ export default function AuthPage() {
       } else {
         toast.success(`📱 OTP sent to +91 ${form.mobile}!`, { duration: 6000 })
       }
-      if (res.otp) {
-        setOtpCode(res.otp)
-      }
     } catch (err) {
       toast.error(err.message || t('toasts.failed_send_otp'))
     } finally {

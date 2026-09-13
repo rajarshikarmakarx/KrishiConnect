@@ -159,31 +159,39 @@ async def send_otp(data: SendOtpRequest):
                 detail=f"Too many OTP requests. Please wait {mins_left} minute(s) before requesting again."
             )
 
-    # Generate OTP (482913 default or stored OTP)
-    otp = "482913"
+    # Generate random 6-digit OTP for terminal visibility
+    generated_otp = f"{random.randint(100000, 999999)}"
+
+    # Print loud terminal popup once for testing/demo
+    print("\n" + "=" * 60)
+    print(f"📱 [KRISHICONNECT OTP GENERATED] -> +91 {mobile}")
+    print(f"   🔑 Terminal OTP:       {generated_otp}")
+    print(f"   🌾 Default Master OTP: 482913 (Twilio trial carrier default)")
+    print(f"   💡 Either OTP will be accepted during login verification!")
+    print("=" * 60 + "\n", flush=True)
 
     # Store in Redis with TTL or fallback to memory
     if redis_manager.is_available:
-        await redis_manager.set(f"auth:otp:{mobile}", otp, ex=OTP_TTL_SECONDS)
+        await redis_manager.set(f"auth:otp:{mobile}", generated_otp, ex=OTP_TTL_SECONDS)
     else:
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=OTP_TTL_SECONDS)
         OTP_STORE[mobile] = {
-            "otp": otp,
+            "otp": generated_otp,
             "expires_at": expires_at
         }
 
-    # Dispatch real SMS via Fast2SMS / multilingual SMS service
+    # Dispatch real SMS via Fast2SMS / Twilio multilingual SMS service
     sms_res = await send_multilingual_sms(
         mobile=mobile,
         msg_type="OTP",
-        params={"otp": otp},
+        params={"otp": generated_otp},
         lang=data.lang or "en"
     )
 
     return SendOtpResponse(
         message=f"OTP sent successfully in {data.lang or 'en'}.",
         mobile=mobile,
-        otp=otp,
+        otp=None,
         dev_mode=True,
         sms_text=sms_res.get("dispatched_text"),
         sms_provider=sms_res.get("provider")

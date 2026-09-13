@@ -39,9 +39,8 @@ async def test_auth_otp_flow():
         print("\n2️⃣  Testing /auth/send-otp endpoint...")
         send_res = await send_otp(SendOtpRequest(mobile=farmer_obj.mobile))
         assert send_res.mobile == farmer_obj.mobile
-        assert send_res.otp == "482913"
         assert send_res.dev_mode is True
-        print(f"   ✓ OTP Generated: {send_res.otp} for mobile {send_res.mobile}")
+        print(f"   ✓ /auth/send-otp dispatched successfully for mobile {send_res.mobile}")
 
         # 3. Test verify-otp with master code 482913 for existing user
         print("\n3️⃣  Testing /auth/verify-otp with existing farmer...")
