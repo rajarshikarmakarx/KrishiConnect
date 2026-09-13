@@ -88,6 +88,7 @@ class ProcurementCentre(Base):
     counters = relationship("CentreCounter", back_populates="centre")
     slots = relationship("TimeSlot", back_populates="centre")
     queue_entries = relationship("QueueEntry", back_populates="centre")
+    quality_standards = relationship("CentreQualityStandard", back_populates="centre", uselist=False)
 
 
 class CentreCounter(Base):
@@ -238,3 +239,18 @@ class Notification(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now)
 
     farmer = relationship("User", back_populates="notifications")
+
+
+class CentreQualityStandard(Base):
+    __tablename__ = "centre_quality_standards"
+
+    id = Column(Integer, primary_key=True, index=True)
+    centre_id = Column(Integer, ForeignKey("procurement_centres.id"), unique=True, nullable=False, index=True)
+    standards_data = Column(Text, nullable=False)  # JSON-encoded standards dict
+    is_customized = Column(Boolean, default=True)
+    infrastructure_notes = Column(String(500), nullable=True)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+    updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    centre = relationship("ProcurementCentre", back_populates="quality_standards")
+    updated_by = relationship("User", foreign_keys=[updated_by_id])
