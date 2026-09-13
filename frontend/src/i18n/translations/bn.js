@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'আর্দ্রতা ও বিশুদ্ধতা যাচাই',
     feature_dbt: 'সরাসরি ডিবিটি',
     feature_dbt_desc: 'তাত্ক্ষণিক ব্যাঙ্ক অ্যাকাউন্টে ডিবিটি প্রদান',
-    tab_otp: '📱 মোবাইল ওটিপি',
+    tab_otp: 'মোবাইল ওটিপি',
     tab_password: 'পাসওয়ার্ড',
     tab_register: 'নিবন্ধন',
     remember_me: 'আমাকে ৭ দিনের জন্য লগইন রাখুন',

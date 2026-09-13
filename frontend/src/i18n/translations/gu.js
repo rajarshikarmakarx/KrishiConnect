@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'ભેજ અને કચરાનું પ્રમાણ ચકાસણી',
     feature_dbt: 'સીધું DBT',
     feature_dbt_desc: 'બેંક ખાતામાં સીધા નાણાં જમા',
-    tab_otp: '📱 મોબાઇલ OTP',
+    tab_otp: 'મોબાઇલ OTP',
     tab_password: 'પાસવર્ડ',
     tab_register: 'નોંધણી',
     remember_me: 'મને 7 દિવસ માટે લૉગ ઇન રાખો',

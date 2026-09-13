@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'नमी व अपद्रव्य ग्रेडिंग',
     feature_dbt: 'सीधा डीबीटी',
     feature_dbt_desc: 'सीधे बैंक खाते में तुरंत भुगतान',
-    tab_otp: '📱 मोबाइल ओटीपी',
+    tab_otp: 'मोबाइल ओटीपी',
     tab_password: 'पासवर्ड',
     tab_register: 'पंजीकरण',
     remember_me: 'मुझे 7 दिनों तक लॉग इन रखें',

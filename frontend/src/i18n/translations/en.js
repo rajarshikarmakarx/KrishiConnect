@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'Moisture & Impurity Grading',
     feature_dbt: 'Direct DBT',
     feature_dbt_desc: 'Instant Bank Payout Transfers',
-    tab_otp: '📱 Mobile OTP',
+    tab_otp: 'Mobile OTP',
     tab_password: 'Password',
     tab_register: 'Register',
     remember_me: 'Keep me logged in for 7 days',

@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'ਨਮੀ ਅਤੇ ਫੋਕ ਪਰਖ',
     feature_dbt: 'ਸਿੱਧਾ ਡੀ.ਬੀ.ਟੀ.',
     feature_dbt_desc: 'ਬੈਂਕ ਖਾਤੇ ਵਿੱਚ ਤੁਰੰਤ ਪੈਸੇ ਜਮ੍ਹਾਂ',
-    tab_otp: '📱 ਮੋਬਾਈਲ OTP',
+    tab_otp: 'ਮੋਬਾਈਲ OTP',
     tab_password: 'ਪਾਸਵਰਡ',
     tab_register: 'ਰਜਿਸਟਰ',
     remember_me: 'ਮੈਨੂੰ 7 ਦਿਨਾਂ ਲਈ ਲੌਗ ਇਨ ਰੱਖੋ',

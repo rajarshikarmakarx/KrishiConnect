@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'తేమ & చెత్త శాతం తనిఖీ',
     feature_dbt: 'ప్రత్యక్ష DBT',
     feature_dbt_desc: 'బ్యాంకు ఖాతాలో తక్షణ నగదు జమ',
-    tab_otp: '📱 మొబైల్ OTP',
+    tab_otp: 'మొబైల్ OTP',
     tab_password: 'పాస్‌వర్డ్',
     tab_register: 'రిజిస్టర్',
     remember_me: 'నన్ను 7 రోజుల పాటు లాగిన్‌లో ఉంచు',

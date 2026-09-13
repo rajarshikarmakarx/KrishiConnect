@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'ತೇವಾಂಶ ಮತ್ತು ಕಸದ ಪ್ರಮಾಣ ತಪಾಸಣೆ',
     feature_dbt: 'ನೇರ ಡಿಬಿಟಿ',
     feature_dbt_desc: 'ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ ನೇರ ನಗದು ಜಮೆ',
-    tab_otp: '📱 ಮೊಬೈಲ್ OTP',
+    tab_otp: 'ಮೊಬೈಲ್ OTP',
     tab_password: 'ಪಾಸ್‌ವರ್ಡ್',
     tab_register: 'ನೋಂದಣಿ',
     remember_me: 'ನನ್ನನ್ನು 7 ದಿನಗಳವರೆಗೆ ಲಾಗಿನ್ ಆಗಿರಿಸಿ',

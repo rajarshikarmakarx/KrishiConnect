@@ -18,7 +18,7 @@ from app.schemas import SendOtpRequest, VerifyOtpRequest, LoginRequest
 
 async def test_auth_otp_flow():
     print("=" * 60)
-    print("📱 TESTING KRISHICONNECT DEMO OTP AUTHENTICATION FLOW")
+    print("TESTING KRISHICONNECT DEMO OTP AUTHENTICATION FLOW")
     print("=" * 60)
 
     await init_db()

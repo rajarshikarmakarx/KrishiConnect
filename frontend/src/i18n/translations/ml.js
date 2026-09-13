@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'ഈർപ്പവും പതിരും പരിശോധിക്കൽ',
     feature_dbt: 'നേരിട്ടുള്ള DBT',
     feature_dbt_desc: 'ബാങ്ക് അക്കൗണ്ടിലേക്ക് തൽക്ഷണം പണം',
-    tab_otp: '📱 മൊബൈൽ OTP',
+    tab_otp: 'മൊബൈൽ OTP',
     tab_password: 'പാസ്‌വേഡ്',
     tab_register: 'രജിസ്റ്റർ ചെയ്യുക',
     remember_me: 'എന്നെ 7 ദിവസത്തേക്ക് ലോഗിൻ ചെയ്തു നിലനിർത്തുക',

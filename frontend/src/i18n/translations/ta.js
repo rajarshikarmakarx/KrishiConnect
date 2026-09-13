@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'ஈரப்பதம் & பதர் அளவு சோதனை',
     feature_dbt: 'நேரடி DBT',
     feature_dbt_desc: 'வங்கிக் கணக்கில் உடனடிப் பணம்',
-    tab_otp: '📱 மொபைல் OTP',
+    tab_otp: 'மொபைல் OTP',
     tab_password: 'கடவுச்சொல்',
     tab_register: 'பதிவு செய்',
     remember_me: 'என்னை 7 நாட்களுக்கு உள்நுழைந்திருக்கச் செய்',

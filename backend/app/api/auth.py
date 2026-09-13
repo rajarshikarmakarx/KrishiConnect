@@ -164,7 +164,7 @@ async def send_otp(data: SendOtpRequest):
 
     # Print loud terminal popup once for testing/demo
     print("\n" + "=" * 60)
-    print(f"📱 [KRISHICONNECT OTP GENERATED] -> +91 {mobile}")
+    print(f"[KRISHICONNECT OTP GENERATED] -> +91 {mobile}")
     print(f"   🔑 Terminal OTP:       {generated_otp}")
     print(f"   🌾 Default Master OTP: 482913 (Twilio trial carrier default)")
     print(f"   💡 Either OTP will be accepted during login verification!")

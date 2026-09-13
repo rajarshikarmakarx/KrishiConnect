@@ -410,7 +410,7 @@ async def send_multilingual_sms(
         SMS_HISTORY.pop()
 
     print(f"\n========================================================")
-    print(f"📱 [KRISHICONNECT SMS DISPATCH] -> +91 {mobile} ({lang.upper()})")
+    print(f"[KRISHICONNECT SMS DISPATCH] -> +91 {mobile} ({lang.upper()})")
     if is_real_gsm:
         print(f"   Gateway: Twilio GSM Carrier Delivery (International Route)")
         print(f"   From:    {result.get('from', from_number)}")

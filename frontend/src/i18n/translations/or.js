@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'ଆର୍ଦ୍ରତା ଓ ଅଦରକାରୀ ପଦାର୍ଥ ଯାଞ୍ଚ',
     feature_dbt: 'ସିଧାସଳଖ DBT',
     feature_dbt_desc: 'ବ୍ୟାଙ୍କ ଖାତାରେ ତୁରନ୍ତ ଟଙ୍କା ଜମା',
-    tab_otp: '📱 ମୋବାଇଲ୍ OTP',
+    tab_otp: 'ମୋବାଇଲ୍ OTP',
     tab_password: 'ପାସୱାର୍ଡ',
     tab_register: 'ପଞ୍ଜୀକରଣ',
     remember_me: 'ମୋତେ ୭ ଦିନ ପର୍ଯ୍ୟନ୍ତ ଲଗ୍ ଇନ୍ ରଖନ୍ତୁ',

@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'ओलावा व कचरा तपासणी',
     feature_dbt: 'थेट डीबीटी',
     feature_dbt_desc: 'थेट बँक खात्यात त्वरित पैसे जमा',
-    tab_otp: '📱 मोबाईल ओटीपी',
+    tab_otp: 'मोबाईल ओटीपी',
     tab_password: 'पासवर्ड',
     tab_register: 'नोंदणी',
     remember_me: 'मला ७ दिवस लॉग इन ठेवा',

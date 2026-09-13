@@ -63,7 +63,7 @@ export default {
     feature_assay_desc: 'আৰ্দ্ৰতা আৰু অলাগতিয়াল পদাৰ্থ পৰীক্ষা',
     feature_dbt: 'পোনপটীয়া DBT',
     feature_dbt_desc: 'বেংক একাউন্টত তৎকালীন টকা জমা',
-    tab_otp: '📱 ম\'বাইল OTP',
+    tab_otp: 'ম\'বাইল OTP',
     tab_password: 'পাছৱৰ্ড',
     tab_register: 'পঞ্জীয়ন',
     remember_me: 'মোক ৭ দিনলৈ লগ ইন ৰাখক',

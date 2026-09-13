@@ -56,11 +56,11 @@ export default function AuthPage() {
       const res = await api.sendOtp(form.mobile, language)
       setOtpSent(true)
       if (res.sms_provider === 'TWILIO_GSM_REAL') {
-        toast.success(`📱 Real SMS delivered to +91 ${form.mobile}!`, { duration: 6000 })
+        toast.success(`Real SMS delivered to +91 ${form.mobile}!`, { duration: 6000 })
       } else if (res.sms_provider === 'FAST2SMS_REAL') {
-        toast.success(`📱 Real SMS delivered to +91 ${form.mobile} in ${language.toUpperCase()}!`, { duration: 6000 })
+        toast.success(`Real SMS delivered to +91 ${form.mobile} in ${language.toUpperCase()}!`, { duration: 6000 })
       } else {
-        toast.success(`📱 OTP sent to +91 ${form.mobile}!`, { duration: 6000 })
+        toast.success(`OTP sent to +91 ${form.mobile}!`, { duration: 6000 })
       }
     } catch (err) {
       toast.error(err.message || t('toasts.failed_send_otp'))
