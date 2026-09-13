@@ -1,6 +1,7 @@
 """
 KrishiConnect Queue Router — Core queue management with transactional locking
 """
+import asyncio
 import random
 import string
 from datetime import datetime, date, timezone
@@ -16,12 +17,13 @@ from app.models import (
     QueueStatus, PaymentStatus, UserRole
 )
 from app.schemas import (
-    BookSlotRequest, QueueEntryOut, QueueStatusOut,
+    BookSlotRequest, BumpQueueRequest, QueueEntryOut, QueueStatusOut,
     MyQueueStatus, CompleteQueueRequest, QualityActionRequest,
     ProcurementOut, PaymentOut, AssayRecordOut
 )
 from app.auth import decode_token
 from app.realtime import manager
+from app.sms import send_multilingual_sms, get_farmer_language
 from app.timezone_utils import get_local_today, get_local_today_range_utc
 from app.pricing import (
     STATUTORY_BASE_MSP, GRADE_PRICE_CONFIG, calculate_gradewise_price, get_base_msp
@@ -137,6 +139,13 @@ async def enrich_entry(entry: QueueEntry, db: AsyncSession, centre_name: str = N
     if assay:
         assay_out = AssayRecordOut.model_validate(assay) if hasattr(AssayRecordOut, 'model_validate') else AssayRecordOut.from_orm(assay)
 
+    # Resolve bumped_by_name if bumped
+    bumped_by_name = None
+    bumped_by_id = getattr(entry, "bumped_by_id", None)
+    if bumped_by_id:
+        r_bumped = await db.execute(select(User.full_name).where(User.id == bumped_by_id))
+        bumped_by_name = r_bumped.scalar_one_or_none()
+
     return QueueEntryOut(
         id=entry.id,
         token=entry.token,
@@ -154,6 +163,12 @@ async def enrich_entry(entry: QueueEntry, db: AsyncSession, centre_name: str = N
         status=entry.status,
         crop=entry.crop,
         expected_quantity_kg=entry.expected_quantity_kg,
+        is_bumped=bool(getattr(entry, "is_bumped", False)),
+        bump_priority=getattr(entry, "bump_priority", 0) or 0,
+        bump_reason=getattr(entry, "bump_reason", None),
+        bumped_at=getattr(entry, "bumped_at", None),
+        bumped_by_id=bumped_by_id,
+        bumped_by_name=bumped_by_name,
         booked_at=entry.booked_at,
         called_at=entry.called_at,
         processing_started_at=entry.processing_started_at,
@@ -293,13 +308,35 @@ async def my_active_queue(current_user: User = Depends(get_current_user), db: As
 
     # People ahead in WAITING
     if entry.status == QueueStatus.WAITING:
-        r = await db.execute(
-            select(func.count(QueueEntry.id)).where(
-                QueueEntry.centre_id == entry.centre_id,
-                QueueEntry.status == QueueStatus.WAITING,
-                QueueEntry.booked_at < entry.booked_at
+        if getattr(entry, "is_bumped", False):
+            r = await db.execute(
+                select(func.count(QueueEntry.id)).where(
+                    QueueEntry.centre_id == entry.centre_id,
+                    QueueEntry.status == QueueStatus.WAITING,
+                    QueueEntry.is_bumped == True,
+                    or_(
+                        QueueEntry.bump_priority > (entry.bump_priority or 0),
+                        and_(
+                            QueueEntry.bump_priority == (entry.bump_priority or 0),
+                            QueueEntry.bumped_at < entry.bumped_at
+                        )
+                    )
+                )
             )
-        )
+        else:
+            r = await db.execute(
+                select(func.count(QueueEntry.id)).where(
+                    QueueEntry.centre_id == entry.centre_id,
+                    QueueEntry.status == QueueStatus.WAITING,
+                    or_(
+                        QueueEntry.is_bumped == True,
+                        and_(
+                            QueueEntry.is_bumped == False,
+                            QueueEntry.booked_at < entry.booked_at
+                        )
+                    )
+                )
+            )
         farmers_ahead = r.scalar() or 0
     else:
         farmers_ahead = 0
@@ -344,14 +381,19 @@ async def get_centre_queue(centre_id: int, db: AsyncSession = Depends(get_db)):
     if not centre:
         raise HTTPException(status_code=404, detail="Centre not found")
 
-    # Get all active entries
+    # Get all active entries sorted with priority bumped first
     result = await db.execute(
         select(QueueEntry).where(
             QueueEntry.centre_id == centre_id,
             QueueEntry.status.in_([
                 QueueStatus.WAITING, QueueStatus.CALLED, QueueStatus.PROCESSING
             ])
-        ).order_by(QueueEntry.booked_at)
+        ).order_by(
+            QueueEntry.is_bumped.desc(),
+            QueueEntry.bump_priority.desc(),
+            QueueEntry.bumped_at.asc(),
+            QueueEntry.booked_at.asc()
+        )
     )
     active_entries = result.scalars().all()
 
@@ -546,6 +588,136 @@ async def call_next(
     return {"message": "Farmer called", "token": entry.token, "counter_id": entry.counter_id, "counter": counter_label}
 
 
+@router.post("/{queue_id}/bump", response_model=QueueEntryOut)
+async def bump_queue_entry(
+    queue_id: int,
+    body: BumpQueueRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Priority Bump by on-site Gate Assayer / Mandi Operator.
+    - Role Restriction: Strict check preventing District Admin (UserRole.ADMIN) from bumping.
+    - Immutability Lock: Once bumped, the bump reason and timestamp can NEVER be altered or cleared by anyone.
+    """
+    if current_user.role == UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied: Priority queue bumps are strictly reserved for on-site Gate Assayers and Mandi Operators. District Admins cannot bump farmers."
+        )
+    if current_user.role not in [UserRole.OPERATOR, UserRole.ASSAYER]:
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied: Only on-site Gate Assayers or Mandi Operators can authorize priority queue bumps."
+        )
+
+    result = await db.execute(select(QueueEntry).where(QueueEntry.id == queue_id))
+    entry = result.scalar_one_or_none()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Queue entry not found")
+
+    if entry.status != QueueStatus.WAITING:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot prioritize token {entry.token} with status {entry.status}. Only WAITING farmers can be bumped."
+        )
+
+    # Statutory Audit Lock: reason and bump status cannot be changed once set
+    if entry.is_bumped:
+        raise HTTPException(
+            status_code=400,
+            detail="Audit Lock: This farmer has already been priority-bumped. The bump reason is legally sealed and cannot be modified or re-submitted by anyone."
+        )
+
+    reason_text = (body.reason or "").strip()
+    if len(reason_text) < 5:
+        raise HTTPException(
+            status_code=400,
+            detail="A valid statutory reason (minimum 5 characters) is required for priority bump authorization."
+        )
+
+    entry.is_bumped = True
+    entry.bump_priority = max(1, body.priority_level or 1)
+    entry.bump_reason = reason_text
+    entry.bumped_at = datetime.now(timezone.utc)
+    entry.bumped_by_id = current_user.id
+    await db.commit()
+    await db.refresh(entry)
+
+    # Real-time WebSocket broadcasts
+    await manager.broadcast_queue_changed(entry.centre_id, "bump")
+    await manager.broadcast_farmer_update(entry.farmer_id, {
+        "type": "BUMPED",
+        "token": entry.token,
+        "reason": entry.bump_reason,
+        "message": f"⚡ Your queue position has been prioritized by the Gate Assayer. Reason: {entry.bump_reason}"
+    })
+
+    # SMS dispatch in farmer's preferred language
+    r_farmer = await db.execute(select(User).where(User.id == entry.farmer_id))
+    farmer_user = r_farmer.scalar_one_or_none()
+    if farmer_user and farmer_user.mobile:
+        farmer_lang = get_farmer_language(farmer_user.mobile)
+        asyncio.create_task(
+            send_multilingual_sms(
+                mobile=farmer_user.mobile,
+                msg_type="PRIORITY_BUMPED",
+                params={"token": entry.token, "reason": entry.bump_reason},
+                lang=farmer_lang
+            )
+        )
+
+    # Integrated Call: If call_now is requested, attempt to assign a free counter immediately
+    if getattr(body, "call_now", False):
+        r_cnt = await db.execute(
+            select(CentreCounter).where(
+                CentreCounter.centre_id == entry.centre_id,
+                CentreCounter.is_active == True
+            )
+        )
+        counters = r_cnt.scalars().all()
+        free_counter = None
+        for counter in counters:
+            r2 = await db.execute(
+                select(QueueEntry.id).where(
+                    QueueEntry.counter_id == counter.id,
+                    QueueEntry.status.in_([QueueStatus.CALLED, QueueStatus.PROCESSING])
+                ).limit(1)
+            )
+            if not r2.scalar():
+                free_counter = counter
+                break
+
+        if free_counter:
+            entry.counter_id = free_counter.id
+            entry.status = QueueStatus.CALLED
+            entry.called_at = datetime.now(timezone.utc)
+            await db.commit()
+            await db.refresh(entry)
+
+            counter_label = free_counter.label or "the counter"
+            if farmer_user and farmer_user.mobile:
+                asyncio.create_task(
+                    send_multilingual_sms(
+                        mobile=farmer_user.mobile,
+                        msg_type="TURN_CALLED",
+                        params={"token": entry.token, "counter": counter_label},
+                        lang=farmer_lang
+                    )
+                )
+
+            await manager.broadcast_farmer_update(entry.farmer_id, {
+                "type": "CALLED",
+                "token": entry.token,
+                "counter": counter_label,
+                "message": f"🔔 Priority Call! Token {entry.token}. Please proceed to {counter_label}."
+            })
+            await manager.broadcast_queue_changed(entry.centre_id, "call")
+
+    enriched = await enrich_entry(entry, db)
+    return enriched
+
+
 @router.post("/centre/{centre_id}/call-next")
 async def call_next_farmer(
     centre_id: int,
@@ -592,7 +764,12 @@ async def call_next_farmer(
         select(QueueEntry).where(
             QueueEntry.centre_id == centre_id,
             QueueEntry.status == QueueStatus.WAITING
-        ).order_by(QueueEntry.booked_at).limit(1)
+        ).order_by(
+            QueueEntry.is_bumped.desc(),
+            QueueEntry.bump_priority.desc(),
+            QueueEntry.bumped_at.asc(),
+            QueueEntry.booked_at.asc()
+        ).limit(1)
         .with_for_update(skip_locked=True)
     )
     entry = result.scalar_one_or_none()

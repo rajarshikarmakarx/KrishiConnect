@@ -94,3 +94,27 @@ async def init_db():
                 await conn.execute(text("ALTER TABLE procurements ADD COLUMN IF NOT EXISTS grade VARCHAR(50);"))
             except Exception as e:
                 pass
+
+        # Ensure priority bump audit columns exist in queue_entries
+        if "postgresql" in DATABASE_URL or "asyncpg" in DATABASE_URL:
+            bump_migration_stmts = [
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS is_bumped BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS bump_priority INTEGER DEFAULT 0;",
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS bump_reason VARCHAR(500);",
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS bumped_at TIMESTAMP WITH TIME ZONE;",
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS bumped_by_id INTEGER REFERENCES users(id);"
+            ]
+        else:
+            bump_migration_stmts = [
+                "ALTER TABLE queue_entries ADD COLUMN is_bumped BOOLEAN DEFAULT 0;",
+                "ALTER TABLE queue_entries ADD COLUMN bump_priority INTEGER DEFAULT 0;",
+                "ALTER TABLE queue_entries ADD COLUMN bump_reason VARCHAR(500);",
+                "ALTER TABLE queue_entries ADD COLUMN bumped_at TIMESTAMP;",
+                "ALTER TABLE queue_entries ADD COLUMN bumped_by_id INTEGER REFERENCES users(id);"
+            ]
+        for stmt in bump_migration_stmts:
+            try:
+                await conn.execute(text(stmt))
+            except Exception:
+                # Column already exists or dialect variance
+                pass

@@ -4,7 +4,8 @@ import { useNotifications } from '../NotificationContext'
 import {
   Wheat, Users, CheckCircle, Clock, X, Wifi, WifiOff,
   IndianRupee, User, LogOut, Building2, ChevronDown, Scale,
-  Sparkles, AlertCircle, ShieldCheck, Droplets, Sun, AlertTriangle
+  Sparkles, AlertCircle, ShieldCheck, Droplets, Sun, AlertTriangle,
+  Zap, Lock
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
@@ -630,6 +631,237 @@ function CancelConfirmModal({ entry, onClose, onConfirm, loading }) {
   )
 }
 
+const STATUTORY_BUMP_PRESETS = [
+  "Perishable produce at spoilage risk (high ambient moisture / rain threat)",
+  "Elderly, disabled, or women farmer special queue accommodation",
+  "Tractor / logistics vehicle overheating or breakdown outside gate",
+  "Sun-Drying yard re-inspection following completed grace period",
+  "Statutory administrative order / priority lot inspection",
+  "Other statutory ground (specify custom justification below)"
+]
+
+function BumpPriorityModal({ entry, allCountersOccupied, onClose, onSuccess }) {
+  const [selectedPreset, setSelectedPreset] = useState(STATUTORY_BUMP_PRESETS[0])
+  const [customReason, setCustomReason] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const isRemarksValid = customReason.trim().length >= 5
+  const effectiveReason = selectedPreset.startsWith('Other')
+    ? customReason.trim()
+    : `${selectedPreset} — ${customReason.trim()}`
+
+  const handleConfirm = async () => {
+    if (!isRemarksValid) {
+      return toast.error('Additional Assayer Remarks are required (minimum 5 characters).')
+    }
+    setLoading(true)
+    try {
+      await api.bumpQueueEntry(entry.id, {
+        reason: effectiveReason,
+        priority_level: 1,
+        call_now: true
+      })
+      if (!allCountersOccupied) {
+        toast.success(`Token ${entry.token} priority-bumped and called to counter!`, { duration: 4000 })
+      } else {
+        toast.success(`Token ${entry.token} priority-bumped to #1 in queue!`, { duration: 4000 })
+      }
+      onSuccess()
+    } catch (err) {
+      toast.error(err.message || 'Failed to authorize priority bump')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 dark:border-slate-800 animate-fade-in space-y-4">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+              ⚡
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Gate Assayer Priority Bump & Call</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {allCountersOccupied 
+                  ? 'Statutory priority authorization (#1 in queue · all counters currently busy)'
+                  : 'Statutory priority authorization & immediate counter call'}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Token Info Card */}
+        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3.5 border border-slate-200/70 dark:border-slate-700/80 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="token-display text-xl font-black text-amber-800 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-500/15 px-3 py-1 rounded-xl border border-amber-300 dark:border-amber-500/30">
+              {entry.token}
+            </span>
+            <div>
+              <div className="font-semibold text-slate-900 dark:text-white text-sm">{entry.farmer_name}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">{entry.crop} · {entry.expected_quantity_kg != null ? (Math.round(Number(entry.expected_quantity_kg) * 10) / 10) : ''} kg</div>
+            </div>
+          </div>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+            Waiting in Queue
+          </span>
+        </div>
+
+        {/* Statutory Preset Selection */}
+        <div>
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+            Statutory Reason Preset <span className="text-red-500 font-bold">*</span>
+          </label>
+          <select
+            value={selectedPreset}
+            onChange={(e) => setSelectedPreset(e.target.value)}
+            className="w-full text-xs sm:text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-500 cursor-pointer"
+          >
+            {STATUTORY_BUMP_PRESETS.map((preset, idx) => (
+              <option key={idx} value={preset}>{preset}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Additional Assayer Remarks (Required for all reasons) */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              Additional Assayer Remarks <span className="text-red-500 font-bold">*</span>
+            </label>
+            <span className="text-[11px] text-slate-400 font-medium">
+              {customReason.trim().length}/5 chars min
+            </span>
+          </div>
+          <textarea
+            rows={2}
+            value={customReason}
+            onChange={(e) => setCustomReason(e.target.value)}
+            placeholder="Enter mandatory inspection notes, vehicle number, or reason details..."
+            className={`w-full text-xs sm:text-sm bg-white dark:bg-slate-800 border rounded-xl p-3 text-slate-800 dark:text-slate-100 focus:outline-none placeholder-slate-400 transition-colors ${
+              isRemarksValid
+                ? 'border-slate-300 dark:border-slate-700 focus:border-amber-500'
+                : 'border-amber-400 dark:border-amber-500/60 focus:border-amber-500'
+            }`}
+          />
+          {!isRemarksValid && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium">
+              * Additional remarks are required for all statutory bump authorizations (minimum 5 characters).
+            </p>
+          )}
+        </div>
+
+        {/* Legal Immutability Notice Banner */}
+        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-300/80 dark:border-amber-500/30 rounded-2xl p-3 flex items-start gap-2.5">
+          <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-[11px] text-amber-900 dark:text-amber-300 leading-relaxed font-medium">
+            <strong>Permanent Statutory Audit Lock:</strong> Once authorized, this reason is sealed in state procurement records and <u>CANNOT</u> be modified, edited, or cleared by anyone (including District Admin).
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            id="btn-confirm-bump"
+            onClick={handleConfirm}
+            disabled={loading || !isRemarksValid}
+            className="flex-1 py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              allCountersOccupied ? 'Authorize Priority Bump (#1 in Queue)' : 'Authorize Bump & Call'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BumpAuditViewModal({ entry, onClose }) {
+  if (!entry) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-100 dark:border-slate-800 animate-fade-in space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Zap className="w-4 h-4 fill-current" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Statutory Priority Bump Audit</h3>
+              <p className="text-[11px] text-slate-400">Official Gate Assayer Record</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-2.5 text-xs">
+          <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-slate-500 dark:text-slate-400">Token Number</span>
+            <span className="font-bold text-slate-900 dark:text-white font-mono">{entry.token}</span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-slate-500 dark:text-slate-400">Farmer Name</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{entry.farmer_name}</span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-slate-500 dark:text-slate-400">Authorized By</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{entry.bumped_by_name || 'Gate Assayer'}</span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-slate-500 dark:text-slate-400">Timestamp</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">
+              {entry.bumped_at ? new Date(entry.bumped_at).toLocaleString('en-IN') : 'N/A'}
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-500 dark:text-slate-400 block mb-1 font-medium">Immutable Statutory Reason:</span>
+            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-medium leading-relaxed">
+              {entry.bump_reason || 'Priority lot intake authorized per assayer inspection.'}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300/60 dark:border-emerald-500/20 rounded-2xl p-2.5 flex items-center gap-2">
+          <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="text-[11px] text-emerald-800 dark:text-emerald-300 font-medium">
+            Audit status: Legally sealed and tamper-proof.
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors cursor-pointer"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function PaymentPanel({ centreId, onPay, payingId }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
@@ -715,6 +947,8 @@ export default function OperatorApp() {
   const [cancelModal, setCancelModal] = useState(null)
   const [cancelling, setCancelling] = useState(false)
   const [payingId, setPayingId] = useState(null)
+  const [bumpModal, setBumpModal] = useState(null)
+  const [auditModal, setAuditModal] = useState(null)
 
   const loadQueue = useCallback(async () => {
     try {
@@ -980,28 +1214,54 @@ export default function OperatorApp() {
           ) : (
             <div className="space-y-1">
               {waiting.slice(0, 8).map((entry, i) => (
-                <div key={entry.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                <div key={entry.id} className={`flex items-center justify-between py-2.5 px-3 rounded-xl transition-colors ${
+                  entry.is_bumped
+                    ? 'bg-amber-50/70 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/30'
+                    : 'hover:bg-slate-50 dark:hover:bg-white/5'
+                }`}>
                   <div className="flex items-center gap-3">
                     <span className="text-slate-400 dark:text-slate-500 text-xs w-4 font-mono">{i + 1}</span>
                     <span className="token-display font-bold text-slate-800 dark:text-slate-200">{entry.token}</span>
                     <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{entry.farmer_name}</span>
+                    {entry.is_bumped && (
+                      <button
+                        type="button"
+                        onClick={() => setAuditModal(entry)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors shrink-0 cursor-pointer"
+                        title={`Bumped by ${entry.bumped_by_name || 'Gate Assayer'}: ${entry.bump_reason}. Click to view immutable audit seal.`}
+                      >
+                        <span>⚡ BUMPED</span>
+                      </button>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded-lg">{entry.crop}</span>
                     <span className="text-slate-500 dark:text-slate-400 text-xs">{entry.expected_quantity_kg != null ? (Math.round(Number(entry.expected_quantity_kg) * 10) / 10) : ''} kg</span>
-                    <button
-                      id={`btn-call-${entry.id}`}
-                      onClick={() => handleCallSpecific(entry)}
-                      disabled={callingId === entry.id || allCountersOccupied}
-                      title={allCountersOccupied ? "All counters occupied" : `Call ${entry.token}`}
-                      className="text-xs bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 px-3 py-1.5 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
-                    >
-                      {callingId === entry.id ? (
-                        <div className="w-3 h-3 border-2 border-blue-700 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        'Call'
-                      )}
-                    </button>
+                    {entry.is_bumped ? (
+                      <button
+                        id={`btn-call-${entry.id}`}
+                        onClick={() => handleCallSpecific(entry)}
+                        disabled={callingId === entry.id || allCountersOccupied}
+                        title={allCountersOccupied ? "All counters occupied" : `Call ${entry.token}`}
+                        className="text-xs bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 px-3 py-1.5 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                      >
+                        {callingId === entry.id ? (
+                          <div className="w-3 h-3 border-2 border-blue-700 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          'Call'
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        id={`btn-bump-call-${entry.id}`}
+                        onClick={() => setBumpModal(entry)}
+                        title="Authorize statutory priority bump & call to counter"
+                        className="text-xs bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-300/80 dark:border-amber-500/30 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
+                      >
+                        Bump & Call
+                      </button>
+                    )}
                     <button
                       id={`btn-cancel-${entry.id}`}
                       onClick={() => setCancelModal(entry)}
@@ -1041,6 +1301,25 @@ export default function OperatorApp() {
           onClose={() => setCancelModal(null)}
           onConfirm={handleConfirmCancel}
           loading={cancelling}
+        />
+      )}
+
+      {bumpModal && (
+        <BumpPriorityModal
+          entry={bumpModal}
+          allCountersOccupied={allCountersOccupied}
+          onClose={() => setBumpModal(null)}
+          onSuccess={async () => {
+            setBumpModal(null)
+            await loadQueue()
+          }}
+        />
+      )}
+
+      {auditModal && (
+        <BumpAuditViewModal
+          entry={auditModal}
+          onClose={() => setAuditModal(null)}
         />
       )}
     </div>

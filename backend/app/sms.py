@@ -34,6 +34,28 @@ TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "").strip()
 # Optional Fast2SMS API key from environment variable
 FAST2SMS_API_KEY = os.getenv("FAST2SMS_API_KEY", "").strip()
 
+FARMER_LANGUAGES: Dict[str, str] = {}
+
+
+def set_farmer_language(mobile: str, lang: Optional[str] = None):
+    """Save or update farmer's language preference."""
+    if not mobile:
+        return
+    clean = mobile.replace("+91", "").replace("-", "").replace(" ", "").strip()
+    if lang:
+        normalized = lang.lower().strip()
+        if normalized in ["en", "bn", "hi", "mr", "te", "ta", "gu", "kn", "ml", "pa", "or", "as"]:
+            FARMER_LANGUAGES[clean] = normalized
+
+
+def get_farmer_language(mobile: str, default: str = "bn") -> str:
+    """Retrieve farmer's saved language preference (defaults to Bengali 'bn')."""
+    if not mobile:
+        return default
+    clean = mobile.replace("+91", "").replace("-", "").replace(" ", "").strip()
+    return FARMER_LANGUAGES.get(clean, default)
+
+
 # In-memory history of last 50 dispatched SMS messages for UI inspector & audit
 SMS_HISTORY: List[Dict[str, Any]] = []
 
@@ -145,6 +167,16 @@ def _format_sms_text(msg_type: str, lang: str, params: Dict[str, Any]) -> str:
             "or": f"କୃଷିକନେକ୍ଟ: {crop} ({grade}) କ୍ରୟ ସମ୍ପୂର୍ଣ୍ଣ ହେଲା। ଓଜନ: {qty} କି.ଗ୍ରା., ଦର: ₹{rate}/କି.ଗ୍ରା.। ମୋଟ: ₹{amount}। PFMS ମାଧ୍ୟମରେ DBT ରାଶି ବ୍ୟାଙ୍କ ଖାତାକୁ ପଠାଗଲା।",
             "as": f"কৃষিকনেক্ট: {crop} ({grade}) ক্ৰয় সম্পূৰ্ণ হ'ল। ওজন: {qty} কি.গ্ৰা., দৰ: ₹{rate}/কি.গ্ৰা.। মুঠ: ₹{amount}। PFMS যোগে DBT ধন বেংক একাউন্টলৈ প্ৰেৰণ কৰা হ'ল।",
             "en": f"KrishiConnect: {crop} ({grade}) procurement complete. Net: {qty} kg @ Rs {rate}/kg. Total: Rs {amount}. Direct DBT payment initiated via PFMS."
+        }
+        return templates.get(lang, templates["en"])
+
+    elif msg_type == "PRIORITY_BUMPED":
+        token = params.get("token", "A100")
+        reason = params.get("reason", "Statutory priority inspection")
+        templates = {
+            "bn": f"কৃষিকানেক্ট গেট নোটিশ: টোকেন {token} গেট অ্যাসেয়ার দ্বারা অগ্রাধিকার দেওয়া হয়েছে (কারণ: {reason})। অনুগ্রহ করে দ্রুত কাউন্টারে প্রস্তুত থাকুন।",
+            "hi": f"कृषिकनेक्ट गेट सूचना: गेट असेयर द्वारा टोकन {token} को प्राथमिकता दी गई है (कारण: {reason})। कृपया तुरंत काउंटर पर तैयार रहें।",
+            "en": f"KrishiConnect Gate Notice: Token {token} has been priority-bumped by the Gate Assayer (Reason: {reason}). Please be prepared at the gate."
         }
         return templates.get(lang, templates["en"])
 

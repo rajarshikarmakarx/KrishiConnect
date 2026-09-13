@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Ticket, Clock, Users, Wifi, WifiOff, Bell, Sparkles, Award, Info } from 'lucide-react'
+import { Ticket, Clock, Users, Wifi, WifiOff, Bell, Sparkles, Award, Info, Zap } from 'lucide-react'
 import api from '../../api'
 import { useTranslation } from '../../i18n'
 import { useAuth } from '../../AuthContext'
@@ -87,8 +87,23 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
 
   return (
     <div className="space-y-4 animate-fade-in">
+      {/* Priority Bump Notification Banner */}
+      {entry?.is_bumped && (
+        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 rounded-2xl p-4 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+            <Zap className="w-4 h-4 fill-current" />
+          </div>
+          <div>
+            <p className="text-amber-900 dark:text-amber-200 text-sm font-bold">Fast-Track Priority Authorized by Gate Assayer</p>
+            <p className="text-amber-800/90 dark:text-amber-300/90 text-xs mt-0.5">
+              Reason: <span className="font-semibold">{entry.bump_reason}</span>
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Notification banner */}
-      {notification && (
+      {notification && !entry?.is_bumped && (
         <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 flex items-start gap-3">
           <Bell className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
           <p className="text-amber-800 text-sm font-medium">{notification}</p>
@@ -126,6 +141,14 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
                 entry.status === 'REJECTED' ? 'bg-red-100 text-red-700 border border-red-300' :
                 'bg-slate-100 text-slate-700'
               }`}>{getStatusBadgeText(entry.status)}</span>
+              {entry.is_bumped && (
+                <div className="mt-2 flex items-center justify-center">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40">
+                    <Zap className="w-2.5 h-2.5 fill-current text-amber-600 dark:text-amber-400" />
+                    Priority Bumped
+                  </span>
+                </div>
+              )}
             </div>
             <div className="text-center p-3 sm:p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('queue.serving_now')}</p>

@@ -142,6 +142,13 @@ class QueueEntry(Base):
     crop = Column(String(100), nullable=False)
     expected_quantity_kg = Column(Float, nullable=False)
 
+    # Priority Bump (Assayer authorization with immutable statutory audit logging)
+    is_bumped = Column(Boolean, default=False, nullable=False)
+    bump_priority = Column(Integer, default=0, nullable=False)
+    bump_reason = Column(String(500), nullable=True)
+    bumped_at = Column(DateTime(timezone=True), nullable=True)
+    bumped_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
     booked_at = Column(DateTime(timezone=True), default=utc_now)
     called_at = Column(DateTime(timezone=True), nullable=True)
     processing_started_at = Column(DateTime(timezone=True), nullable=True)
@@ -152,6 +159,7 @@ class QueueEntry(Base):
     centre = relationship("ProcurementCentre", back_populates="queue_entries")
     slot = relationship("TimeSlot", back_populates="queue_entries")
     counter = relationship("CentreCounter", back_populates="queue_entries")
+    bumped_by = relationship("User", foreign_keys=[bumped_by_id])
     procurement = relationship("Procurement", back_populates="queue_entry", uselist=False)
     assay_record = relationship("AssayRecord", back_populates="queue_entry", uselist=False)
 
