@@ -348,13 +348,11 @@ export default function FarmerApp() {
 
   const handleBookingSuccess = (entry) => {
     activeEntryIdRef.current = entry.id
-    setSessionCompletedEntryId(null)
     setNewToken(entry)
     setShowBooking(false)
-    setActiveQueue(null)
-    loadActiveQueue()
     setTab('queue')
-    toast.success(t('toasts.token_booked_success', { token: entry.token }))
+    loadActiveQueue()
+    toast.success(t('toasts.booking_confirmed_toast'))
     addNotification({
       title: t('notifications.slot_booked_title', { token: entry.token }),
       message: t('notifications.slot_booked_msg', {
@@ -371,7 +369,7 @@ export default function FarmerApp() {
       crop: crop || 'Paddy',
       qty: quantity ? String(quantity) : ''
     })
-    const targetCentre = centres[0] || null
+    const targetCentre = selectedCentre || centres[0] || null
     setSelectedCentre(targetCentre)
     setShowBooking(true)
     setShowChatbot(false)

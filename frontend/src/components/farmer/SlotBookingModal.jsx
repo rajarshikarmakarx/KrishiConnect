@@ -49,8 +49,8 @@ export default function SlotBookingModal({
 
   useEffect(() => {
     api.getSlots(centre.id).then(data => {
-      setSlots(data)
-      const available = data.find(s => !s.is_full)
+      setSlots(data || [])
+      const available = (data || []).find(s => !s.is_full)
       if (available) setSelectedSlot(available)
     }).catch(() => toast.error(t('toasts.could_not_load_slots'))).finally(() => setLoadingSlots(false))
   }, [centre.id, t])
@@ -59,7 +59,7 @@ export default function SlotBookingModal({
   useEffect(() => {
     return () => {
       if (window._krishiSpeechRec) {
-        try { window._krishiSpeechRec.stop() } catch {}
+        try { window._krishiSpeechRec.abort() } catch {}
         window._krishiSpeechRec = null
       }
       if (window._krishiSlotAudio) {
@@ -82,13 +82,13 @@ export default function SlotBookingModal({
 
     try {
       setIsPlayingAudio(true)
-      const clean = text.replace(/[*#_`~•\n|<>\-–—]/g, ' ').slice(0, 200).trim()
+      const clean = text.replace(/[*#_`~•\n|<>\-–—]/g, ' ').slice(0, 250).trim()
       const langCode = speechLang || language || 'bn'
       const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
       const ttsUrl = `${apiBase}/ai/tts?text=${encodeURIComponent(clean)}&lang=${langCode}`
 
       if (window._krishiSlotAudio) {
-        window._krishiSlotAudio.pause()
+        try { window._krishiSlotAudio.pause() } catch {}
       }
       const audio = new Audio(ttsUrl)
       window._krishiSlotAudio = audio
@@ -100,10 +100,119 @@ export default function SlotBookingModal({
     }
   }
 
+  // Core NLP processing handler (used by both SpeechRecognition and quick sample chips)
+  const handleProcessTranscript = async (transcriptText) => {
+    if (!transcriptText || !transcriptText.trim()) return
+    const cleanTranscript = transcriptText.trim()
+    setLastVoiceTranscript(cleanTranscript)
+    setIsListening(false)
+    setIsProcessingVoice(true)
+
+    try {
+      const context = {
+        nearest_mandi: centre?.name || 'Singur Mandi',
+        registered_crop: crop || 'Paddy'
+      }
+
+      // Detect language script automatically if Bengali or Hindi characters are present
+      let targetLang = speechLang || language || 'bn'
+      if (/[\u0980-\u09FF]/.test(cleanTranscript)) targetLang = 'bn'
+      else if (/[\u0900-\u097F]/.test(cleanTranscript)) targetLang = 'hi'
+
+      const res = await api.getVoiceIntent(cleanTranscript, targetLang, centre?.id, context)
+      if (res && res.booking_intent_detected !== false) {
+        setVoiceFeedback(res)
+
+        const extracted = res.extracted_data || {}
+        const rawCrop = extracted.crop || res.crop || ''
+
+        // Multilingual & Case-insensitive Crop Mapping
+        const cropMap = {
+          paddy: 'Paddy', rice: 'Paddy', dhan: 'Paddy', ধান: 'Paddy', धान: 'Paddy',
+          wheat: 'Wheat', gom: 'Wheat', গম: 'Wheat', gehun: 'Wheat', गेहूँ: 'Wheat', गेहूं: 'Wheat',
+          mustard: 'Mustard', sarisha: 'Mustard', সরিষা: 'Mustard', sarson: 'Mustard', सरसों: 'Mustard',
+          jute: 'Jute', pat: 'Jute', পাট: 'Jute', patsan: 'Jute', पटसन: 'Jute',
+          potato: 'Potato', alu: 'Potato', আলু: 'Potato', aalu: 'Potato', आलू: 'Potato',
+          onion: 'Onion', peyaj: 'Onion', পেঁয়াজ: 'Onion', pyaz: 'Onion', प्याज़: 'Onion', प्याज: 'Onion'
+        }
+        const lowerRaw = rawCrop.toLowerCase().trim()
+        const matchedCrop = CROPS.find(c => c.toLowerCase() === lowerRaw) || cropMap[lowerRaw]
+        if (matchedCrop) {
+          setCrop(matchedCrop)
+        }
+
+        // Convert quintals to kg for the numeric input field (1 quintal = 100 kg)
+        let qtyInKg = null
+        if (typeof extracted.quantity_quintals === 'number' && extracted.quantity_quintals > 0) {
+          qtyInKg = Math.round(extracted.quantity_quintals * 100)
+        } else if (typeof res.quantity === 'number' && res.quantity > 0) {
+          qtyInKg = Math.round(res.quantity)
+        } else if (extracted.quantity_quintals) {
+          qtyInKg = Math.round(parseFloat(extracted.quantity_quintals) * 100)
+        }
+        if (qtyInKg && qtyInKg > 0) {
+          setQty(String(qtyInKg))
+        }
+
+        // Match exact preferred time (e.g. "10:00", "14:00") or slot window (MORNING / AFTERNOON)
+        const prefTime = extracted.preferred_time
+        const slotWindow = (extracted.slot_window || res.slot || '').toUpperCase()
+        let matched = null
+
+        if (prefTime && slots.length > 0) {
+          const prefHour = prefTime.slice(0, 2)
+          matched = slots.find(s => !s.is_full && s.start_time.startsWith(prefHour))
+        }
+
+        if (!matched && slots.length > 0) {
+          if (slotWindow.includes('AFTERNOON') || slotWindow === 'AFTERNOON') {
+            matched = slots.find(s => !s.is_full && parseInt(s.start_time.slice(0, 2), 10) >= 12)
+          } else if (slotWindow.includes('MORNING') || slotWindow === 'MORNING') {
+            matched = slots.find(s => !s.is_full && parseInt(s.start_time.slice(0, 2), 10) < 12)
+          }
+        }
+
+        // Guaranteed fallback to first available slot if none matched so slot is never empty
+        if (!matched && slots.length > 0) {
+          matched = slots.find(s => !s.is_full) || slots[0]
+        }
+
+        if (matched) {
+          setSelectedSlot(matched)
+        }
+
+        setVoiceAutoFilled(true)
+        toast.success(
+          targetLang === 'bn' ? `ভয়েস এআই দিয়ে পূরণ সম্পন্ন! (${matchedCrop || crop} ${qtyInKg ? qtyInKg + ' কেজি' : ''})` :
+          targetLang === 'hi' ? `वॉइस एआई से फॉर्म भर दिया गया! (${matchedCrop || crop} ${qtyInKg ? qtyInKg + ' किग्रा' : ''})` :
+          `Auto-filled via Voice AI (${matchedCrop || crop} ${qtyInKg ? qtyInKg + ' kg' : ''})`,
+          { icon: '✨' }
+        )
+
+        // Automatically speak the confirmation aloud
+        if (res.farmer_clarification_message) {
+          playClarificationSpeech(res.farmer_clarification_message)
+        }
+      } else {
+        toast(
+          speechLang === 'bn' ? `শুনলাম: "${cleanTranscript}" (ফসলের নাম ও পরিমাণ স্পষ্ট করে বলুন)` :
+          speechLang === 'hi' ? `सुना: "${cleanTranscript}" (कृपया फसल और मात्रा दोबारा बोलें)` :
+          `Heard: "${cleanTranscript}" (Please specify crop name and quantity clearly)`,
+          { icon: '🎙️' }
+        )
+      }
+    } catch (err) {
+      toast.error(err.message || 'Voice intent processing failed')
+    } finally {
+      setIsProcessingVoice(false)
+    }
+  }
+
   const toggleVoiceBooking = () => {
     if (isListening) {
       if (window._krishiSpeechRec) {
-        try { window._krishiSpeechRec.stop() } catch {}
+        try { window._krishiSpeechRec.abort() } catch {}
+        window._krishiSpeechRec = null
       }
       setIsListening(false)
       return
@@ -112,118 +221,82 @@ export default function SlotBookingModal({
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognition) {
       toast.error(
-        speechLang === 'bn' ? 'আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই (Chrome/Edge ব্যবহার করুন)।' :
-        speechLang === 'hi' ? 'आपके ब्राउज़र में वॉइस सपोर्ट नहीं है (Chrome/Edge इस्तेमाल करें)।' :
-        'Speech recognition is not supported in this browser. Please use Chrome or Edge.'
+        speechLang === 'bn' ? 'আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই (Chrome/Edge ব্যবহার করুন বা নিচের নমুনা বাটনে চাপুন)।' :
+        speechLang === 'hi' ? 'आपके ब्राउज़र में वॉइस सपोर्ट नहीं है (Chrome/Edge इस्तेमाल करें या नीचे दिए गए सैंपल पर टैप करें)।' :
+        'Speech recognition is not supported in this browser. Please use Chrome/Edge or tap a sample prompt below.'
       )
       return
     }
 
-    const recognition = new SpeechRecognition()
-    window._krishiSpeechRec = recognition
-    recognition.continuous = false
-    recognition.interimResults = false
+    try {
+      if (window._krishiSpeechRec) {
+        try { window._krishiSpeechRec.abort() } catch {}
+      }
+      const recognition = new SpeechRecognition()
+      window._krishiSpeechRec = recognition
+      recognition.continuous = false
+      recognition.interimResults = false
+      recognition.maxAlternatives = 1
 
-    const localeMap = { bn: 'bn-IN', hi: 'hi-IN', en: 'en-IN' }
-    recognition.lang = localeMap[speechLang] || 'bn-IN'
+      const localeMap = {
+        bn: 'bn-IN',
+        hi: 'hi-IN',
+        en: 'en-IN',
+        as: 'bn-IN',
+        gu: 'gu-IN',
+        mr: 'mr-IN',
+        ta: 'ta-IN',
+        te: 'te-IN',
+        kn: 'kn-IN',
+        ml: 'ml-IN',
+        pa: 'pa-IN',
+        or: 'or-IN'
+      }
+      recognition.lang = localeMap[speechLang] || localeMap[language] || 'bn-IN'
 
-    recognition.onstart = () => {
-      setIsListening(true)
-      setVoiceAutoFilled(false)
-      setVoiceFeedback(null)
-    }
+      recognition.onstart = () => {
+        setIsListening(true)
+        setIsProcessingVoice(false)
+        setVoiceAutoFilled(false)
+        setVoiceFeedback(null)
+      }
 
-    recognition.onresult = async (event) => {
-      const transcript = event.results[0][0].transcript
-      setLastVoiceTranscript(transcript)
-      setIsListening(false)
-      setIsProcessingVoice(true)
+      recognition.onresult = (event) => {
+        if (!event.results || !event.results[0] || !event.results[0][0]) return
+        const transcript = event.results[0][0].transcript
+        handleProcessTranscript(transcript)
+      }
 
-      try {
-        const context = {
-          nearest_mandi: centre?.name || 'Singur Mandi',
-          registered_crop: crop || 'Paddy'
-        }
-        const res = await api.getVoiceIntent(transcript, speechLang, centre?.id, context)
-        if (res && res.booking_intent_detected !== false) {
-          setVoiceFeedback(res)
-
-          const extracted = res.extracted_data || {}
-          const recognizedCrop = extracted.crop || res.crop
-          if (recognizedCrop && CROPS.includes(recognizedCrop)) {
-            setCrop(recognizedCrop)
-          }
-
-          // Convert quintals to kg for the numeric input field (1 quintal = 100 kg)
-          let qtyInKg = null
-          if (extracted.quantity_quintals != null) {
-            qtyInKg = Math.round(extracted.quantity_quintals * 100)
-          } else if (res.quantity != null) {
-            qtyInKg = Math.round(res.quantity)
-          }
-          if (qtyInKg && qtyInKg > 0) {
-            setQty(String(qtyInKg))
-          }
-
-          // Match exact preferred time (e.g., "10:00", "14:00") or slot window (MORNING / AFTERNOON)
-          const prefTime = extracted.preferred_time
-          const slotWindow = (extracted.slot_window || res.slot || '').toUpperCase()
-          let matched = null
-
-          if (prefTime && slots.length > 0) {
-            const prefHour = prefTime.slice(0, 2)
-            matched = slots.find(s => !s.is_full && s.start_time.startsWith(prefHour))
-          }
-
-          if (!matched && slots.length > 0) {
-            if (slotWindow.includes('AFTERNOON') || slotWindow === 'AFTERNOON') {
-              matched = slots.find(s => !s.is_full && parseInt(s.start_time.slice(0, 2), 10) >= 12)
-            } else if (slotWindow.includes('MORNING') || slotWindow === 'MORNING') {
-              matched = slots.find(s => !s.is_full && parseInt(s.start_time.slice(0, 2), 10) < 12)
-            }
-          }
-
-          if (matched) {
-            setSelectedSlot(matched)
-          }
-
-          setVoiceAutoFilled(true)
-          toast.success(
-            speechLang === 'bn' ? `ভয়েস এআই দিয়ে পূরণ সম্পন্ন! (${recognizedCrop || ''} ${qtyInKg ? qtyInKg + ' কেজি' : ''})` :
-            speechLang === 'hi' ? `वॉइस एআই से फॉर्म भर दिया गया! (${recognizedCrop || ''} ${qtyInKg ? qtyInKg + ' किग्रा' : ''})` :
-            `Auto-filled via Voice AI (${recognizedCrop || ''} ${qtyInKg ? qtyInKg + ' kg' : ''})`,
-            { icon: '✨' }
+      recognition.onerror = (event) => {
+        setIsListening(false)
+        if (event.error === 'not-allowed') {
+          toast.error(
+            speechLang === 'bn' ? 'মাইক্রোফোন অ্যাক্সেস ব্লক করা আছে। ব্রাউজারে পারমিশন অন করুন।' :
+            speechLang === 'hi' ? 'माइक्रोफ़ोन अनुमति अस्वीकृत है। ब्राउज़र में अनुमति दें।' :
+            'Microphone access denied. Please allow microphone permissions in browser.'
           )
-        } else {
+        } else if (event.error === 'network') {
+          toast.error('Network issue during speech recognition. Please retry.')
+        } else if (event.error === 'no-speech') {
           toast(
-            speechLang === 'bn' ? `শুনলাম: "${transcript}" (ফসলের নাম ও পরিমাণ স্পষ্ট করে বলুন)` :
-            speechLang === 'hi' ? `सुना: "${transcript}" (कृपया फसल और मात्रा दोबारा बोलें)` :
-            `Heard: "${transcript}" (Please specify crop name and quantity clearly)`,
+            speechLang === 'bn' ? 'কোনো কথা শোনা যায়নি। মাইক চেপে স্পষ্ট করে বলুন।' :
+            speechLang === 'hi' ? 'कोई आवाज नहीं सुनी गई। माइक दबाकर बोलें।' :
+            'No speech detected. Please tap mic and speak clearly.',
             { icon: '🎙️' }
           )
+        } else {
+          toast.error(`Mic error: ${event.error}`)
         }
-      } catch (err) {
-        toast.error(err.message || 'Voice intent processing failed')
-      } finally {
-        setIsProcessingVoice(false)
       }
-    }
 
-    recognition.onerror = (event) => {
-      setIsListening(false)
-      if (event.error !== 'no-speech') {
-        toast.error(`Mic error: ${event.error}`)
+      recognition.onend = () => {
+        setIsListening(false)
       }
-    }
 
-    recognition.onend = () => {
-      setIsListening(false)
-    }
-
-    try {
       recognition.start()
     } catch (err) {
       setIsListening(false)
+      toast.error('Could not start microphone: ' + (err.message || 'Error'))
     }
   }
 
@@ -260,7 +333,7 @@ export default function SlotBookingModal({
       await api.cancelBooking(activeQueueToken.queue_entry.id)
       toast.success(t('toasts.previous_booking_cancelled'))
       setActiveError(null)
-      onGoToQueue?.(true) // refresh queue state
+      onGoToQueue?.(true)
     } catch (e) {
       toast.error(t('toasts.could_not_cancel_booking'))
     } finally {
@@ -297,7 +370,7 @@ export default function SlotBookingModal({
               <div className="flex items-center gap-2 pt-1">
                 <button
                   onClick={() => { onClose(); onGoToQueue?.(); }}
-                  className="flex-1 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                  className="flex-1 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                 >
                   {t('booking.view_active_token')}
                 </button>
@@ -305,7 +378,7 @@ export default function SlotBookingModal({
                   <button
                     onClick={handleCancelActive}
                     disabled={cancelling}
-                    className="py-2 px-3 bg-white dark:bg-[#0e1626] hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/40 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                    className="py-2 px-3 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
                   >
                     {cancelling ? t('booking.cancelling') : t('booking.cancel_and_rebook')}
                   </button>
@@ -326,6 +399,7 @@ export default function SlotBookingModal({
               <div className="flex items-center gap-3.5 min-w-0">
                 <button
                   type="button"
+                  id="btn-voice-mic-main"
                   onClick={toggleVoiceBooking}
                   disabled={isProcessingVoice}
                   className={`relative w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
@@ -335,7 +409,7 @@ export default function SlotBookingModal({
                       ? 'bg-emerald-600 text-white'
                       : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-700/25 hover:scale-105 active:scale-95'
                   }`}
-                  title="Click to speak booking"
+                  title="Click to speak your slot booking"
                 >
                   {isListening && (
                     <span className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-60 pointer-events-none" />
@@ -353,7 +427,7 @@ export default function SlotBookingModal({
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
                       <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                      {speechLang === 'bn' ? 'ভয়েস এআই বুকিং' : speechLang === 'hi' ? 'वॉइस एआई बुकिंग' : 'Voice AI Booking'}
+                      {speechLang === 'bn' ? 'ভয়েস এআই বুকিং' : speechLang === 'hi' ? 'वॉइस एআই बुकिंग' : 'Voice AI Booking'}
                     </span>
                     {voiceAutoFilled && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
@@ -366,7 +440,7 @@ export default function SlotBookingModal({
                     {isListening
                       ? (speechLang === 'bn' ? '🎙️ শুনছি... বলুন (যেমন: ৫০ বস্তা ধান সকাল ১০টায়)' : speechLang === 'hi' ? '🎙️ सुन रहा हूँ... बोलिए (जैसे: 20 बोरी गेहूँ)' : '🎙️ Listening... speak crop, quantity & slot')
                       : isProcessingVoice
-                      ? (speechLang === 'bn' ? '⚡ এআই দিয়ে ফর্ম পূরণ করা হচ্ছে...' : speechLang === 'hi' ? '⚡ एআই से फॉर्म भरा जा रहा है...' : '⚡ Processing voice intent via Krishi AI Engine...')
+                      ? (speechLang === 'bn' ? '⚡ এআই দিয়ে ফর্ম পূরণ করা হচ্ছে...' : speechLang === 'hi' ? '⚡ এআই से फॉर्म भरा जा रहा है...' : '⚡ Processing voice intent via Krishi AI Engine...')
                       : lastVoiceTranscript
                       ? `"${lastVoiceTranscript}"`
                       : (speechLang === 'bn' ? 'মাইকে ট্যাপ করে বাংলায় কথা বলুন' : speechLang === 'hi' ? 'माइक दबाकर बोलें' : 'Tap mic to speak your booking')}
@@ -395,6 +469,28 @@ export default function SlotBookingModal({
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Quick Sample Voice Prompts (1-Click instant voice auto-fill) */}
+            <div className="pt-2 border-t border-emerald-500/10 flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                {speechLang === 'bn' ? '💡 নমুনা ট্যাপ করুন:' : speechLang === 'hi' ? '💡 नमूना टैप करें:' : '💡 Tap sample:'}
+              </span>
+              {[
+                speechLang === 'bn' ? '৫০ বস্তা ধান কাল সকাল ১০টায়' : speechLang === 'hi' ? '20 बोरी गेहूँ कल सुबह 10 बजे' : '50 bags Paddy tomorrow at 10 AM',
+                speechLang === 'bn' ? '২৫ কুইন্টাল আলু কাল দুপুরে' : speechLang === 'hi' ? '25 क्विंटल आलू कल दोपहर' : '25 quintal Potato tomorrow afternoon',
+                speechLang === 'bn' ? 'এক গাড়ি সরিষা কাল' : speechLang === 'hi' ? 'एक गाड़ी सरसों कल' : '1 trolley Mustard tomorrow'
+              ].map((sample, sIdx) => (
+                <button
+                  key={sIdx}
+                  type="button"
+                  onClick={() => handleProcessTranscript(sample)}
+                  disabled={isProcessingVoice}
+                  className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-white/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all cursor-pointer shadow-2xs hover:scale-102"
+                >
+                  "{sample}"
+                </button>
+              ))}
             </div>
           </div>
 
@@ -447,6 +543,7 @@ export default function SlotBookingModal({
 
                 <button
                   type="button"
+                  id="btn-voice-audio-playback"
                   onClick={() => playClarificationSpeech(voiceFeedback.farmer_clarification_message)}
                   className={`p-2.5 rounded-xl transition-all shrink-0 cursor-pointer shadow-xs flex items-center gap-1.5 font-bold text-xs ${
                     isPlayingAudio
@@ -518,6 +615,7 @@ export default function SlotBookingModal({
               />
               <button
                 type="button"
+                id="btn-voice-mic-input"
                 onClick={toggleVoiceBooking}
                 disabled={isProcessingVoice}
                 className={`absolute right-2 p-2 rounded-xl transition-all cursor-pointer ${
