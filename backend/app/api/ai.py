@@ -58,18 +58,34 @@ ai_router = APIRouter(prefix="/ai", tags=["ai"])
 
 # ── Pydantic Schemas for Gen AI ──────────────────────────────────────────────
 
+class ExtractedVoiceData(BaseModel):
+    crop: str = Field("Paddy", description="Target crop e.g. Paddy, Wheat, Mustard, Jute, Potato, Onion")
+    quantity_quintals: float = Field(25.0, description="Total quantity in quintals")
+    mandi_name: str = Field("Singur Mandi", description="Target procurement centre name")
+    slot_window: str = Field("MORNING", description="Preferred slot: MORNING or AFTERNOON")
+    preferred_time: Optional[str] = Field(None, description="Exact preferred time e.g. '09:00', '10:00', '11:00', '12:00', '14:00', '15:00'")
+    date: str = Field("TOMORROW", description="Target date: TODAY or TOMORROW")
+
+
 class VoiceIntentRequest(BaseModel):
     transcript: str = Field(..., description="Speech-to-text transcript from farmer")
     lang: Optional[str] = Field("en", description="Locale code, e.g. 'bn', 'hi', 'en'")
     centre_id: Optional[int] = Field(None, description="Optional target mandi centre ID")
+    context: Optional[dict] = Field(default_factory=dict, description="Contextual defaults e.g. nearest_mandi, registered_crop")
 
 class VoiceIntentResponse(BaseModel):
+    booking_intent_detected: bool = Field(True, description="Whether a booking intent was detected")
+    has_ambiguity: bool = Field(False, description="Whether any required fields relied on defaults or were ambiguous")
+    ambiguous_fields: List[str] = Field(default_factory=list, description="List of fields that were missing or ambiguous")
+    extracted_data: ExtractedVoiceData = Field(default_factory=ExtractedVoiceData, description="Core structured intent")
+    confidence_score: float = Field(0.95, description="Confidence score between 0.0 and 1.0")
+    farmer_clarification_message: str = Field("", description="Empathetic vernacular confirmation message in farmer's language")
+    # Compatibility accessors for UI
     crop: Optional[str] = None
-    quantity: Optional[float] = None
+    quantity: Optional[float] = None  # in kg for numeric input
     mandi: Optional[str] = None
     slot: Optional[str] = None
-    confidence: float = 1.0
-    auto_filled: bool = False
+    auto_filled: bool = True
     raw_transcript: str = ""
     engine: str = "groq-llama-3.3-70b"
 
@@ -260,60 +276,347 @@ CROP_PATTERNS = {
 BENGALI_DIGITS = {'০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9'}
 HINDI_DIGITS = {'०':'0','१':'1','२':'2','३':'3','४':'4','५':'5','६':'6','७':'7','८':'8','९':'9'}
 
+# Spoken word numbers to digits
+WORD_NUMBER_REPLACEMENTS = [
+    # Bengali multi-word & composite
+    (r"\bএকশো\s*পঞ্চাশ\b", "150"),
+    (r"\bদেড়শো\b|\bদেড়শো\b", "150"),
+    (r"\bএকশো\b", "100"),
+    (r"\bদুশো\b", "200"),
+    (r"\bতিনশো\b", "300"),
+    (r"\bচারশো\b", "400"),
+    (r"\bপাঁচশো\b", "500"),
+    (r"\bহাজার\b", "1000"),
+    (r"\bপঞ্চাশ\b", "50"),
+    (r"\bপঁয়তাল্লিশ\b|\bপঁয়তাল্লিশ\b", "45"),
+    (r"\bচল্লিশ\b", "40"),
+    (r"\bপঁয়ত্রিশ\b|\bপঁয়ত্রিশ\b", "35"),
+    (r"\bত্রিশ\b|\bতিরিশ\b", "30"),
+    (r"\bপঁচিশ\b", "25"),
+    (r"\bকুড়ি\b|\bকুড়ি\b|\bবিশ\b", "20"),
+    (r"\bপনেরো\b|\bপনের\b", "15"),
+    (r"\bচৌদ্দ\b", "14"),
+    (r"\bতেরো\b|\bতের\b", "13"),
+    (r"\bবারো\b|\bবার\b", "12"),
+    (r"\bএগারো\b|\bএগার\b", "11"),
+    (r"\bদশ\b", "10"),
+    (r"\bনয়\b|\bনয়\b", "9"),
+    (r"\bআট\b", "8"),
+    (r"\bসাত\b", "7"),
+    (r"\bছয়\b|\bছয়\b", "6"),
+    (r"\bপাঁচ\b", "5"),
+    (r"\bচার\b", "4"),
+    (r"\bতিন\b", "3"),
+    (r"\bদুই\b", "2"),
+    (r"\bএক\b", "1"),
+    # Hindi
+    (r"\bडेढ़\s*सौ\b|\bडेढ़\s*सौ\b", "150"),
+    (r"\bदो\s*सौ\b", "200"),
+    (r"\bसौ\b", "100"),
+    (r"\bहज़ार\b|\bहजार\b", "1000"),
+    (r"\bपचास\b", "50"),
+    (r"\bपैंतालीस\b", "45"),
+    (r"\bचालीस\b", "40"),
+    (r"\bपैंतीस\b", "35"),
+    (r"\bतीस\b", "30"),
+    (r"\bपच्चीस\b", "25"),
+    (r"\bबीस\b", "20"),
+    (r"\bपंद्रह\b", "15"),
+    (r"\bचौदह\b", "14"),
+    (r"\bतेरह\b", "13"),
+    (r"\bबारह\b", "12"),
+    (r"\bग्यारह\b", "11"),
+    (r"\bदस\b", "10"),
+    (r"\bनौ\b", "9"),
+    (r"\bआठ\b", "8"),
+    (r"\bसात\b", "7"),
+    (r"\bछह\b|\bछः\b", "6"),
+    (r"\bपाँच\b|\bपांच\b", "5"),
+    (r"\bचार\b", "4"),
+    (r"\bतीन\b", "3"),
+    (r"\bदो\b", "2"),
+    (r"\bएक\b", "1"),
+    # English
+    (r"\bone\s*hundred\b", "100"),
+    (r"\bone\s*thousand\b", "1000"),
+    (r"\bfifty\b", "50"),
+    (r"\bforty\s*five\b|\bforty-five\b", "45"),
+    (r"\bforty\b", "40"),
+    (r"\bthirty\s*five\b|\bthirty-five\b", "35"),
+    (r"\bthirty\b", "30"),
+    (r"\btwenty\s*five\b|\btwenty-five\b", "25"),
+    (r"\btwenty\b", "20"),
+    (r"\bfifteen\b", "15"),
+    (r"\bfourteen\b", "14"),
+    (r"\bthirteen\b", "13"),
+    (r"\btwelve\b", "12"),
+    (r"\beleven\b", "11"),
+    (r"\bten\b", "10"),
+    (r"\bnine\b", "9"),
+    (r"\beight\b", "8"),
+    (r"\bseven\b", "7"),
+    (r"\bsix\b", "6"),
+    (r"\bfive\b", "5"),
+    (r"\bfour\b", "4"),
+    (r"\bthree\b", "3"),
+    (r"\btwo\b", "2"),
+    (r"\bone\b", "1"),
+]
+
 def normalize_numbers(text: str) -> str:
+    """Normalize script digits and spoken word numbers into Arabic digits."""
     for bn, num in BENGALI_DIGITS.items():
         text = text.replace(bn, num)
     for hi, num in HINDI_DIGITS.items():
         text = text.replace(hi, num)
+    for pattern, replacement in WORD_NUMBER_REPLACEMENTS:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     return text
 
-def parse_voice_intent_local(transcript: str, lang: str = "en") -> dict:
-    """Intelligent rule-based parser for Bengali, Hindi, and English voice intents."""
+def parse_voice_intent_local(transcript: str, lang: str = "en", context: Optional[dict] = None) -> dict:
+    """
+    Intelligent, deterministic rule-based parser for Bengali, Hindi, and English voice intents.
+    Strictly complies with the Operational Directive:
+    - Never throws an unhandled error or returns null.
+    - Handles colloquial units (বস্তা, গাড়ি, দশ চাকা, কুইন্টাল, কেজি).
+    - Translates spoken word numbers (পঞ্চাশ, কুড়ি, पचास, fifty) into digits.
+    - Extracts exact preferred time (09:00, 10:00, 11:00, 12:00, 14:00, 15:00).
+    - Falls back to contextual defaults:
+        * mandi_name: context.nearest_mandi or 'Singur Mandi'
+        * crop: context.registered_crop or 'Paddy'
+        * quantity_quintals: 25.0 quintals
+        * slot_window: 'MORNING'
+        * date: 'TOMORROW'
+    - Flags has_ambiguity and ambiguous_fields.
+    - Generates empathetic, vernacular farmer_clarification_message.
+    """
+    context = context or {}
+    default_mandi = context.get("nearest_mandi") or "Singur Mandi"
+    default_crop = context.get("registered_crop") or "Paddy"
+
     norm_text = normalize_numbers(transcript.lower())
+    ambiguous_fields = []
+
+    # 1. Detect language for clarification message
+    detected_lang = lang or "en"
+    if re.search(r'[\u0980-\u09FF]', transcript):
+        detected_lang = "bn"
+    elif re.search(r'[\u0900-\u097F]', transcript):
+        detected_lang = "hi"
+
+    # 2. Extract Crop
     detected_crop = None
-    for crop, patterns in CROP_PATTERNS.items():
+    for crop_name, patterns in CROP_PATTERNS.items():
         if any(re.search(p, norm_text, re.IGNORECASE) for p in patterns):
-            detected_crop = crop
+            detected_crop = crop_name
             break
+    if not detected_crop:
+        detected_crop = default_crop
+        ambiguous_fields.append("crop")
 
-    # Extract quantity
-    # Match numbers with units (quintal / কুইন্টাল / क्विंटल, kg / কেজি / किलो, bag / বস্তা / बोरी)
-    detected_qty = None
-    qtl_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:quintal|quintals|কুইন্টাল|কুন্টাল|क्विंटल)", norm_text)
-    if qtl_match:
-        detected_qty = round(float(qtl_match.group(1)) * 100.0, 1)  # 1 quintal = 100 kg
-    else:
-        kg_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:kg|kgs|kilo|kilos|কেজি|কেজির|কিলোগ্রাম|किलो|किग्रा)", norm_text)
+    # 3. Extract Quantity in Quintals
+    # Conversions:
+    # 1 bag (বস্তা/बोरी/bag) = 0.5 quintals (50 kg)
+    # 1 trolley/car (গাড়ি/गाड़ी/trolley) = 25.0 quintals
+    # 1 truck / 10-wheeler (দশ চাকা/10 wheeler) = 150.0 quintals
+    # 1 quintal (কুইন্টাল/क्विंटल) = 1.0 quintal
+    # 1 kg (কেজি/किलो) = 0.01 quintal
+    detected_quintals = None
+
+    # Check 10-wheeler / truck first
+    truck_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:দশ\s*চাকা|দশ\s*চাকার\s*ট্রাক|truck|trucks|10\s*wheeler)", norm_text)
+    if truck_match:
+        detected_quintals = round(float(truck_match.group(1)) * 150.0, 1)
+    elif "দশ চাকা" in norm_text or "দশ চাকার" in norm_text:
+        detected_quintals = 150.0
+
+    if detected_quintals is None:
+        # Check trolley / gari
+        trolley_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:গাড়ি|গাডি|গাডী|गाड़ी|गाडी|trolley|trolleys|ট্রলি)", norm_text)
+        if trolley_match:
+            detected_quintals = round(float(trolley_match.group(1)) * 25.0, 1)
+        elif any(w in norm_text for w in ["এক গাড়ি", "এক ট্রলি", "एक गाड़ी", "एक गाडी", "one trolley"]):
+            detected_quintals = 25.0
+
+    if detected_quintals is None:
+        # Check bags (বস্তা / बोरी / bag) -> 0.5 quintals
+        bag_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:বস্তা|ব্যাগ|বোरी|बोरी|थैला|bag|bags|sack|sacks)", norm_text)
+        if bag_match:
+            detected_quintals = round(float(bag_match.group(1)) * 0.5, 1)
+
+    if detected_quintals is None:
+        # Check quintals
+        qtl_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:কুইন্টাল|কুন্টাল|क्विंटल|quintal|quintals|qtl)", norm_text)
+        if qtl_match:
+            detected_quintals = round(float(qtl_match.group(1)), 1)
+
+    if detected_quintals is None:
+        # Check kg -> convert to quintals
+        kg_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:কেজি|কেজির|কিলোগ্রাম|किलो|किग्रा|kg|kgs|kilo|kilos)", norm_text)
         if kg_match:
-            detected_qty = round(float(kg_match.group(1)), 1)
-        else:
-            bag_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:bag|bags|sack|sacks|বস্তা|ব্যাগ|बोरी|थैला)", norm_text)
-            if bag_match:
-                detected_qty = round(float(bag_match.group(1)) * 50.0, 1)  # standard bag = 50 kg
-            else:
-                # Raw number fallback
-                num_match = re.search(r"\b(\d{1,4})\b", norm_text)
-                if num_match:
-                    detected_qty = float(num_match.group(1))
+            detected_quintals = round(float(kg_match.group(1)) / 100.0, 2)
 
-    # Detect preferred slot timing
-    detected_slot = None
-    if any(w in norm_text for w in ["morning", "সকাল", "সকালে", "सुबह", "प्रभात"]):
-        detected_slot = "morning"
+    if detected_quintals is None:
+        # Raw number fallback
+        num_match = re.search(r"\b(\d{1,4})\b", norm_text)
+        if num_match:
+            val = float(num_match.group(1))
+            detected_quintals = round(val / 100.0, 2) if val >= 100 else round(val, 1)
+
+    if detected_quintals is None or detected_quintals <= 0:
+        detected_quintals = 25.0
+        ambiguous_fields.append("quantity_quintals")
+
+    # 4. Extract Mandi Name
+    detected_mandi = None
+    known_mandis = ["Singur Mandi", "Haripur Centre", "Bagnan Centre", "Uluberia Centre", "Amta Centre", "Memari Mandi", "Burdwan Mandi"]
+    for m in known_mandis:
+        m_root = m.lower().replace("centre", "").replace("mandi", "").strip()
+        if m_root in norm_text:
+            detected_mandi = m
+            break
+    if not detected_mandi:
+        detected_mandi = default_mandi
+        ambiguous_fields.append("mandi_name")
+
+    # 5. Extract Exact Preferred Time & Slot Window
+    detected_time = None
+    detected_slot = "MORNING"
+
+    # Exact time checks across Bengali, Hindi, and English
+    # 09:00: সকাল ৯টা / 9 am / नौ बजे
+    if re.search(r"(?:সকাল\s*)?(?:০৯|৯|9)\s*(?:টা|টায়|টায়|am|a\.m\.|baje|बजे)", norm_text) or "09:00" in norm_text:
+        detected_time = "09:00"
+        detected_slot = "MORNING"
+    # 10:00: সকাল ১০টা / 10 am / দশটা / दस बजे
+    elif re.search(r"(?:সকাল\s*)?(?:১০|10)\s*(?:টা|টায়|টায়|am|a\.m\.|baje|बजे)", norm_text) or "10:00" in norm_text:
+        detected_time = "10:00"
+        detected_slot = "MORNING"
+    # 11:00: সকাল ১১টা / 11 am / এগারোটা / ग्यारह बजे
+    elif re.search(r"(?:সকাল\s*)?(?:১১|11)\s*(?:টা|টায়|টায়|am|a\.m\.|baje|बजे)", norm_text) or "11:00" in norm_text:
+        detected_time = "11:00"
+        detected_slot = "MORNING"
+    # 12:00: দুপুর ১২টা / 12 pm / বারোটা / बारह बजे
+    elif re.search(r"(?:১২|12)\s*(?:টা|টায়|টায়|pm|p\.m\.|baje|बजे)", norm_text) or "12:00" in norm_text:
+        detected_time = "12:00"
+        detected_slot = "AFTERNOON"
+    # 14:00 (2 PM): দুপুর ২টো / 2 pm / দুটো / दो बजे
+    elif re.search(r"(?:দুপুর\s*)?(?:০২|২|2)\s*(?:টো|টায়|টায়|টা|pm|p\.m\.|baje|बजे)", norm_text) or "14:00" in norm_text:
+        detected_time = "14:00"
+        detected_slot = "AFTERNOON"
+    # 15:00 (3 PM): বিকেল ৩টে / 3 pm / তিনটে / तीन बजे
+    elif re.search(r"(?:বিকেল\s*|বিকাল\s*)?(?:০৩|৩|3)\s*(?:টে|টায়|টায়|pm|p\.m\.|baje|बजे)", norm_text) or "15:00" in norm_text:
+        detected_time = "15:00"
+        detected_slot = "AFTERNOON"
+    # 16:00 (4 PM): বিকেল ৪টে / 4 pm
+    elif re.search(r"(?:০৪|৪|4)\s*(?:টে|টায়|টায়|pm|p\.m\.|baje|बजे)", norm_text) or "16:00" in norm_text:
+        detected_time = "15:00"
+        detected_slot = "AFTERNOON"
+    # Broad time expressions
     elif any(w in norm_text for w in ["afternoon", "বিকেল", "বিকাল", "দুপুর", "দুপুরে", "दोपहर", "शाम"]):
-        detected_slot = "afternoon"
+        detected_slot = "AFTERNOON"
+        detected_time = "14:00"
+    elif any(w in norm_text for w in ["morning", "সকাল", "সকালে", "সকালবেলা", "सुबह", "प्रभात"]):
+        detected_slot = "MORNING"
+        detected_time = "10:00"
+    else:
+        detected_slot = "MORNING"
+        detected_time = "10:00"
+        ambiguous_fields.append("slot_window")
 
-    auto_filled = bool(detected_crop or detected_qty)
+    # 6. Extract Date
+    detected_date = "TOMORROW"
+    if any(w in norm_text for w in ["today", "আজ", "আজকে", "आज"]):
+        detected_date = "TODAY"
+    elif any(w in norm_text for w in ["tomorrow", "কাল", "কালে", "আগামীকাল", "कल"]):
+        detected_date = "TOMORROW"
+    else:
+        detected_date = "TOMORROW"
+
+    has_ambiguity = len(ambiguous_fields) > 0
+    confidence = max(0.5, round(0.95 - (len(ambiguous_fields) * 0.12), 2))
+
+    # Crop name localized for message
+    crop_names_bn = {"Paddy": "ধান", "Wheat": "গম", "Mustard": "সরিষা", "Jute": "পাট", "Potato": "আলু", "Onion": "পেঁয়াজ"}
+    crop_names_hi = {"Paddy": "धान", "Wheat": "गेहूँ", "Mustard": "सरसों", "Jute": "पटसन", "Potato": "आलू", "Onion": "प्याज़"}
+    crop_bn = crop_names_bn.get(detected_crop, detected_crop)
+    crop_hi = crop_names_hi.get(detected_crop, detected_crop)
+
+    # Time label for empathetic confirmation message
+    time_label_map_bn = {
+        "09:00": "সকাল ৯টায়",
+        "10:00": "সকাল ১০টায়",
+        "11:00": "সকাল ১১টায়",
+        "12:00": "দুপুর ১২টায়",
+        "14:00": "দুপুর ২টোয়",
+        "15:00": "বিকেল ৩টেয়",
+    }
+    time_label_map_hi = {
+        "09:00": "सुबह 9 बजे",
+        "10:00": "सुबह 10 बजे",
+        "11:00": "सुबह 11 बजे",
+        "12:00": "दोपहर 12 बजे",
+        "14:00": "दोपहर 2 बजे",
+        "15:00": "दोपहर 3 बजे",
+    }
+    time_label_map_en = {
+        "09:00": "09:00 AM",
+        "10:00": "10:00 AM",
+        "11:00": "11:00 AM",
+        "12:00": "12:00 PM",
+        "14:00": "02:00 PM",
+        "15:00": "03:00 PM",
+    }
+    slot_text_bn = time_label_map_bn.get(detected_time, "সকাল ১০টায়" if detected_slot == "MORNING" else "দুপুর ২টোয়")
+    slot_text_hi = time_label_map_hi.get(detected_time, "सुबह 10 बजे" if detected_slot == "MORNING" else "दोपहर 2 बजे")
+    slot_text_en = time_label_map_en.get(detected_time, "10:00 AM" if detected_slot == "MORNING" else "02:00 PM")
+
+    date_text_bn = "আজ" if detected_date == "TODAY" else "কাল"
+    date_text_hi = "आज" if detected_date == "TODAY" else "कल"
+    date_text_en = "today" if detected_date == "TODAY" else "tomorrow"
+
+    # 7. Generate empathetic, vernacular clarification message
+    if detected_lang == "bn":
+        if has_ambiguity:
+            clarification = f"আমরা আপনার জন্য {date_text_bn} {slot_text_bn} {detected_mandi}-তে {detected_quintals:g} কুইন্টাল {crop_bn}ের স্লট নির্ধারণ করেছি। এটি কি ঠিক আছে, নাকি কোনো পরিবর্তন করবেন?"
+        else:
+            clarification = f"আমরা আপনার জন্য {date_text_bn} {slot_text_bn} {detected_mandi}-তে {detected_quintals:g} কুইন্টাল {crop_bn}ের স্লট নির্ধারণ করেছি। এটি কি ঠিক আছে?"
+    elif detected_lang == "hi":
+        if has_ambiguity:
+            clarification = f"हमने आपके लिए {date_text_hi} {slot_text_hi} {detected_mandi} में {detected_quintals:g} क्विंटल {crop_hi} का स्लॉट निर्धारित किया है। क्या यह ठीक है या आप कोई बदलाव चाहते हैं?"
+        else:
+            clarification = f"हमने आपके लिए {date_text_hi} {slot_text_hi} {detected_mandi} में {detected_quintals:g} क्विंटल {crop_hi} का स्लॉट चुन लिया है। क्या यह ठीक है?"
+    else:
+        if has_ambiguity:
+            clarification = f"We have tentatively scheduled a slot for {detected_quintals:g} quintals of {detected_crop} at {detected_mandi} for {date_text_en} ({slot_text_en}). Would you like to confirm or modify this?"
+        else:
+            clarification = f"We have scheduled your slot for {detected_quintals:g} quintals of {detected_crop} at {detected_mandi} for {date_text_en} ({slot_text_en}). Does this look good to you?"
+
     return {
+        "booking_intent_detected": True,
+        "has_ambiguity": has_ambiguity,
+        "ambiguous_fields": ambiguous_fields,
+        "extracted_data": {
+            "crop": detected_crop,
+            "quantity_quintals": float(detected_quintals),
+            "mandi_name": detected_mandi,
+            "slot_window": detected_slot,
+            "preferred_time": detected_time,
+            "date": detected_date
+        },
+        "confidence_score": confidence,
+        "farmer_clarification_message": clarification,
+        # Helper accessors
         "crop": detected_crop,
-        "quantity": detected_qty,
-        "mandi": None,
-        "slot": detected_slot,
-        "confidence": 0.85 if auto_filled else 0.3,
-        "auto_filled": auto_filled,
+        "quantity": float(detected_quintals * 100.0),
+        "mandi": detected_mandi,
+        "slot": (detected_time or detected_slot.lower()),
+        "auto_filled": True,
         "raw_transcript": transcript,
         "engine": "local-heuristic"
     }
+
+
 
 def get_chat_response_local(message: str, lang: str = "en", farmer_name: Optional[str] = None) -> dict:
     """Rich domain knowledge responder in Bengali, Hindi, and English."""
@@ -844,39 +1147,88 @@ async def data_info(db: AsyncSession = Depends(get_db)):
 @ai_router.post("/voice-intent", response_model=VoiceIntentResponse)
 async def extract_voice_intent(req: VoiceIntentRequest):
     """
-    Extracts structured booking intent (crop, quantity in kg, slot, mandi)
+    Extracts structured booking intent (crop, quantity in quintals, slot, mandi, date)
     from spoken farmer audio transcript across Bengali, Hindi, and English.
-    Powered by Groq Llama-3.3-70B with instantaneous zero-config fallback.
+    Strictly follows the Operational Directive:
+    - Never throws an unhandled error or returns null.
+    - Handles colloquial agricultural units (বস্তা, গাড়ি, দশ চাকা, কুইন্টাল, কেজি).
+    - Falls back to contextual defaults and flags ambiguity.
+    - Generates empathetic, vernacular confirmation/clarification message.
+    Powered by Groq LPU with instantaneous zero-config fallback.
     """
     transcript = req.transcript.strip()
-    if not transcript:
-        return VoiceIntentResponse(raw_transcript="", confidence=0.0, auto_filled=False)
+    ctx = req.context or {}
+    default_mandi = ctx.get("nearest_mandi") or "Singur Mandi"
+    default_crop = ctx.get("registered_crop") or "Paddy"
 
-    # Attempt Groq Llama 3.3 70B
-    groq_key = os.getenv("GROQ_API_KEY")
+    if not transcript:
+        local_res = parse_voice_intent_local("", req.lang or "en", ctx)
+        local_res["booking_intent_detected"] = False
+        return VoiceIntentResponse(**local_res)
+
+    # Attempt Groq LPU LLM
+    groq_key = get_groq_api_key()
     if groq_key:
         system_prompt = (
-            "You are a specialized agricultural voice intent parser for KrishiConnect (West Bengal Mandis). "
-            "The farmer spoke in English, Bengali, or Hindi to book a mandi procurement slot. "
-            "Extract: "
-            "1. 'crop': strictly one of ['Paddy', 'Wheat', 'Mustard', 'Jute', 'Potato', 'Onion'] or null if unmentioned. "
-            "2. 'quantity': total numeric quantity converted to KILOGRAMS (kg). "
-            "   (Note: 1 quintal/কুইন্টাল/क्विंटल = 100 kg; 1 bag/বস্তা/बोरी = 50 kg; 1 ton = 1000 kg). "
-            "3. 'slot': preferred time of day, e.g. 'morning' or 'afternoon' or null. "
-            "4. 'mandi': name of the procurement centre if mentioned, else null. "
-            "Output strictly valid JSON with keys: crop, quantity, slot, mandi, confidence (float 0 to 1)."
+            "You are an empathetic, expert agricultural voice intent parser for KrishiConnect (West Bengal Mandis).\n\n"
+            "### OPERATIONAL DIRECTIVE:\n"
+            "Farmers speak in noisy agricultural environments, regional dialects, and colloquial units "
+            "(e.g., 'বস্তা' (bags), 'গাড়ি'/'ট্রলি' (trolley), 'क्विंटल' (quintals), 'দশ চাকা' (truck)).\n"
+            "You must extract the core intent: [Crop, Quantity, Mandi, Preferred Slot].\n"
+            "Whenever any field is ambiguous, missing, noisy, or uncertain:\n"
+            "1. NEVER throw an unhandled error or return null.\n"
+            "2. Fall back to the designated contextual default option.\n"
+            "3. Flag `has_ambiguity: true` and specify the `ambiguous_fields`.\n"
+            "4. Generate an empathetic, vernacular clarification message (`farmer_clarification_message`) in the farmer's native "
+            "spoken language (Bengali, Hindi, or English) stating the assigned default and explicitly prompting them to confirm or modify it.\n\n"
+            "### DEFAULT FALLBACK SPECIFICATIONS:\n"
+            f"- `mandi_name`: Default to context.nearest_mandi or '{default_mandi}'.\n"
+            f"- `crop`: Default to context.registered_crop or '{default_crop}' (West Bengal Kharif staple).\n"
+            "- `quantity_quintals`:\n"
+            "  * If unit is 'bags' (বস্তা/बोरी), convert using 1 bag = 0.5 quintals (50 kg).\n"
+            "  * If unit is 'trolley' / 'gari' (গাড়ি/गाड़ी/trolley), standard mini-trolley load = 25.0 quintals.\n"
+            "  * If unit is 'truck' / '10-wheeler' (দশ চাকা/10 wheeler), standard load = 150.0 quintals.\n"
+            "  * If unit is 'quintal' (কুইন্টাল/क्विंटल), 1 quintal = 1.0 quintal.\n"
+            "  * If unit is 'kg' (কেজি/किलो), 100 kg = 1.0 quintal.\n"
+            "  * If completely absent or indecipherable, default to 25.0 quintals (standard tractor mini-trolley load).\n"
+            "- `slot_window`: Default to 'MORNING' (09:00 AM - 12:00 PM) unless afternoon/evening mentioned.\n"
+            "- `preferred_time`: If the farmer specifies an exact hour (e.g. 'সকাল ১০টায়', '১১টায়', 'দুপুর ১২টা', 'দুপুর ২টো', 'বিকেল ৩টে', '10 am', '2 pm'), "
+            "set to '09:00', '10:00', '11:00', '12:00', '14:00', or '15:00'. Otherwise null.\n"
+            "- `date`: Default to 'TOMORROW' unless explicitly specified as today or a named day.\n\n"
+            "### STRICT JSON RESPONSE SCHEMA:\n"
+            "{\n"
+            '  "booking_intent_detected": true,\n'
+            '  "has_ambiguity": false,\n'
+            '  "ambiguous_fields": [],\n'
+            '  "extracted_data": {\n'
+            '    "crop": "Paddy",\n'
+            '    "quantity_quintals": 40.0,\n'
+            '    "mandi_name": "Singur Mandi",\n'
+            '    "slot_window": "MORNING",\n'
+            '    "preferred_time": "10:00",\n'
+            '    "date": "TOMORROW"\n'
+            '  },\n'
+            '  "confidence_score": 0.95,\n'
+            '  "farmer_clarification_message": "আমরা আপনার জন্য কাল সকাল ১০টায় সিঙ্গুর মান্ডিতে ৪০ কুইন্টাল ধানের স্লট বুক করেছি। এটি কি ঠিক আছে?"\n'
+            "}"
         )
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Language: {req.lang}\nSpoken transcript: \"{transcript}\""}
+            {"role": "user", "content": f"Farmer UI Language: {req.lang}\nContextual Defaults: {json.dumps(ctx)}\nSpoken Transcript: \"{transcript}\""}
         ]
         try:
             raw_response = await call_groq(messages, response_format_json=True, temperature=0.1)
             if raw_response:
-                parsed = json.loads(raw_response)
-                crop = parsed.get("crop")
-                if crop and crop not in ["Paddy", "Wheat", "Mustard", "Jute", "Potato", "Onion"]:
-                    # Normalize common variations
+                clean_json = raw_response.strip()
+                if "```" in clean_json:
+                    clean_json = re.sub(r"^```(?:json)?\s*", "", clean_json)
+                    clean_json = re.sub(r"\s*```$", "", clean_json)
+                parsed = json.loads(clean_json)
+                extracted = parsed.get("extracted_data", {})
+                print(f"[AI Voice Intent] Spoken: '{transcript}' -> Extracted: {extracted}")
+
+                crop = extracted.get("crop") or default_crop
+                if crop not in ["Paddy", "Wheat", "Mustard", "Jute", "Potato", "Onion"]:
                     if "paddy" in crop.lower() or "rice" in crop.lower() or "ধান" in crop:
                         crop = "Paddy"
                     elif "wheat" in crop.lower() or "গম" in crop:
@@ -889,30 +1241,54 @@ async def extract_voice_intent(req: VoiceIntentRequest):
                         crop = "Potato"
                     elif "onion" in crop.lower() or "পেঁয়াজ" in crop:
                         crop = "Onion"
+                    else:
+                        crop = default_crop
 
-                qty = parsed.get("quantity")
                 try:
-                    qty = float(qty) if qty is not None else None
+                    qty_qtl = float(extracted.get("quantity_quintals", 25.0))
                 except (ValueError, TypeError):
-                    qty = None
+                    qty_qtl = 25.0
 
-                auto_filled = bool(crop or qty)
+                mandi = extracted.get("mandi_name") or default_mandi
+                slot_w = (extracted.get("slot_window") or "MORNING").upper()
+                if slot_w not in ["MORNING", "AFTERNOON"]:
+                    slot_w = "MORNING"
+                pref_time = extracted.get("preferred_time")
+                date_val = (extracted.get("date") or "TOMORROW").upper()
+
+                amb_fields = parsed.get("ambiguous_fields", [])
+                has_amb = bool(parsed.get("has_ambiguity", len(amb_fields) > 0))
+
                 return VoiceIntentResponse(
+                    booking_intent_detected=bool(parsed.get("booking_intent_detected", True)),
+                    has_ambiguity=has_amb,
+                    ambiguous_fields=amb_fields,
+                    extracted_data=ExtractedVoiceData(
+                        crop=crop,
+                        quantity_quintals=qty_qtl,
+                        mandi_name=mandi,
+                        slot_window=slot_w,
+                        preferred_time=pref_time,
+                        date=date_val
+                    ),
+                    confidence_score=float(parsed.get("confidence_score", 0.95)),
+                    farmer_clarification_message=parsed.get("farmer_clarification_message", ""),
                     crop=crop,
-                    quantity=qty,
-                    mandi=parsed.get("mandi"),
-                    slot=parsed.get("slot"),
-                    confidence=float(parsed.get("confidence", 0.95)) if auto_filled else 0.4,
-                    auto_filled=auto_filled,
+                    quantity=round(qty_qtl * 100.0, 1),
+                    mandi=mandi,
+                    slot=(pref_time or slot_w.lower()),
+                    auto_filled=True,
                     raw_transcript=transcript,
-                    engine="groq-llama-3.3-70b"
+                    engine=f"groq-{_CACHED_GROQ_MODEL}" if _CACHED_GROQ_MODEL else "groq-llama-3.3-70b"
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[AI Voice Intent Error]: {e}")
 
     # Seamless Local Fallback
-    local_res = parse_voice_intent_local(transcript, req.lang or "en")
+    local_res = parse_voice_intent_local(transcript, req.lang or "en", ctx)
+    print(f"[AI Voice Intent Local] Spoken: '{transcript}' -> Output: {local_res['extracted_data']}")
     return VoiceIntentResponse(**local_res)
+
 
 
 # ── Script detection helper ──────────────────────────────────────────────────

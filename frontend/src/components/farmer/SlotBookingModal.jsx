@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Wheat, Calendar, Clock, AlertTriangle, Mic, MicOff, Sparkles, CheckCircle2 } from 'lucide-react'
+import { X, Wheat, Calendar, Clock, AlertTriangle, Mic, MicOff, Sparkles, CheckCircle2, Volume2, VolumeX, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api'
 import { useTranslation } from '../../i18n'
@@ -18,10 +18,18 @@ export default function SlotBookingModal({ centre, onClose, onSuccess, onGoToQue
   const [cancelling, setCancelling] = useState(false)
 
   // Voice AI Booking State
+  const [speechLang, setSpeechLang] = useState(language || 'bn')
   const [isListening, setIsListening] = useState(false)
   const [isProcessingVoice, setIsProcessingVoice] = useState(false)
   const [voiceAutoFilled, setVoiceAutoFilled] = useState(false)
   const [lastVoiceTranscript, setLastVoiceTranscript] = useState('')
+  const [voiceFeedback, setVoiceFeedback] = useState(null)
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false)
+
+  // Keep speechLang in sync if app language changes
+  useEffect(() => {
+    if (language) setSpeechLang(language)
+  }, [language])
 
   useEffect(() => {
     api.getSlots(centre.id).then(data => {
@@ -31,15 +39,49 @@ export default function SlotBookingModal({ centre, onClose, onSuccess, onGoToQue
     }).catch(() => toast.error(t('toasts.could_not_load_slots'))).finally(() => setLoadingSlots(false))
   }, [centre.id, t])
 
-  // Cleanup speech recognition on unmount
+  // Cleanup speech recognition and audio on unmount
   useEffect(() => {
     return () => {
       if (window._krishiSpeechRec) {
         try { window._krishiSpeechRec.stop() } catch {}
         window._krishiSpeechRec = null
       }
+      if (window._krishiSlotAudio) {
+        try { window._krishiSlotAudio.pause() } catch {}
+        window._krishiSlotAudio = null
+      }
     }
   }, [])
+
+  const playClarificationSpeech = async (text) => {
+    if (!text) return
+    if (isPlayingAudio) {
+      if (window._krishiSlotAudio) {
+        window._krishiSlotAudio.pause()
+        window._krishiSlotAudio = null
+      }
+      setIsPlayingAudio(false)
+      return
+    }
+
+    try {
+      setIsPlayingAudio(true)
+      const clean = text.replace(/[*#_`~•\n|<>\-–—]/g, ' ').slice(0, 200).trim()
+      const langCode = speechLang || language || 'bn'
+      const ttsUrl = `http://localhost:8000/ai/tts?text=${encodeURIComponent(clean)}&lang=${langCode}`
+      
+      if (window._krishiSlotAudio) {
+        window._krishiSlotAudio.pause()
+      }
+      const audio = new Audio(ttsUrl)
+      window._krishiSlotAudio = audio
+      audio.onended = () => setIsPlayingAudio(false)
+      audio.onerror = () => setIsPlayingAudio(false)
+      await audio.play()
+    } catch {
+      setIsPlayingAudio(false)
+    }
+  }
 
   const toggleVoiceBooking = () => {
     if (isListening) {
@@ -53,8 +95,8 @@ export default function SlotBookingModal({ centre, onClose, onSuccess, onGoToQue
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognition) {
       toast.error(
-        language === 'bn' ? 'আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই (Chrome/Edge ব্যবহার করুন)।' :
-        language === 'hi' ? 'आपके ब्राउज़र में वॉइस सपोर्ट नहीं है (Chrome/Edge इस्तेमाल करें)।' :
+        speechLang === 'bn' ? 'আপনার ব্রাউজারে ভয়েস সাপোর্ট নেই (Chrome/Edge ব্যবহার করুন)।' :
+        speechLang === 'hi' ? 'आपके ब्राउज़र में वॉइस सपोर्ट नहीं है (Chrome/Edge इस्तेमाल करें)।' :
         'Speech recognition is not supported in this browser. Please use Chrome or Edge.'
       )
       return
@@ -66,11 +108,12 @@ export default function SlotBookingModal({ centre, onClose, onSuccess, onGoToQue
     recognition.interimResults = false
 
     const localeMap = { bn: 'bn-IN', hi: 'hi-IN', en: 'en-IN' }
-    recognition.lang = localeMap[language] || 'en-IN'
+    recognition.lang = localeMap[speechLang] || 'bn-IN'
 
     recognition.onstart = () => {
       setIsListening(true)
       setVoiceAutoFilled(false)
+      setVoiceFeedback(null)
     }
 
     recognition.onresult = async (event) => {
@@ -80,40 +123,64 @@ export default function SlotBookingModal({ centre, onClose, onSuccess, onGoToQue
       setIsProcessingVoice(true)
 
       try {
-        const res = await api.getVoiceIntent(transcript, language || 'en', centre.id)
-        if (res.auto_filled) {
-          if (res.crop && CROPS.includes(res.crop)) {
-            setCrop(res.crop)
+        const context = {
+          nearest_mandi: centre?.name || 'Singur Mandi',
+          registered_crop: crop || 'Paddy'
+        }
+        const res = await api.getVoiceIntent(transcript, speechLang, centre?.id, context)
+        if (res && res.booking_intent_detected !== false) {
+          setVoiceFeedback(res)
+
+          const extracted = res.extracted_data || {}
+          const recognizedCrop = extracted.crop || res.crop
+          if (recognizedCrop && CROPS.includes(recognizedCrop)) {
+            setCrop(recognizedCrop)
           }
-          if (res.quantity && res.quantity > 0) {
-            setQty(String(res.quantity))
+
+          // Convert quintals to kg for the numeric input field (1 quintal = 100 kg)
+          let qtyInKg = null
+          if (extracted.quantity_quintals != null) {
+            qtyInKg = Math.round(extracted.quantity_quintals * 100)
+          } else if (res.quantity != null) {
+            qtyInKg = Math.round(res.quantity)
           }
-          // Match slot timing if recognized
-          if (res.slot && slots.length > 0) {
-            const matched = slots.find(s => {
-              if (s.is_full) return false
-              if (res.slot === 'morning') {
-                return s.start_time.startsWith('08') || s.start_time.startsWith('09') || s.start_time.startsWith('10')
-              }
-              if (res.slot === 'afternoon') {
-                return s.start_time.startsWith('12') || s.start_time.startsWith('13') || s.start_time.startsWith('14')
-              }
-              return false
-            })
-            if (matched) setSelectedSlot(matched)
+          if (qtyInKg && qtyInKg > 0) {
+            setQty(String(qtyInKg))
+          }
+
+          // Match exact preferred time (e.g., "10:00", "14:00") or slot window (MORNING / AFTERNOON)
+          const prefTime = extracted.preferred_time
+          const slotWindow = (extracted.slot_window || res.slot || '').toUpperCase()
+          let matched = null
+
+          if (prefTime && slots.length > 0) {
+            const prefHour = prefTime.slice(0, 2)
+            matched = slots.find(s => !s.is_full && s.start_time.startsWith(prefHour))
+          }
+
+          if (!matched && slots.length > 0) {
+            if (slotWindow.includes('AFTERNOON') || slotWindow === 'AFTERNOON') {
+              matched = slots.find(s => !s.is_full && parseInt(s.start_time.slice(0, 2), 10) >= 12)
+            } else if (slotWindow.includes('MORNING') || slotWindow === 'MORNING') {
+              matched = slots.find(s => !s.is_full && parseInt(s.start_time.slice(0, 2), 10) < 12)
+            }
+          }
+
+          if (matched) {
+            setSelectedSlot(matched)
           }
 
           setVoiceAutoFilled(true)
           toast.success(
-            language === 'bn' ? `ভয়েস এআই দিয়ে পূরণ সম্পন্ন! (${res.crop || ''} ${res.quantity ? res.quantity + ' কেজি' : ''})` :
-            language === 'hi' ? `वॉइस एआई से फॉर्म भर दिया गया! (${res.crop || ''} ${res.quantity ? res.quantity + ' किग्रा' : ''})` :
-            `Auto-filled via Voice AI (${res.crop || ''} ${res.quantity ? res.quantity + ' kg' : ''})`,
+            speechLang === 'bn' ? `ভয়েস এআই দিয়ে পূরণ সম্পন্ন! (${recognizedCrop || ''} ${qtyInKg ? qtyInKg + ' কেজি' : ''})` :
+            speechLang === 'hi' ? `वॉइस एআই से फॉर्म भर दिया गया! (${recognizedCrop || ''} ${qtyInKg ? qtyInKg + ' किग्रा' : ''})` :
+            `Auto-filled via Voice AI (${recognizedCrop || ''} ${qtyInKg ? qtyInKg + ' kg' : ''})`,
             { icon: '✨' }
           )
         } else {
           toast(
-            language === 'bn' ? `শুনলাম: "${transcript}" (ফসলের নাম ও পরিমাণ স্পষ্ট করে বলুন)` :
-            language === 'hi' ? `सुना: "${transcript}" (कृपया फसल और मात्रा दोबारा बोलें)` :
+            speechLang === 'bn' ? `শুনলাম: "${transcript}" (ফসলের নাম ও পরিমাণ স্পষ্ট করে বলুন)` :
+            speechLang === 'hi' ? `सुना: "${transcript}" (कृपया फसल और मात्रा दोबारा बोलें)` :
             `Heard: "${transcript}" (Please specify crop name and quantity clearly)`,
             { icon: '🎙️' }
           )
@@ -231,64 +298,163 @@ export default function SlotBookingModal({ centre, onClose, onSuccess, onGoToQue
           )}
 
           {/* Voice AI Smart Assistant Banner */}
-          <div className={`p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between gap-3 ${
+          <div className={`p-4 rounded-2xl border transition-all duration-300 flex flex-col gap-2.5 ${
             isListening
               ? 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300 ring-2 ring-red-500/20'
               : voiceAutoFilled
               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-200 shadow-sm'
               : 'bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-transparent border-emerald-500/20 dark:border-emerald-500/20'
           }`}>
-            <div className="flex items-center gap-3.5 min-w-0">
-              <button
-                type="button"
-                onClick={toggleVoiceBooking}
-                disabled={isProcessingVoice}
-                className={`relative w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
-                  isListening
-                    ? 'bg-red-600 text-white shadow-lg shadow-red-600/40'
-                    : isProcessingVoice
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-700/25 hover:scale-105 active:scale-95'
-                }`}
-                title="Click to speak booking"
-              >
-                {isListening && (
-                  <span className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-60 pointer-events-none" />
-                )}
-                {isProcessingVoice ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : isListening ? (
-                  <MicOff className="w-6 h-6 relative z-10" />
-                ) : (
-                  <Mic className="w-6 h-6 relative z-10" />
-                )}
-              </button>
-
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    {language === 'bn' ? 'ভয়েস এআই বুকিং (মুখে বলুন)' : language === 'hi' ? 'वॉइस एआई बुकिंग (बोलकर भरें)' : 'Voice AI Booking'}
-                  </span>
-                  {voiceAutoFilled && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                      Auto-filled via Voice AI
-                    </span>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <button
+                  type="button"
+                  onClick={toggleVoiceBooking}
+                  disabled={isProcessingVoice}
+                  className={`relative w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-all cursor-pointer ${
+                    isListening
+                      ? 'bg-red-600 text-white shadow-lg shadow-red-600/40'
+                      : isProcessingVoice
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-700/25 hover:scale-105 active:scale-95'
+                  }`}
+                  title="Click to speak booking"
+                >
+                  {isListening && (
+                    <span className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-60 pointer-events-none" />
                   )}
+                  {isProcessingVoice ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : isListening ? (
+                    <MicOff className="w-6 h-6 relative z-10" />
+                  ) : (
+                    <Mic className="w-6 h-6 relative z-10" />
+                  )}
+                </button>
+
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      {speechLang === 'bn' ? 'ভয়েস এআই বুকিং' : speechLang === 'hi' ? 'वॉइस एआई बुकिंग' : 'Voice AI Booking'}
+                    </span>
+                    {voiceAutoFilled && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                        Auto-filled
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate mt-0.5 font-medium">
+                    {isListening
+                      ? (speechLang === 'bn' ? '🎙️ শুনছি... বলুন (যেমন: ৫০ বস্তা ধান সকাল ১০টায়)' : speechLang === 'hi' ? '🎙️ सुन रहा हूँ... बोलिए (जैसे: 20 बोरी गेहूँ)' : '🎙️ Listening... speak crop, quantity & slot')
+                      : isProcessingVoice
+                      ? (speechLang === 'bn' ? '⚡ এআই দিয়ে ফর্ম পূরণ করা হচ্ছে...' : speechLang === 'hi' ? '⚡ एআই से फॉर्म भरा जा रहा है...' : '⚡ Processing voice intent via Groq Llama...')
+                      : lastVoiceTranscript
+                      ? `"${lastVoiceTranscript}"`
+                      : (speechLang === 'bn' ? 'মাইকে ট্যাপ করে বাংলায় কথা বলুন' : speechLang === 'hi' ? 'माइक दबाकर बोलें' : 'Tap mic to speak your booking')}
+                  </p>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate mt-0.5 font-medium">
-                  {isListening
-                    ? (language === 'bn' ? '🎙️ শুনছি... বলুন (যেমন: ৫০ কুইন্টাল ধান সকালে)' : language === 'hi' ? '🎙️ सुन रहा हूँ... बोलिए (जैसे: 20 क्विंटल गेहूँ)' : '🎙️ Listening... speak crop, quantity & slot')
-                    : isProcessingVoice
-                    ? (language === 'bn' ? '⚡ এআই দিয়ে ফর্ম পূরণ করা হচ্ছে...' : language === 'hi' ? '⚡ एআই से फॉर्म भरा जा रहा है...' : '⚡ Processing voice intent via Groq Llama...')
-                    : lastVoiceTranscript
-                    ? `"${lastVoiceTranscript}"`
-                    : (language === 'bn' ? 'মাইকে ট্যাপ করে বাংলায় কথা বলুন' : language === 'hi' ? 'माइक दबाकर बोलें' : 'Tap circular mic to speak your booking')}
-                </p>
+              </div>
+
+              {/* Language Selector Pills */}
+              <div className="flex items-center gap-1 shrink-0 bg-white/70 dark:bg-slate-900/60 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                {[
+                  { code: 'bn', label: 'বাংলা' },
+                  { code: 'hi', label: 'हिंदी' },
+                  { code: 'en', label: 'EN' },
+                ].map(item => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() => setSpeechLang(item.code)}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                      speechLang === item.code
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
+
+          {/* Vernacular Farmer Clarification Card (Operational Directive) */}
+          {voiceFeedback && voiceFeedback.farmer_clarification_message && (
+            <div className={`p-4 rounded-2xl border text-xs transition-all duration-300 shadow-sm ${
+              voiceFeedback.has_ambiguity
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
+                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
+            }`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  {voiceFeedback.has_ambiguity ? (
+                    <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`font-bold uppercase tracking-wider text-[10px] px-2 py-0.5 rounded-full ${
+                        voiceFeedback.has_ambiguity
+                          ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30'
+                          : 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
+                      }`}>
+                        {voiceFeedback.has_ambiguity
+                          ? (speechLang === 'bn' ? '⚠️ প্রাথমিক স্লট (যাচাই করুন)' : speechLang === 'hi' ? '⚠️ प्राथमिक स्लॉट (सत्यापित करें)' : '⚠️ Tentative Booking Defaults')
+                          : (speechLang === 'bn' ? '✨ স্লট বুকিং স্পষ্ট' : speechLang === 'hi' ? '✨ स्लॉट स्पष्ट' : '✨ Confirmed Booking Intent')}
+                      </span>
+                      {voiceFeedback.extracted_data?.quantity_quintals && (
+                        <span className="text-[10px] font-semibold bg-white/70 dark:bg-slate-800/70 px-2 py-0.5 rounded-md text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                          🌾 {voiceFeedback.extracted_data.quantity_quintals} Q ({voiceFeedback.extracted_data.quantity_quintals * 100} kg)
+                        </span>
+                      )}
+                      {selectedSlot && (
+                        <span className="text-[10px] font-semibold bg-white/70 dark:bg-slate-800/70 px-2 py-0.5 rounded-md text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          ⏰ {formatTimeSlot(selectedSlot.start_time, selectedSlot.end_time)}
+                        </span>
+                      )}
+                      {voiceFeedback.extracted_data?.mandi_name && (
+                        <span className="text-[10px] font-semibold bg-white/70 dark:bg-slate-800/70 px-2 py-0.5 rounded-md text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                          📍 {voiceFeedback.extracted_data.mandi_name}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[13px] leading-relaxed font-medium">
+                      "{voiceFeedback.farmer_clarification_message}"
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => playClarificationSpeech(voiceFeedback.farmer_clarification_message)}
+                  className={`p-2.5 rounded-xl transition-all shrink-0 cursor-pointer shadow-xs flex items-center gap-1.5 font-bold text-xs ${
+                    isPlayingAudio
+                      ? 'bg-red-600 text-white animate-pulse'
+                      : voiceFeedback.has_ambiguity
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                  title={isPlayingAudio ? 'Stop audio' : 'Listen to confirmation aloud'}
+                >
+                  {isPlayingAudio ? (
+                    <>
+                      <VolumeX className="w-4 h-4" />
+                      <span>{speechLang === 'bn' ? 'থামান' : speechLang === 'hi' ? 'रोकেন' : 'Stop'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="w-4 h-4" />
+                      <span>{speechLang === 'bn' ? 'শুনুন' : speechLang === 'hi' ? 'सुनें' : 'Listen'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Crop selection */}
           <div>
