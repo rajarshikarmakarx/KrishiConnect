@@ -400,6 +400,9 @@ async def seed(reset: bool = False):
 
             for j in range(n_waiting):
                 farmer = farmers[(22 + n_completed + j) % len(farmers)]
+                is_bump = (centre_idx == 1 and j == 0) or (centre_idx == 2 and j == 0)
+                bump_reason = "Perishable produce at spoilage risk: Incoming monsoon shower over open transport trolley" if centre_idx == 1 else "Gate congestion emergency: Tractor hydraulic arm failure blocking entry ramp"
+                op_for_centre = next((o for o in [op] if hasattr(o, 'id')), None)
                 entry = QueueEntry(
                     token=f"B{c_token}",
                     farmer_id=farmer.id,
@@ -409,6 +412,11 @@ async def seed(reset: bool = False):
                     crop=random.choice(CROPS),
                     expected_quantity_kg=round(random.uniform(100, 400), 1),
                     booked_at=now - timedelta(minutes=random.randint(10, 120)),
+                    is_bumped=is_bump,
+                    bump_priority=1 if is_bump else 0,
+                    bump_reason=bump_reason if is_bump else None,
+                    bumped_at=(now - timedelta(minutes=30)) if is_bump else None,
+                    bumped_by_id=2 if is_bump else None
                 )
                 db.add(entry)
                 c_token += 1

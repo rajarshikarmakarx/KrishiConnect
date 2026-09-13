@@ -3,19 +3,20 @@ KrishiConnect Payments & Analytics Routers
 Redis-accelerated multi-tier analytics with batched SQL execution and index-seek range scans.
 """
 from datetime import date, datetime, timedelta, timezone
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, text, and_, case
+from sqlalchemy.orm import aliased
 from app.database import get_db
 from app.models import (
     User, ProcurementCentre, CentreCounter, QueueEntry, Procurement, Payment,
-    QueueStatus, PaymentStatus, UserRole
+    TimeSlot, QueueStatus, PaymentStatus, UserRole
 )
-from app.schemas import PaymentOut, DistrictAnalytics, CentreAnalytics
+from app.schemas import PaymentOut, DistrictAnalytics, CentreAnalytics, PriorityBumpAuditOut
 from app.auth import decode_token
 from app.realtime import manager
-from app.timezone_utils import get_local_today, get_local_today_range_utc, is_postgres
+from app.timezone_utils import get_local_today, get_local_today_range_utc, is_postgres, KOLKATA_TZ
 from app.redis_client import redis_manager
 
 payments_router = APIRouter(prefix="/payments", tags=["payments"])
@@ -329,6 +330,92 @@ async def district_analytics(db: AsyncSession = Depends(get_db)):
         await redis_manager.set_json(cache_key, response_data.model_dump(), expire_seconds=ANALYTICS_CACHE_TTL)
 
     return response_data
+
+
+# ── Priority Bump Audit Trail (Statutory Override Oversight) ──────────────────
+
+@analytics_router.get("/priority-bumps", response_model=List[PriorityBumpAuditOut])
+async def get_priority_bumps(
+    centre_id: Optional[int] = None,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Priority Queue Bump & Assayer Authorization Audit Trail for District Administration.
+    Displays statutory justifications for why farmers were called/bumped before their scheduled slot,
+    along with authorizing official attribution, timestamp, slot window, and produce lot details.
+    """
+    UserBump = aliased(User)
+    query = (
+        select(
+            QueueEntry,
+            User.full_name.label("farmer_name"),
+            User.mobile.label("farmer_mobile"),
+            User.village.label("farmer_village"),
+            ProcurementCentre.name.label("centre_name"),
+            TimeSlot.start_time.label("slot_start"),
+            TimeSlot.end_time.label("slot_end"),
+            TimeSlot.date.label("slot_date"),
+            UserBump.full_name.label("bumped_by_name")
+        )
+        .join(User, QueueEntry.farmer_id == User.id)
+        .join(ProcurementCentre, QueueEntry.centre_id == ProcurementCentre.id)
+        .outerjoin(TimeSlot, QueueEntry.slot_id == TimeSlot.id)
+        .outerjoin(UserBump, QueueEntry.bumped_by_id == UserBump.id)
+        .where(QueueEntry.is_bumped == True)
+        .order_by(QueueEntry.bumped_at.desc(), QueueEntry.id.desc())
+        .limit(limit)
+    )
+    if centre_id:
+        query = query.where(QueueEntry.centre_id == centre_id)
+
+    result = await db.execute(query)
+    rows = result.all()
+
+    items = []
+    for entry, f_name, f_mobile, f_village, c_name, slot_start, slot_end, slot_date, bumped_by_name in rows:
+        slot_label = f"{slot_start} - {slot_end}" if slot_start and slot_end else "Standard Slot"
+
+        lead_minutes = None
+        if slot_date and slot_start and entry.bumped_at:
+            try:
+                h, m = [int(x) for x in slot_start.split(":")]
+                slot_start_dt = datetime(slot_date.year, slot_date.month, slot_date.day, h, m, 0, tzinfo=KOLKATA_TZ)
+                bump_dt_ist = entry.bumped_at.astimezone(KOLKATA_TZ) if entry.bumped_at.tzinfo else entry.bumped_at.replace(tzinfo=timezone.utc).astimezone(KOLKATA_TZ)
+                lead_sec = (slot_start_dt - bump_dt_ist).total_seconds()
+                if lead_sec > 0:
+                    lead_minutes = int(lead_sec // 60)
+            except Exception:
+                lead_minutes = None
+
+        items.append(PriorityBumpAuditOut(
+            id=entry.id,
+            token=entry.token,
+            farmer_id=entry.farmer_id,
+            farmer_name=f_name or "Farmer",
+            farmer_mobile=f_mobile,
+            farmer_village=f_village,
+            centre_id=entry.centre_id,
+            centre_name=c_name,
+            crop=entry.crop,
+            expected_quantity_kg=entry.expected_quantity_kg,
+            status=entry.status.value if hasattr(entry.status, "value") else str(entry.status),
+            is_bumped=entry.is_bumped,
+            bump_priority=entry.bump_priority,
+            bump_reason=entry.bump_reason,
+            bumped_at=entry.bumped_at,
+            bumped_by_id=entry.bumped_by_id,
+            bumped_by_name=bumped_by_name or "Mandi Gate Assayer",
+            slot_id=entry.slot_id,
+            slot_date=str(slot_date) if slot_date else None,
+            slot_time=slot_label,
+            early_lead_minutes=lead_minutes,
+            booked_at=entry.booked_at,
+            called_at=entry.called_at,
+            completed_at=entry.completed_at,
+        ))
+
+    return items
 
 
 # ── System Health ─────────────────────────────────────────────────────────────

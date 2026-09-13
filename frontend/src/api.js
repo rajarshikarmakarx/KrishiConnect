@@ -136,6 +136,7 @@ export const api = {
   // Analytics & Impact
   getCentreAnalytics: (centreId) => request('GET', `/analytics/centre/${centreId}`),
   getDistrictAnalytics: () => request('GET', '/analytics/district'),
+  getPriorityBumps: (centreId) => request('GET', `/analytics/priority-bumps${centreId ? `?centre_id=${centreId}` : ''}`),
   getSystemHealth: () => request('GET', '/analytics/system-health'),
   getImpactMetrics: () => request('GET', '/analytics/impact'),
 

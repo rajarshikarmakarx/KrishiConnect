@@ -208,6 +208,33 @@ class QueueEntryOut(SchemaModel):
     assay_record: Optional[AssayRecordOut] = None
 
 
+class PriorityBumpAuditOut(BaseModel):
+    id: int
+    token: str
+    farmer_id: int
+    farmer_name: str
+    farmer_mobile: Optional[str] = None
+    farmer_village: Optional[str] = None
+    centre_id: int
+    centre_name: str
+    crop: str
+    expected_quantity_kg: float
+    status: str
+    is_bumped: bool = True
+    bump_priority: int = 1
+    bump_reason: Optional[str] = None
+    bumped_at: Optional[datetime] = None
+    bumped_by_id: Optional[int] = None
+    bumped_by_name: Optional[str] = None
+    slot_id: Optional[int] = None
+    slot_date: Optional[str] = None
+    slot_time: Optional[str] = None
+    early_lead_minutes: Optional[int] = None
+    booked_at: Optional[datetime] = None
+    called_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
 class QueueStatusOut(BaseModel):
     centre_id: int
     centre_name: str
