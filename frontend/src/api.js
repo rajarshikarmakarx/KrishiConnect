@@ -145,8 +145,8 @@ export const api = {
   getMspRates: () => request('GET', '/ai/msp-rates'),
   getQualityStandards: () => request('GET', '/ai/quality-standards'),
   getAiDataInfo: () => request('GET', '/ai/data-info'),
-  getVoiceIntent: (transcript, lang = 'en', centreId = null) =>
-    request('POST', '/ai/voice-intent', { transcript, lang, centre_id: centreId }),
+  getVoiceIntent: (transcript, lang = 'en', centreId = null, context = {}) =>
+    request('POST', '/ai/voice-intent', { transcript, lang, centre_id: centreId, context }),
   sendAiChat: (message, lang = 'en', history = [], farmerName = null, village = null) =>
     request('POST', '/ai/chat', { message, lang, history, farmer_name: farmerName, village }),
   getAdminAiOverview: () => request('GET', '/ai/admin-overview'),
