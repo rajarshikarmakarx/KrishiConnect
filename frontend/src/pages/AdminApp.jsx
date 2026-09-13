@@ -338,8 +338,8 @@ export default function AdminApp() {
                       <h2 className="text-base sm:text-lg font-bold font-display text-white">
                         District AI Executive Intelligence Briefing
                       </h2>
-                      <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                        {aiOverview?.engine || 'Groq Llama 3.3 70B'}
+                      <span className="bg-emerald-400/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        {aiOverview?.engine || 'Krishi AI Engine'}
                       </span>
                     </div>
                     <p className="text-xs text-emerald-200/80 mt-0.5">

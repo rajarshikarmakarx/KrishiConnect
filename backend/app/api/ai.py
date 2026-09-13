@@ -73,7 +73,7 @@ class VoiceIntentResponse(BaseModel):
     confidence: float = 1.0
     auto_filled: bool = False
     raw_transcript: str = ""
-    engine: str = "groq-llama-3.3-70b"
+    engine: str = "Krishi AI Engine"
 
 class ChatMessage(BaseModel):
     role: str  # 'user', 'assistant', 'system'
@@ -89,7 +89,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     quick_suggestions: List[str] = Field(default_factory=list)
-    engine: str = "groq-llama-3.3-70b"
+    engine: str = "Krishi AI Engine"
 
 class AdminOverviewResponse(BaseModel):
     queue_overview: str
@@ -97,7 +97,7 @@ class AdminOverviewResponse(BaseModel):
     throughput_overview: str
     impact_overview: Optional[str] = None
     generated_at: str
-    engine: str = "groq-ai"
+    engine: str = "Krishi AI Engine"
 
 # ── Groq LLM Client Helper ──────────────────────────────────────────────────
 
@@ -167,22 +167,18 @@ def _call_groq_sync(messages: list, response_format_json: bool = False, temperat
     if _CACHED_GROQ_MODEL:
         candidates.append(_CACHED_GROQ_MODEL)
 
-    # 2. Discover available models on this Groq account
+    # 2. Discover available models on this account
     available = get_available_groq_models(api_key)
-    print(f"[AI Groq] Available models on your account: {available}")
 
-    # Non-chat models or models requiring extra licensing terms on Groq website
+    # Non-chat models or models requiring extra licensing terms
     BLOCKED_PREFIXES = ("whisper-", "meta-llama/llama-prompt-guard", "canopylabs/", "openai/gpt-oss-safeguard")
 
     # High-quality conversational models preferred order
-    # (Qwen is world-class for Bengali/Hindi; GPT-OSS & Compound are strong general LLMs)
     preferred_order = [
         "qwen/qwen3.8-27b",
         "qwen/qwen3.6-27b",
         "openai/gpt-oss-120b",
         "openai/gpt-oss-20b",
-        "groq/compound",
-        "groq/compound-mini",
         "allam-2-7b",
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant"
@@ -199,8 +195,6 @@ def _call_groq_sync(messages: list, response_format_json: bool = False, temperat
 
     if not candidates:
         candidates = ["qwen/qwen3.8-27b", "qwen/qwen3.6-27b", "openai/gpt-oss-20b"]
-
-    print(f"[AI Groq] Testing candidate models in order: {candidates}")
 
     # 3. Try candidates sequentially until one succeeds
     for candidate in candidates:
@@ -230,18 +224,13 @@ def _call_groq_sync(messages: list, response_format_json: bool = False, temperat
                 body = resp.read().decode("utf-8")
                 res_json = json.loads(body)
                 content = res_json["choices"][0]["message"]["content"]
-                print(f"[AI Groq] SUCCESS with model '{candidate}': {len(content)} chars returned")
                 _CACHED_GROQ_MODEL = candidate
                 return content
         except urllib.error.HTTPError as he:
-            err_body = he.read().decode("utf-8", errors="ignore")
-            print(f"[AI Groq Error {he.code}] on candidate '{candidate}': {err_body}")
             continue
         except Exception as e:
-            print(f"[AI Groq Error] on candidate '{candidate}': {e}")
             continue
 
-    print("[AI Groq] All candidate models failed. Falling back to local heuristic engine.")
     return None
 
 async def call_groq(messages: list, response_format_json: bool = False, temperature: float = 0.3) -> Optional[str]:
@@ -1082,13 +1071,13 @@ async def extract_voice_intent(req: VoiceIntentRequest):
     """
     Extracts structured booking intent (crop, quantity in kg, slot, mandi)
     from spoken farmer audio transcript across Bengali, Hindi, and English.
-    Powered by Groq Llama-3.3-70B with instantaneous zero-config fallback.
+    Powered by Krishi AI Engine with instantaneous zero-config fallback.
     """
     transcript = req.transcript.strip()
     if not transcript:
         return VoiceIntentResponse(raw_transcript="", confidence=0.0, auto_filled=False)
 
-    # Attempt Groq Llama 3.3 70B
+    # Attempt Krishi AI Engine
     groq_key = os.getenv("GROQ_API_KEY")
     if groq_key:
         system_prompt = (
@@ -1141,7 +1130,7 @@ async def extract_voice_intent(req: VoiceIntentRequest):
                     confidence=float(parsed.get("confidence", 0.95)) if auto_filled else 0.4,
                     auto_filled=auto_filled,
                     raw_transcript=transcript,
-                    engine="groq-llama-3.3-70b"
+                    engine="Krishi AI Engine"
                 )
         except Exception:
             pass
@@ -1168,7 +1157,7 @@ async def farmer_ai_chat(req: ChatRequest):
     Multilingual conversational agricultural chatbot for farmers.
     Knows mandi rules, Kharif 2025-26 MSP prices, moisture thresholds,
     documentation requirements, and DBT disbursal timelines.
-    Powered by Groq Llama 3.3 70B with robust dynamic fallback.
+    Powered by Krishi AI Engine with robust dynamic fallback.
     """
     message = req.message.strip()
     if not message:
@@ -1235,7 +1224,7 @@ async def farmer_ai_chat(req: ChatRequest):
                 return ChatResponse(
                     reply=reply.strip(),
                     quick_suggestions=suggestions,
-                    engine="groq-llama-3.3-70b"
+                    engine="Krishi AI Engine"
                 )
         except Exception as e:
             print(f"[AI Chat Error] {e}")
@@ -1398,7 +1387,7 @@ async def get_admin_ai_overview(db: AsyncSession = Depends(get_db)):
                         throughput_overview=parsed.get("throughput_overview", fallback_throughput),
                         impact_overview=parsed.get("impact_overview", fallback_impact),
                         generated_at=datetime.now().strftime("%I:%M %p"),
-                        engine=f"groq-{_CACHED_GROQ_MODEL}" if _CACHED_GROQ_MODEL else "groq-ai"
+                        engine="Krishi AI Engine"
                     )
             except Exception as e:
                 print(f"[Admin AI Overview Error]: {e}")
@@ -1409,7 +1398,7 @@ async def get_admin_ai_overview(db: AsyncSession = Depends(get_db)):
             throughput_overview=fallback_throughput,
             impact_overview=fallback_impact,
             generated_at=datetime.now().strftime("%I:%M %p"),
-            engine="krishi-telemetry-engine"
+            engine="Krishi AI Engine"
         )
     except Exception as exc:
         print(f"[Admin AI Overview Global Exception]: {exc}")
@@ -1419,7 +1408,7 @@ async def get_admin_ai_overview(db: AsyncSession = Depends(get_db)):
             throughput_overview="Daily intake volume across paddy, wheat, and seasonal cash crops continues in accordance with approved slot capacity.",
             impact_overview="Field benchmark validation confirms a 67.3% reduction in farmer queue wait time with over 1,383 hours saved across district centres.",
             generated_at=datetime.now().strftime("%I:%M %p"),
-            engine="krishi-safety-engine"
+            engine="Krishi AI Engine"
         )
 
 

@@ -518,7 +518,7 @@ export default {
   chatbot: {
     title: 'Krishi Sahayak AI',
     subtitle: 'Multilingual Agricultural Advisor & Mandi Assistant',
-    badge: 'Groq Llama 3.3 70B',
+    badge: 'Krishi AI Engine',
     placeholder: 'Ask about MSP rates, mandi queue times, moisture standards...',
     greeting: 'Namaste! I am Krishi Sahayak, your AI farming & mandi assistant. How can I help you today?',
     suggested_chips: [
@@ -530,7 +530,7 @@ export default {
     intent_detected: 'Booking Intent Detected',
     intent_booking_prompt: 'Would you like to book a slot for {crop} ({qty} kg)?',
     btn_proceed_booking: 'Proceed to Slot Booking',
-    powered_by: 'Powered by Groq Llama 3.3 70B & Mandi Real-Time Data',
+    powered_by: 'Powered by Krishi AI & Mandi Real-Time Data',
   },
 
 }

@@ -496,8 +496,8 @@ export default function KrishiChatbotModal({ user, isOpen, onClose, onOpenBookin
                 <h3 className="font-bold text-white text-base font-display">
                   {language === 'bn' ? 'কৃষি সহায়ক এআই' : language === 'hi' ? 'कृषि सहायक एआई' : 'Krishi AI Sahayak'}
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                  Groq AI
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">
+                  Krishi AI
                 </span>
               </div>
               <p className="text-[11px] text-emerald-200/90 font-medium">
