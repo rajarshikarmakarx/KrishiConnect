@@ -66,7 +66,7 @@ export default {
     tab_otp: 'ম\'বাইল OTP',
     tab_password: 'পাছৱৰ্ড',
     tab_register: 'পঞ্জীয়ন',
-    remember_me: 'মোক ৭ দিনলৈ লগ ইন ৰাখক',
+    remember_me: 'মোক ছাইন ইন ৰাখক',
     mobile_label: 'ম\'বাইল নম্বৰ',
     mobile_placeholder: '১০ টা অংকৰ ম\'বাইল নম্বৰ দিয়ক',
     mobile_password_placeholder: '১০ টা অংকৰ ম\'বাইল নম্বৰ দিয়ক',

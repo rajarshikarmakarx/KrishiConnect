@@ -14,7 +14,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv("SECRET_KEY", "krishiconnect-dev-secret-key-change-in-production-2026")
 
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
 # Use bcrypt directly — passlib 1.7.4 is incompatible with bcrypt 4.x/5.x
 # (it accesses bcrypt.__about__ which was removed).

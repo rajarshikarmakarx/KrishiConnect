@@ -154,6 +154,102 @@ function FormattedMessage({ content }) {
   return <div className="space-y-0.5">{elements}</div>
 }
 
+// Multilingual placeholder for "Ask Anything..." across all 12 supported languages
+const ASK_ANYTHING_MAP = {
+  en: 'Ask Anything...',
+  bn: 'যেকোনো কিছু জিজ্ঞাসা করুন...',
+  hi: 'कुछ भी पूछें...',
+  mr: 'काहीही विचारा...',
+  te: 'ఏదైనా అడగండి...',
+  ta: 'எதையும் கேளுங்கள்...',
+  gu: 'કંઈપણ પૂછો...',
+  kn: 'ಏನನ್ನಾದರೂ ಕೇಳಿ...',
+  ml: 'എന്തും ചോദിക്കാം...',
+  pa: 'ਕੁਝ ਵੀ ਪੁੱਛੋ...',
+  or: 'ଯାହା କିଛି ପଚାରନ୍ତୁ...',
+  as: 'যিকোনো কথা সোধক...'
+}
+
+// Multilingual listening status for voice recognition
+const LISTENING_MAP = {
+  en: 'Listening... speak now',
+  bn: 'শুনছি... কথা বলুন',
+  hi: 'सुन रहा हूँ... बोलिए',
+  mr: 'ऐकत आहे... बोला',
+  te: 'వింటున్నాను... మాట్లాడండి',
+  ta: 'கேட்கிறேன்... பேசுங்கள்',
+  gu: 'સાંભળી રહ્યો છું... બોલો',
+  kn: 'ಕೇಳಿಸಿಕೊಳ್ಳುತ್ತಿದ್ದೇನೆ... ಮಾತನಾಡಿ',
+  ml: 'കേൾക്കുന്നു... സംസാരിക്കൂ',
+  pa: 'ਸੁਣ ਰਿਹਾ ਹਾਂ... ਬੋਲੋ',
+  or: 'ଶୁଣୁଛି... କୁହନ୍ତୁ',
+  as: 'শুনি আছোঁ... কওক'
+}
+
+// Multilingual speech recognition locale mapping
+const LOCALE_MAP = {
+  en: 'en-IN',
+  bn: 'bn-IN',
+  hi: 'hi-IN',
+  mr: 'mr-IN',
+  te: 'te-IN',
+  ta: 'ta-IN',
+  gu: 'gu-IN',
+  kn: 'kn-IN',
+  ml: 'ml-IN',
+  pa: 'pa-IN',
+  or: 'or-IN',
+  as: 'as-IN'
+}
+
+// Read aloud button labels
+const READ_ALOUD_MAP = {
+  en: 'Read aloud',
+  bn: 'শুনুন',
+  hi: 'सुनें',
+  mr: 'ऐका',
+  te: 'వినండి',
+  ta: 'கேளுங்கள்',
+  gu: 'સાંભળો',
+  kn: 'ಕೇಳಿ',
+  ml: 'കേൾക്കൂ',
+  pa: 'ਸੁਣੋ',
+  or: 'ଶୁଣନ୍ତୁ',
+  as: 'শুনক'
+}
+
+// Generating reply labels
+const GENERATING_MAP = {
+  en: 'Generating reply...',
+  bn: 'উত্তর তৈরি হচ্ছে...',
+  hi: 'उत्तर तैयार हो रहा है...',
+  mr: 'उत्तर तयार होत आहे...',
+  te: 'సమాధానం తయారవుతోంది...',
+  ta: 'பதில் தயாராகிறது...',
+  gu: 'જવાબ તૈયાર થઈ રહ્યો છે...',
+  kn: 'ಉತ್ತರ ಸಿದ್ಧವಾಗುತ್ತಿದೆ...',
+  ml: 'മറുപടി തയ്യാറാകുന്നു...',
+  pa: 'ਜਵਾਬ ਤਿਆਰ ਹੋ ਰਿਹਾ ਹੈ...',
+  or: 'ଉତ୍ତର ପ୍ରସ୍ତୁତ ହେଉଛି...',
+  as: 'উত্তৰ প্ৰস্তুত হৈ আছে...'
+}
+
+// Book slot button labels
+const BOOK_SLOT_MAP = {
+  en: 'Book a Slot',
+  bn: 'স্লট বুক করুন',
+  hi: 'स्लॉट बुक करें',
+  mr: 'स्लॉट बुक करा',
+  te: 'స్లాట్ బుక్ చేయండి',
+  ta: 'முன்பதிவு செய்க',
+  gu: 'સ્લોટ બુક કરો',
+  kn: 'ಸ್ಲಾಟ್ ಬುಕ್ ಮಾಡಿ',
+  ml: 'സ്ലോട്ട് ബുക്ക് ചെയ്യുക',
+  pa: 'ਸਲਾਟ ਬੁੱਕ ਕਰੋ',
+  or: 'ସ୍ଲଟ୍ ବୁକ୍ କରନ୍ତୁ',
+  as: 'স্লট বুক কৰক'
+}
+
 export default function KrishiChatbotModal({ user, isOpen, onClose, onOpenBooking }) {
   const { language } = useTranslation()
   const [messages, setMessages] = useState([])
@@ -191,6 +287,87 @@ export default function KrishiChatbotModal({ user, isOpen, onClose, onOpenBookin
           '📋 What documents are needed for booking?',
           '💧 What is the maximum moisture allowed?',
           '💳 When will the DBT payment arrive?'
+        ]
+      },
+      mr: {
+        reply: `नमस्कार ${user?.full_name ? 'शेतकरी बांधव ' + user.full_name : 'शेतकरी बांधव'}! मी कृषी सहाय्यक (Krishi AI Assistant) आहे.\n\nमी तुम्हाला हमीभाव (MSP), स्लॉट बुकिंग, गुणवत्ता तपासणी आणि थेट बँक खात्यात पैसे जमा होण्याबाबत संपूर्ण माहिती देऊ शकतो.\n\nखालील प्रश्नांवर टॅप करा किंवा माइक वापरून विचारा!`,
+        suggestions: [
+          '🌾 आजचा धानाचा MSP किती आहे?',
+          '📋 स्लॉट बुकिंगसाठी कोणती कागदपत्रे लागतात?',
+          '💧 ओलावा (Moisture) किती टक्के चालतो?',
+          '💳 बँक खात्यात पैसे कधी जमा होतात?'
+        ]
+      },
+      te: {
+        reply: `నమస్కారం ${user?.full_name ? 'రైతు సోదరుడు ' + user.full_name : 'రైతు సోదరుడు'}! నేను కృషి సహాయక్ (Krishi AI Assistant).\n\nమద్దతు ధర (MSP), స్లాట్ బుకింగ్, నాణ్యత పరీక్ష మరియు నేరుగా DBT బ్యాంక్ ఖాతాకు నిధుల వివరాలను అందించగలను.\n\nక్రింది ప్రశ్నలపై నొక్కండి లేదా మైక్ ద్వారా మాట్లాడండి!`,
+        suggestions: [
+          '🌾 నేటి వరి MSP ఎంత?',
+          '📋 స్లాట్ బుకింగ్ కోసం ఏ పత్రాలు కావాలి?',
+          '💧 తేమ (Moisture) గరిష్ట పరిమితి ఎంత?',
+          '💳 ఖాతాలో DBT డబ్బులు ఎప్పుడు వస్తాయి?'
+        ]
+      },
+      ta: {
+        reply: `வணக்கம் ${user?.full_name ? 'விவசாயி ' + user.full_name : 'விவசாயி'}! நான் கிருஷி உதவியாளர் (Krishi AI Assistant).\n\nஅரசு ஆதரவு விலை (MSP), முன்பதிவு, தர பரிசோதனை மற்றும் நேரடி வங்கி பரிமாற்றம் குறித்த அனைத்து தகவல்களையும் தருகிறேன்.\n\nகீழே உள்ள கேள்விகளைத் தொடவும் அல்லது மைக்கில் பேசவும்!`,
+        suggestions: [
+          '🌾 இன்றைய நெல் MSP விலை என்ன?',
+          '📋 முன்பதிவுக்கு என்ன ஆவணங்கள் தேவை?',
+          '💧 ஈரப்பதம் (Moisture) அதிகபட்சம் எவ்வளவு?',
+          '💳 வங்கிக் கணக்கில் பணம் எப்போது வரும்?'
+        ]
+      },
+      gu: {
+        reply: `નમસ્તે ${user?.full_name ? 'ખેડૂત મિત્ર ' + user.full_name : 'ખેડૂત મિત્ર'}! હું કૃષિ સહાયક (Krishi AI Assistant) છું.\n\nહું તમને ટેકાના ભાવ (MSP), સ્લોટ બુકિંગ, ગુણવત્તા ચકાસણી અને સીધા બેંક ખાતામાં જમા થતી રકમ વિશે તમામ માહિતી આપી શકું છું.\n\nનીચેના પ્રશ્નો પર ટેપ કરો અથવા માઇકમાં બોલો!`,
+        suggestions: [
+          '🌾 આજનો ડાંગરનો MSP કેટલો છે?',
+          '📋 સ્લોટ બુકિંગ માટે કયા દસ્તાવેજો જોઈએ?',
+          '💧 ભેજનું પ્રમાણ (Moisture) કેટલું માન્ય છે?',
+          '💳 ખાતામાં DBT પૈસા ક્યારે આવશે?'
+        ]
+      },
+      kn: {
+        reply: `ನಮಸ್ಕಾರ ${user?.full_name ? 'ರೈತ ಬಾಂಧವ ' + user.full_name : 'ರೈತ ಬಾಂಧವ'}! ನಾನು ಕೃಷಿ ಸಹಾಯಕ (Krishi AI Assistant).\n\nಬೆಂಬಲ ಬೆಲೆ (MSP), ಸ್ಲಾಟ್ ಬುಕಿಂಗ್, ಗುಣಮಟ್ಟ ಪರೀಕ್ಷೆ ಮತ್ತು ನೇರ DBT ಬ್ಯಾಂಕ್ ಪಾವತಿ ಕುರಿತು ಸಂಪೂರ್ಣ ಮಾಹಿತಿ ನೀಡುತ್ತೇನೆ.\n\nಕೆಳಗಿನ ಪ್ರಶ್ನೆಗಳನ್ನು ಕ್ಲಿಕ್ ಮಾಡಿ ಅಥವಾ ಮೈಕ್‌ನಲ್ಲಿ ಮಾತನಾಡಿ!`,
+        suggestions: [
+          '🌾 ಇಂದಿನ ಭತ್ತದ MSP ಬೆಲೆ ಎಷ್ಟು?',
+          '📋 ಸ್ಲಾಟ್ ಬುಕಿಂಗ್‌ಗೆ ಯಾವ ದಾಖಲೆಗಳು ಬೇಕು?',
+          '💧 ತೇವಾಂಶ (Moisture) ಗರಿಷ್ಠ ಎಷ್ಟು ಇರಬೇಕು?',
+          '💳 ಖಾತೆಗೆ DBT ಹಣ ಯಾವಾಗ ಬರುತ್ತದೆ?'
+        ]
+      },
+      ml: {
+        reply: `നമസ്കാരം ${user?.full_name ? 'കർഷക സുഹൃത്ത് ' + user.full_name : 'കർഷക സുഹൃത്ത്'}! ഞാൻ കൃഷി സഹായക് (Krishi AI Assistant).\n\nതാങ്ങുവില (MSP), സ്ലോട്ട് ബുക്കിംഗ്, ഗുണനിലവാര പരിശോധന, ബാങ്ക് അക്കൗണ്ടിലേക്ക് നേരിട്ടുള്ള പണം കൈമാറ്റം എന്നിവ സംബന്ധിച്ച വിവരങ്ങൾ നൽകാം.\n\nതാഴെയുള്ള ചോദ്യങ്ങളിൽ ടാപ്പ് ചെയ്യുകയോ മൈക്കിലൂടെ സംസാരിക്കുകയോ ചെയ്യുക!`,
+        suggestions: [
+          '🌾 ഇന്നത്തെ നെല്ലിന്റെ താങ്ങുവില (MSP) എത്ര?',
+          '📋 സ്ലോട്ട് ബുക്കിംഗിന് എന്തൊക്കെ രേഖകൾ വേണം?',
+          '💧 ഈർപ്പം (Moisture) പരമാവധി എത്രയാകാം?',
+          '💳 അക്കൗണ്ടിൽ DBT പണം എപ്പോൾ എത്തും?'
+        ]
+      },
+      pa: {
+        reply: `ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ ${user?.full_name ? 'ਕਿਸਾਨ ਵੀਰ ' + user.full_name : 'ਕਿਸਾਨ ਵੀਰ'}! ਮੈਂ ਕ੍ਰਿਸ਼ੀ ਸਹਾਇਕ (Krishi AI Assistant) ਹਾਂ।\n\nਮੈਂ ਤੁਹਾਨੂੰ ਸਰਕਾਰੀ ਮੰਡੀ ਦੇ ਸਮਰਥਨ ਮੁੱਲ (MSP), ਸਲਾਟ ਬੁਕਿੰਗ, ਗੁਣਵੱਤਾ ਜਾਂਚ ਅਤੇ ਸਿੱਧੇ ਬੈਂਕ ਖਾਤੇ ਵਿੱਚ ਭੁਗਤਾਨ ਬਾਰੇ ਜਾਣਕਾਰੀ ਦੇ ਸਕਦਾ ਹਾਂ।\n\nਹੇਠਾਂ ਦਿੱਤੇ ਸਵਾਲਾਂ 'ਤੇ ਟੈਪ ਕਰੋ ਜਾਂ ਮਾਈਕ ਵਿੱਚ ਬੋਲੋ!`,
+        suggestions: [
+          '🌾 ਅੱਜ ਝੋਨੇ ਦਾ MSP ਕੀ ਹੈ?',
+          '📋 ਸਲਾਟ ਬੁਕਿੰਗ ਲਈ ਕਿਹੜੇ ਦਸਤਾਵੇਜ਼ ਚਾਹੀਦੇ ਹਨ?',
+          '💧 ਨਮੀ (Moisture) ਵੱਧ ਤੋਂ ਵੱਧ ਕਿੰਨੀ ਚੱਲ ਸਕਦੀ ਹੈ?',
+          '💳 ਖਾਤੇ ਵਿੱਚ ਪੈਸੇ ਕਦੋਂ ਆਉਂਦੇ ਹਨ?'
+        ]
+      },
+      or: {
+        reply: `ନମସ୍କାର ${user?.full_name ? 'କୃଷକ ଭାଇ ' + user.full_name : 'କୃଷକ ଭାଇ'}! ମୁଁ କୃଷି ସହାୟକ (Krishi AI Assistant)।\n\nମୁଁ ଆପଣଙ୍କୁ ସରକାରୀ ମଣ୍ଡି ସହାୟକ ମୂଲ୍ୟ (MSP), ସ୍ଲଟ୍ ବୁକିଂ, ଗୁଣବତ୍ତା ଯାଞ୍ଚ ଏବଂ ସିଧାସଳଖ DBT ବ୍ୟାଙ୍କ ଜମା ସମ୍ବନ୍ଧୀୟ ସମସ୍ତ ତଥ୍ୟ ଦେଇପାରିବି।\n\nତଳ ପ୍ରଶ୍ନଗୁଡ଼ିକ ଉପରେ ଟ୍ୟାପ୍ କରନ୍ତୁ କିମ୍ବା ମାଇକ୍ ରେ କୁହନ୍ତୁ!`,
+        suggestions: [
+          '🌾 ଆଜିର ଧାନ MSP କେତେ?',
+          '📋 ସ୍ଲଟ୍ ବୁକିଂ ପାଇଁ କେଉଁ କାଗଜପତ୍ର ଦରକାର?',
+          '💧 ଆର୍ଦ୍ରତା (Moisture) ସର୍ବାଧିକ କେତେ ହେବା ଉଚିତ୍?',
+          '💳 ବ୍ୟାଙ୍କ ଖାତାକୁ ଟଙ୍କା କେବେ ଆସିବ?'
+        ]
+      },
+      as: {
+        reply: `নমস্কাৰ ${user?.full_name ? 'কৃষক ভাই ' + user.full_name : 'কৃষক ভাই'}! মই কৃষি সহায়ক (Krishi AI Assistant)।\n\nমই আপোনাক চৰকাৰী মণ্ডিৰ সহায়ক মূল্য (MSP), স্লট বুকিং, গুণগত মান পৰীক্ষা আৰু প্ৰত্যক্ষ DBT বেংক জমাৰ তথ্য দিব পাৰোঁ।\n\nতলৰ প্ৰশ্নসমূহত টেপ কৰক অথবা মাইকত কওক!`,
+        suggestions: [
+          '🌾 আজিৰ ধানৰ MSP কিমান?',
+          '📋 স্লট বুকিং কৰিবলৈ কি কি নথি লাগে?',
+          '💧 আৰ্দ্ৰতা (Moisture) সৰ্বাধিক কিমান চলিব?',
+          '💳 একাউণ্টত পইচা কেতিয়া সোমাব?'
         ]
       }
     }
@@ -288,8 +465,7 @@ export default function KrishiChatbotModal({ user, isOpen, onClose, onOpenBookin
     recognition.continuous = false
     recognition.interimResults = false
 
-    const localeMap = { bn: 'bn-IN', hi: 'hi-IN', en: 'en-IN' }
-    recognition.lang = localeMap[language] || 'en-IN'
+    recognition.lang = LOCALE_MAP[language] || 'en-IN'
 
     recognition.onstart = () => {
       setIsListening(true)
@@ -557,7 +733,7 @@ export default function KrishiChatbotModal({ user, isOpen, onClose, onOpenBookin
                         ) : (
                           <>
                             <Volume2 className="w-3.5 h-3.5" />
-                            <span>{language === 'bn' ? 'শুনুন' : language === 'hi' ? 'सुनें' : 'Read aloud'}</span>
+                            <span>{READ_ALOUD_MAP[language] || READ_ALOUD_MAP.en}</span>
                           </>
                         )}
                       </button>
@@ -589,7 +765,7 @@ export default function KrishiChatbotModal({ user, isOpen, onClose, onOpenBookin
                       className="text-xs font-semibold py-1 px-2.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all cursor-pointer shadow-2xs hover:scale-102 flex items-center gap-1"
                     >
                       <Calendar className="w-3 h-3" />
-                      <span>{language === 'bn' ? 'স্লট বুক করুন' : language === 'hi' ? 'स्लॉट बुक करें' : 'Book a Slot'}</span>
+                      <span>{BOOK_SLOT_MAP[language] || BOOK_SLOT_MAP.en}</span>
                     </button>
                   )}
                 </div>
@@ -608,7 +784,7 @@ export default function KrishiChatbotModal({ user, isOpen, onClose, onOpenBookin
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.15s]" />
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" />
                 <span className="text-[11px] text-slate-400 font-medium ml-1">
-                  {language === 'bn' ? 'উত্তর তৈরি হচ্ছে...' : 'Generating reply...'}
+                  {GENERATING_MAP[language] || GENERATING_MAP.en}
                 </span>
               </div>
             </div>
@@ -644,8 +820,8 @@ export default function KrishiChatbotModal({ user, isOpen, onClose, onOpenBookin
               onChange={(e) => setInput(e.target.value)}
               placeholder={
                 isListening
-                  ? (language === 'bn' ? 'শুনছি... কথা বলুন' : language === 'hi' ? 'सुन रहा हूँ... बोलिए' : 'Listening... speak now')
-                  : (language === 'bn' ? 'বাংলা বা ইংরেজিতে প্রশ্ন করুন...' : language === 'hi' ? 'हिंदी या अंग्रेज़ी में पूछें...' : 'Ask in বাংলা, हिंदी, or English...')
+                  ? (LISTENING_MAP[language] || LISTENING_MAP.en)
+                  : (ASK_ANYTHING_MAP[language] || ASK_ANYTHING_MAP.en)
               }
               disabled={loading || isListening}
               className="flex-1 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white px-4 py-2.5 rounded-2xl text-xs sm:text-sm border border-transparent focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none transition-all placeholder:text-slate-400"

@@ -5,7 +5,205 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api'
-import { useTranslation } from '../../i18n'
+import { useTranslation, LANGUAGES } from '../../i18n'
+
+const VOICE_AI_TITLES = {
+  en: 'Voice AI Booking',
+  bn: 'ভয়েস এআই বুকিং',
+  hi: 'वॉइस एआई बुकिंग',
+  mr: 'व्हॉइस एआय बुकिंग',
+  te: 'వాయిస్ AI బుకింగ్',
+  ta: 'வாய்ஸ் AI முன்பதிவு',
+  gu: 'વોઇસ AI બુકિંગ',
+  kn: 'ಧ್ವನಿ AI ಬುಕಿಂಗ್',
+  ml: 'വോയ്‌സ് AI ബുക്കിംഗ്',
+  pa: 'ਵੌਇਸ AI ਬੁਕਿੰਗ',
+  or: 'ଭଏସ୍ AI ବୁକିଂ',
+  as: 'ভইচ AI বুকিং'
+}
+
+const VOICE_AI_SUBTITLES = {
+  en: 'Tap mic to speak your booking',
+  bn: 'মাইকে ট্যাপ করে বাংলায় কথা বলুন',
+  hi: 'माइक दबाकर अपनी बुकिंग बोलें',
+  mr: 'माईक दाबून आपली बुकिंग बोला',
+  te: 'మైక్ నొక్కి మీ బుకింగ్ వివరాలు చెప్పండి',
+  ta: 'மைக்கை தட்டி உங்கள் முன்பதிவை கூறுங்கள்',
+  gu: 'માઇક દબાવીને તમારું બુકિંગ બોલો',
+  kn: 'ಮೈಕ್ ಒತ್ತಿ ನಿಮ್ಮ ಬುಕಿಂಗ್ ವಿವರ ಹೇಳಿ',
+  ml: 'മൈക്ക് അമർത്തി നിങ്ങളുടെ ബുക്കിംഗ് പറയുക',
+  pa: 'ਮਾਈਕ ਦਬਾ ਕੇ ਆਪਣੀ ਬੁਕਿੰਗ ਦੱਸੋ',
+  or: 'ମାଇକ୍ ଦବାଇ ଆପଣଙ୍କ ବୁକିଂ କୁହନ୍ତୁ',
+  as: 'মাইকত টিপি আপোনাৰ বুকিং কওক'
+}
+
+const VOICE_LISTENING_PROMPTS = {
+  en: '🎙️ Listening... speak crop, quantity & slot',
+  bn: '🎙️ শুনছি... বলুন (যেমন: ৫০ বস্তা ধান সকাল ১০টায়)',
+  hi: '🎙️ सुन रहा हूँ... बोलिए (जैसे: 20 बोरी गेहूँ कल सुबह 10 बजे)',
+  mr: '🎙️ ऐकत आहे... बोला (उदा: ५० पोती भात उद्या सकाळी १० वाजता)',
+  te: '🎙️ వింటున్నాము... మాట్లాడండి (ఉదా: 50 బస్తాల వరి రేపు ఉదయం 10 గంటలకు)',
+  ta: '🎙️ கேட்கிறது... பேசுங்கள் (எ.கா: 50 மூட்டை நெல் நாளை காலை 10 மணிக்கு)',
+  gu: '🎙️ સાંભળી રહ્યા છીએ... બોલો (દા.ત: 50 બોરી ડાંગર કાલે સવારે 10 વાગ્યે)',
+  kn: '🎙️ ಆಲಿಸಲಾಗುತ್ತಿದೆ... ಮಾತನಾಡಿ (ಉದಾ: 50 ಚೀಲ ಭತ್ತ ನಾಳೆ ಬೆಳಗ್ಗೆ 10 ಗಂಟೆಗೆ)',
+  ml: '🎙️ കേൾക്കുന്നു... സംസാരിക്കൂ (ഉദാ: 50 ചാക്ക് നെല്ല് നാളെ രാവിലെ 10 മണിക്ക്)',
+  pa: '🎙️ ਸੁਣ ਰਹੇ ਹਾਂ... ਬੋਲੋ (ਜਿਵੇਂ: 50 ਬੋਰੀਆਂ ਝੋਨਾ ਕੱਲ੍ਹ ਸਵੇਰੇ 10 ਵਜੇ)',
+  or: '🎙️ ଶୁଣୁଛୁ... କୁହନ୍ତୁ (ଯଥା: ୫୦ ବସ୍ତା ଧାନ କାଲି ସକାଳ ୧୦ଟାରେ)',
+  as: '🎙️ শুনি আছোঁ... কওক (যেনে: ৫০ বস্তা ধান কাইলৈ পুৱা ১০ বজাত)'
+}
+
+const VOICE_PROCESSING_PROMPTS = {
+  en: '⚡ Processing voice intent via Krishi AI Engine...',
+  bn: '⚡ এআই দিয়ে ফর্ম পূরণ করা হচ্ছে...',
+  hi: '⚡ এআই से फॉर्म भरा जा रहा है...',
+  mr: '⚡ এআই द्वारे फॉर्म भरला जात आहे...',
+  te: '⚡ AI తో ఫారమ్ నింపబడుతోంది...',
+  ta: '⚡ AI மூலம் படிவம் நிரப்பப்படுகிறது...',
+  gu: '⚡ AI દ્વારા ફોર્મ ભરવામાં આવી રહ્યું છે...',
+  kn: '⚡ AI ಮೂಲಕ ಫಾರ್ಮ್ ಭರ್ತಿ ಮಾಡಲಾಗುತ್ತಿದೆ...',
+  ml: '⚡ AI ఉపయోగിച്ച് ഫോം പൂരിപ്പിക്കുന്നു...',
+  pa: '⚡ AI ਰਾਹੀਂ ਫਾਰਮ ਭਰਿਆ ਜਾ ਰਿਹਾ ਹੈ...',
+  or: '⚡ AI ଦ୍ୱାରା ଫର୍ମ ପୂରଣ ହେଉଛି...',
+  as: '⚡ AI ৰ দ্বাৰা ফৰ্ম পূৰণ কৰা হৈছে...'
+}
+
+const SAMPLE_PROMPT_LABELS = {
+  en: '💡 Tap sample:',
+  bn: '💡 নমুনা ট্যাপ করুন:',
+  hi: '💡 नमूना टैप करें:',
+  mr: '💡 नमुना टॅप करा:',
+  te: '💡 నమూనాను నొక్కండి:',
+  ta: '💡 மாதிரியை தட்டவும்:',
+  gu: '💡 નમૂના ટેપ કરો:',
+  kn: '💡 ಮಾದರಿಯನ್ನು ಒತ್ತಿ:',
+  ml: '💡 സാമ്പിൾ ടാപ്പ് ചെയ്യുക:',
+  pa: '💡 ਨਮੂਨਾ ਟੈਪ ਕਰੋ:',
+  or: '💡 ନମୁନା ଟ୍ୟାପ୍ କରନ୍ତୁ:',
+  as: '💡 নমুনা টিপক:'
+}
+
+const SAMPLE_PROMPTS = {
+  en: [
+    '50 bags Paddy tomorrow at 10 AM',
+    '25 quintal Potato tomorrow afternoon',
+    '1 trolley Mustard tomorrow'
+  ],
+  bn: [
+    '৫০ বস্তা ধান কাল সকাল ১০টায়',
+    '২৫ কুইন্টাল আলু কাল দুপুরে',
+    '১ ট্রলি সরিষা কাল'
+  ],
+  hi: [
+    '20 बोरी गेहूँ कल सुबह 10 बजे',
+    '25 क्विंटल आलू कल दोपहर',
+    '1 ट्रॉली सरसों कल'
+  ],
+  mr: [
+    '५० पोती भात उद्या सकाळी १० वाजता',
+    '२५ क्विंटल बटाटे उद्या दुपारी',
+    '१ ट्रॉली मोहरी उद्या'
+  ],
+  te: [
+    '50 బస్తాల వరి రేపు ఉదయం 10 గంటలకు',
+    '25 క్వింటాళ్ల బంగాళాదుంపలు రేపు మధ్యాహ్నం',
+    '1 ట్రాలీ ఆవాలు రేపు'
+  ],
+  ta: [
+    '50 மூட்டை நெல் நாளை காலை 10 மணிக்கு',
+    '25 குவிண்டால் உருளைக்கிழங்கு நாளை மதியம்',
+    '1 டிராலி கடுகு நாளை'
+  ],
+  gu: [
+    '50 બોરી ડાંગર કાલે સવારે 10 વાગ્યે',
+    '25 ક્વિન્ટલ બટાકા કાલે બપોરે',
+    '1 ટ્રોલી રાઈ કાલે'
+  ],
+  kn: [
+    '50 ಚೀಲ ಭತ್ತ ನಾಳೆ ಬೆಳಗ್ಗೆ 10 ಗಂಟೆಗೆ',
+    '25 ಕ್ವಿಂಟಾಲ್ ಆಲೂಗಡ್ಡೆ ನಾಳೆ ಮಧ್ಯಾಹ್ನ',
+    '1 ಟ್ರಾಲಿ ಸಾಸಿವೆ ನಾಳೆ'
+  ],
+  ml: [
+    '50 ചാക്ക് നെല്ല് നാളെ രാവിലെ 10 മണിക്ക്',
+    '25 ക്വിന്റൽ ഉരുളക്കിഴങ്ങ് നാളെ ഉച്ചയ്ക്ക്',
+    '1 ട്രോളി കടുക് നാളെ'
+  ],
+  pa: [
+    '50 ਬੋਰੀਆਂ ਝੋਨਾ ਕੱਲ੍ਹ ਸਵੇਰੇ 10 ਵਜੇ',
+    '25 ਕੁਇੰਟਲ ਆਲੂ ਕੱਲ੍ਹ ਦੁਪਹਿਰ',
+    '1 ਟਰਾਲੀ ਸਰ੍ਹੋਂ ਕੱਲ੍ਹ'
+  ],
+  or: [
+    '୫୦ ବସ୍ତା ଧାନ କାଲି ସକାଳ ୧୦ଟାରେ',
+    '୨୫ କ୍ୱିଣ୍ଟାଲ ଆଳୁ କାଲି ଅପରାହ୍ନରେ',
+    '୧ ଟ୍ରଲି ସୋରିଷ କାଲି'
+  ],
+  as: [
+    '৫০ বস্তা ধান কাইলৈ পুৱা ১০ বজাত',
+    '২৫ কুইন্টাল আলু কাইলৈ দুপৰীয়া',
+    '১ ট্ৰলি সৰিয়হ কাইলৈ'
+  ]
+}
+
+const CONFIRMED_MAP = {
+  en: '✨ Confirmed Booking Intent',
+  bn: '✨ স্লট বুকিং স্পষ্ট',
+  hi: '✨ स्लॉट स्पष्ट',
+  mr: '✨ स्लॉट बुकिंग निश्चित',
+  te: '✨ స్లాట్ బుకింగ్ స్పష్టం',
+  ta: '✨ முன்பதிவு உறுதிப்படுத்தப்பட்டது',
+  gu: '✨ સ્લોટ બુકિંગ સ્પષ્ટ',
+  kn: '✨ ಸ್ಲಾಟ್ ಬುಕಿಂಗ್ ಸ್ಪಷ್ಟವಾಗಿದೆ',
+  ml: '✨ സ്ലോട്ട് ಬುക്കിംഗ് ഉറപ്പിച്ചു',
+  pa: '✨ ਸਲਾਟ ਬੁਕਿੰਗ ਸਪੱਸ਼ਟ ਹੈ',
+  or: '✨ ସ୍ଲଟ୍ ବୁକିଂ ନିଶ୍ଚିତ',
+  as: '✨ স্লট বুকিং স্পষ্ট'
+}
+
+const TENTATIVE_MAP = {
+  en: '⚠️ Tentative Booking Defaults',
+  bn: '⚠️ প্রাথমিক স্লট (যাচাই করুন)',
+  hi: '⚠️ प्राथमिक स्लॉट (सत्यापित करें)',
+  mr: '⚠️ तात्पुरता स्लॉट (तपासा)',
+  te: '⚠️ తాత్కాలిక స్లాట్ (పరిశీలించండి)',
+  ta: '⚠️ தற்காலிக முன்பதிவு (சரிபார்க்கவும்)',
+  gu: '⚠️ પ્રારંભિક સ્લોટ (ચકાસો)',
+  kn: '⚠️ ತಾತ್ಕಾಲಿಕ ಸ್ಲಾಟ್ (ಪರಿಶೀಲಿಸಿ)',
+  ml: '⚠️ താൽക്കാലിക സ്ലോട്ട് (పరిశోధിക്കുക)',
+  pa: '⚠️ ਆਰਜ਼ੀ ਸਲਾਟ (ਜਾਂਚ ਕਰੋ)',
+  or: '⚠️ ପ୍ରାଥମିକ ସ୍ଲଟ୍ (ଯାଞ୍ଚ କରନ୍ତୁ)',
+  as: '⚠️ প্ৰাথমিক স্লট (পৰীক্ষা কৰক)'
+}
+
+const LISTEN_MAP = {
+  en: 'Listen',
+  bn: 'শুনুন',
+  hi: 'सुनें',
+  mr: 'ऐका',
+  te: 'వినండి',
+  ta: 'கேளுங்கள்',
+  gu: 'સાંભળો',
+  kn: 'ಕೇಳಿ',
+  ml: 'കേൾക്കുക',
+  pa: 'ਸੁਣੋ',
+  or: 'ଶୁଣନ୍ତୁ',
+  as: 'শুনক'
+}
+
+const STOP_MAP = {
+  en: 'Stop',
+  bn: 'থামান',
+  hi: 'रोकें',
+  mr: 'थांबवा',
+  te: 'ఆపండి',
+  ta: 'நிறுத்து',
+  gu: 'રોકો',
+  kn: 'ನಿಲ್ಲಿಸಿ',
+  ml: 'നിർത്തുക',
+  pa: 'ਰੋਕੋ',
+  or: 'ଅଟକାନ୍ତୁ',
+  as: 'ৰখাৱক'
+}
 
 const CROPS = ['Paddy', 'Wheat', 'Mustard', 'Jute', 'Potato', 'Onion']
 
@@ -28,19 +226,16 @@ export default function SlotBookingModal({
   const [activeError, setActiveError] = useState(null)
   const [cancelling, setCancelling] = useState(false)
 
-  // Voice AI Booking State
-  const [speechLang, setSpeechLang] = useState(language || 'bn')
+  // Voice AI Booking State — strictly bound to farmer's selected app language
+  const speechLang = language || 'en'
+  const selectedLangObj = LANGUAGES.find(l => l.code === speechLang) || { code: 'en', label: 'English', native: 'English' }
+
   const [isListening, setIsListening] = useState(false)
   const [isProcessingVoice, setIsProcessingVoice] = useState(false)
   const [voiceAutoFilled, setVoiceAutoFilled] = useState(false)
   const [lastVoiceTranscript, setLastVoiceTranscript] = useState('')
   const [voiceFeedback, setVoiceFeedback] = useState(null)
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
-
-  // Keep speechLang in sync if app language changes
-  useEffect(() => {
-    if (language) setSpeechLang(language)
-  }, [language])
 
   useEffect(() => {
     if (initialCrop) setCrop(initialCrop)
@@ -427,7 +622,7 @@ export default function SlotBookingModal({
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
                       <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                      {speechLang === 'bn' ? 'ভয়েস এআই বুকিং' : speechLang === 'hi' ? 'वॉइस एআই बुकिंग' : 'Voice AI Booking'}
+                      {VOICE_AI_TITLES[speechLang] || VOICE_AI_TITLES.en}
                     </span>
                     {voiceAutoFilled && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
@@ -438,49 +633,28 @@ export default function SlotBookingModal({
                   </div>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate mt-0.5 font-medium">
                     {isListening
-                      ? (speechLang === 'bn' ? '🎙️ শুনছি... বলুন (যেমন: ৫০ বস্তা ধান সকাল ১০টায়)' : speechLang === 'hi' ? '🎙️ सुन रहा हूँ... बोलिए (जैसे: 20 बोरी गेहूँ)' : '🎙️ Listening... speak crop, quantity & slot')
+                      ? (VOICE_LISTENING_PROMPTS[speechLang] || VOICE_LISTENING_PROMPTS.en)
                       : isProcessingVoice
-                      ? (speechLang === 'bn' ? '⚡ এআই দিয়ে ফর্ম পূরণ করা হচ্ছে...' : speechLang === 'hi' ? '⚡ এআই से फॉर्म भरा जा रहा है...' : '⚡ Processing voice intent via Krishi AI Engine...')
+                      ? (VOICE_PROCESSING_PROMPTS[speechLang] || VOICE_PROCESSING_PROMPTS.en)
                       : lastVoiceTranscript
                       ? `"${lastVoiceTranscript}"`
-                      : (speechLang === 'bn' ? 'মাইকে ট্যাপ করে বাংলায় কথা বলুন' : speechLang === 'hi' ? 'माइक दबाकर बोलें' : 'Tap mic to speak your booking')}
+                      : (VOICE_AI_SUBTITLES[speechLang] || VOICE_AI_SUBTITLES.en)}
                   </p>
                 </div>
               </div>
 
-              {/* Language Selector Pills */}
-              <div className="flex items-center gap-1 shrink-0 bg-white/70 dark:bg-slate-900/60 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                {[
-                  { code: 'bn', label: 'বাংলা' },
-                  { code: 'hi', label: 'हिंदी' },
-                  { code: 'en', label: 'EN' },
-                ].map(item => (
-                  <button
-                    key={item.code}
-                    type="button"
-                    onClick={() => setSpeechLang(item.code)}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                      speechLang === item.code
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+              {/* Selected Language Badge (only the farmer's selected language stays) */}
+              <div className="shrink-0 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold shadow-xs">
+                {selectedLangObj?.native || selectedLangObj?.label || 'English'}
               </div>
             </div>
 
             {/* Quick Sample Voice Prompts (1-Click instant voice auto-fill) */}
             <div className="pt-2 border-t border-emerald-500/10 flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                {speechLang === 'bn' ? '💡 নমুনা ট্যাপ করুন:' : speechLang === 'hi' ? '💡 नमूना टैप करें:' : '💡 Tap sample:'}
+                {SAMPLE_PROMPT_LABELS[speechLang] || SAMPLE_PROMPT_LABELS.en}
               </span>
-              {[
-                speechLang === 'bn' ? '৫০ বস্তা ধান কাল সকাল ১০টায়' : speechLang === 'hi' ? '20 बोरी गेहूँ कल सुबह 10 बजे' : '50 bags Paddy tomorrow at 10 AM',
-                speechLang === 'bn' ? '২৫ কুইন্টাল আলু কাল দুপুরে' : speechLang === 'hi' ? '25 क्विंटल आलू कल दोपहर' : '25 quintal Potato tomorrow afternoon',
-                speechLang === 'bn' ? 'এক গাড়ি সরিষা কাল' : speechLang === 'hi' ? 'एक गाड़ी सरसों कल' : '1 trolley Mustard tomorrow'
-              ].map((sample, sIdx) => (
+              {(SAMPLE_PROMPTS[speechLang] || SAMPLE_PROMPTS.en).map((sample, sIdx) => (
                 <button
                   key={sIdx}
                   type="button"
@@ -516,8 +690,8 @@ export default function SlotBookingModal({
                           : 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
                       }`}>
                         {voiceFeedback.has_ambiguity
-                          ? (speechLang === 'bn' ? '⚠️ প্রাথমিক স্লট (যাচাই করুন)' : speechLang === 'hi' ? '⚠️ प्राथमिक स्लॉट (सत्यापित करें)' : '⚠️ Tentative Booking Defaults')
-                          : (speechLang === 'bn' ? '✨ স্লট বুকিং স্পষ্ট' : speechLang === 'hi' ? '✨ स्लॉट स्पष्ट' : '✨ Confirmed Booking Intent')}
+                          ? (TENTATIVE_MAP[speechLang] || TENTATIVE_MAP.en)
+                          : (CONFIRMED_MAP[speechLang] || CONFIRMED_MAP.en)}
                       </span>
                       {voiceFeedback.extracted_data?.quantity_quintals && (
                         <span className="text-[10px] font-semibold bg-white/70 dark:bg-slate-800/70 px-2 py-0.5 rounded-md text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
@@ -557,12 +731,12 @@ export default function SlotBookingModal({
                   {isPlayingAudio ? (
                     <>
                       <VolumeX className="w-4 h-4" />
-                      <span>{speechLang === 'bn' ? 'থামান' : speechLang === 'hi' ? 'रोकें' : 'Stop'}</span>
+                      <span>{STOP_MAP[speechLang] || STOP_MAP.en}</span>
                     </>
                   ) : (
                     <>
                       <Volume2 className="w-4 h-4" />
-                      <span>{speechLang === 'bn' ? 'শুনুন' : speechLang === 'hi' ? 'सुनें' : 'Listen'}</span>
+                      <span>{LISTEN_MAP[speechLang] || LISTEN_MAP.en}</span>
                     </>
                   )}
                 </button>
