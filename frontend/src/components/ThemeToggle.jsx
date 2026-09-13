@@ -10,7 +10,7 @@ export default function ThemeToggle({ dark = false, className = '' }) {
       id="btn-theme-toggle"
       type="button"
       onClick={toggleTheme}
-      className={`relative p-2 rounded-full transition-all duration-300 cursor-pointer flex items-center justify-center shrink-0 active:scale-95 border ${
+      className={`relative p-1.5 sm:p-2 rounded-full transition-all duration-300 cursor-pointer flex items-center justify-center shrink-0 active:scale-95 border ${
         dark
           ? 'bg-white/10 hover:bg-white/20 text-amber-200 border-white/20 shadow-xs'
           : isDark

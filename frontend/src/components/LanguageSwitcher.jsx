@@ -79,7 +79,7 @@ export default function LanguageSwitcher({
         type="button"
         onClick={() => setOpen(!open)}
         aria-label="Change Language"
-        className={`flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 active:scale-95 ${
+        className={`flex items-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 active:scale-95 ${
           isHeader
             ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-xs backdrop-blur-sm'
             : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xs'
@@ -93,9 +93,9 @@ export default function LanguageSwitcher({
 
       {open && (
         <div
-          className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-1.5rem)] max-h-[70vh] overflow-y-auto rounded-2xl bg-white text-slate-900 shadow-2xl border border-slate-100 z-50 py-1.5 animate-fade-in origin-top-right divide-y divide-slate-50"
+          className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-1.5rem)] max-h-[70vh] overflow-y-auto rounded-2xl bg-white dark:bg-[#0a101d] text-slate-900 dark:text-white shadow-2xl border border-slate-100 dark:border-white/10 z-50 py-1.5 animate-fade-in origin-top-right divide-y divide-slate-50 dark:divide-white/5"
         >
-          <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xs px-3.5 py-2 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="sticky top-0 z-10 bg-white/95 dark:bg-[#0a101d]/95 backdrop-blur-xs px-3.5 py-2 border-b border-slate-100 dark:border-white/10 text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Select Language / भाषा / ভাষা
           </div>
           {LANGUAGES.map((lang) => {
@@ -111,18 +111,18 @@ export default function LanguageSwitcher({
                 }}
                 className={`w-full px-3.5 py-2.5 text-left text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
                   isActive
-                    ? 'bg-emerald-50 text-emerald-800 font-bold'
-                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
                   <span className="text-base">{lang.flag}</span>
                   <div>
-                    <p className="leading-tight font-semibold text-slate-800">{lang.native}</p>
-                    <p className="text-[10px] text-slate-400 font-normal">{lang.label}</p>
+                    <p className="leading-tight font-semibold text-slate-800 dark:text-slate-200">{lang.native}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-400 font-normal">{lang.label}</p>
                   </div>
                 </div>
-                {isActive && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                {isActive && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />}
               </button>
             )
           })}

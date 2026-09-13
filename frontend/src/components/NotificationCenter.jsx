@@ -92,7 +92,7 @@ export default function NotificationCenter({ className = '', dark = false, heade
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notifications"
-        className={`relative p-2 sm:p-2.5 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 cursor-pointer shrink-0 active:scale-95 ${
+        className={`relative p-1.5 sm:p-2.5 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 cursor-pointer shrink-0 active:scale-95 ${
           isDarkHeader
             ? 'text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 shadow-xs backdrop-blur-sm'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 bg-white'
@@ -107,17 +107,17 @@ export default function NotificationCenter({ className = '', dark = false, heade
         )}
       </button>
 
-      {/* Popover Dropdown Panel - Clean Light Theme */}
+      {/* Popover Dropdown Panel */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-[calc(100vw-1.5rem)] max-w-sm sm:w-96 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200/90 bg-white text-slate-900 z-50 overflow-hidden transform transition-all animate-fade-in origin-top-right"
+          className="absolute right-0 mt-2 w-[calc(100vw-1.5rem)] max-w-sm sm:w-96 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#0a101d] text-slate-900 dark:text-white z-50 overflow-hidden transform transition-all animate-fade-in origin-top-right"
         >
           {/* Header */}
-          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/90 flex items-center justify-between">
+          <div className="px-4 py-3 border-b border-slate-100 dark:border-white/10 bg-slate-50/90 dark:bg-white/5 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-sm tracking-tight text-slate-900">{t('notifications.center_title')}</span>
+              <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">{t('notifications.center_title')}</span>
               {unreadCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-green-100 text-green-800 border border-green-200">
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-green-100 dark:bg-emerald-500/20 text-green-800 dark:text-emerald-300 border border-green-200 dark:border-emerald-500/30">
                   {t('notifications.new_count', { count: unreadCount })}
                 </span>
               )}
@@ -129,7 +129,7 @@ export default function NotificationCenter({ className = '', dark = false, heade
                   type="button"
                   onClick={markAllAsRead}
                   title={t('notifications.mark_all_read')}
-                  className="px-2 py-1 rounded-lg text-xs font-semibold text-green-700 hover:bg-green-50 transition-colors flex items-center gap-1 cursor-pointer"
+                  className="px-2 py-1 rounded-lg text-xs font-semibold text-green-700 dark:text-emerald-400 hover:bg-green-50 dark:hover:bg-white/5 transition-colors flex items-center gap-1 cursor-pointer"
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{t('notifications.mark_all_read')}</span>
@@ -140,7 +140,7 @@ export default function NotificationCenter({ className = '', dark = false, heade
                   type="button"
                   onClick={clearAll}
                   title={t('notifications.clear_all')}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -148,7 +148,7 @@ export default function NotificationCenter({ className = '', dark = false, heade
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -157,14 +157,14 @@ export default function NotificationCenter({ className = '', dark = false, heade
 
           {/* Filter Tabs */}
           {notifications.length > 0 && (
-            <div className="flex px-3 py-1.5 border-b border-slate-100 bg-slate-50/50 text-xs font-semibold text-slate-500">
+            <div className="flex px-3 py-1.5 border-b border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 text-xs font-semibold text-slate-500 dark:text-slate-400">
               <button
                 type="button"
                 onClick={() => setFilter('all')}
                 className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
                   filter === 'all'
-                    ? 'bg-white text-slate-900 font-bold shadow-xs border border-slate-200/70'
-                    : 'hover:text-slate-700'
+                    ? 'bg-white dark:bg-[#0e1626] text-slate-900 dark:text-white font-bold shadow-xs border border-slate-200/70 dark:border-white/10'
+                    : 'hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
                 {t('notifications.tab_all', { count: notifications.length })}
@@ -174,8 +174,8 @@ export default function NotificationCenter({ className = '', dark = false, heade
                 onClick={() => setFilter('unread')}
                 className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
                   filter === 'unread'
-                    ? 'bg-white text-slate-900 font-bold shadow-xs border border-slate-200/70'
-                    : 'hover:text-slate-700'
+                    ? 'bg-white dark:bg-[#0e1626] text-slate-900 dark:text-white font-bold shadow-xs border border-slate-200/70 dark:border-white/10'
+                    : 'hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
                 {t('notifications.tab_unread', { count: unreadCount })}
@@ -184,13 +184,13 @@ export default function NotificationCenter({ className = '', dark = false, heade
           )}
 
           {/* Notification List */}
-          <div className="max-h-[340px] overflow-y-auto divide-y divide-slate-100">
+          <div className="max-h-[340px] overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
             {displayedNotifications.length === 0 ? (
               <div className="py-10 px-4 text-center">
-                <div className="w-11 h-11 mx-auto mb-2.5 rounded-2xl flex items-center justify-center bg-slate-50 border border-slate-200 text-slate-400">
+                <div className="w-11 h-11 mx-auto mb-2.5 rounded-2xl flex items-center justify-center bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-400">
                   <Bell className="w-5 h-5 opacity-40" />
                 </div>
-                <p className="text-sm font-bold text-slate-700">
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
                   {filter === 'unread' ? t('notifications.empty_unread_title') : t('notifications.empty_all_title')}
                 </p>
                 <p className="text-xs text-slate-400 mt-1 max-w-[240px] mx-auto leading-relaxed">
@@ -206,8 +206,8 @@ export default function NotificationCenter({ className = '', dark = false, heade
                   onClick={() => !n.read && markAsRead(n.id)}
                   className={`px-3.5 py-3 text-left transition-colors cursor-pointer group flex items-start gap-3 ${
                     n.read
-                      ? 'bg-white hover:bg-slate-50 text-slate-600'
-                      : 'bg-green-50/50 hover:bg-green-50/80 text-slate-900'
+                      ? 'bg-white dark:bg-[#0a101d] hover:bg-slate-50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'
+                      : 'bg-green-50/50 dark:bg-emerald-950/30 hover:bg-green-50/80 dark:hover:bg-emerald-950/50 text-slate-900 dark:text-white'
                   }`}
                 >
                   {/* Category Icon */}
@@ -225,8 +225,8 @@ export default function NotificationCenter({ className = '', dark = false, heade
                       <p
                         className={`text-xs truncate ${
                           n.read
-                            ? 'text-slate-700 font-semibold'
-                            : 'text-slate-900 font-bold'
+                            ? 'text-slate-700 dark:text-slate-300 font-semibold'
+                            : 'text-slate-900 dark:text-white font-bold'
                         }`}
                       >
                         {n.title}
@@ -235,7 +235,7 @@ export default function NotificationCenter({ className = '', dark = false, heade
                         {formatTimeAgo(n.timestamp)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed line-clamp-2">
                       {n.message}
                     </p>
                   </div>
@@ -266,10 +266,10 @@ export default function NotificationCenter({ className = '', dark = false, heade
           </div>
 
           {/* Footer status */}
-          <div className="px-4 py-2 border-t border-slate-100 bg-slate-50 text-[11px] flex items-center justify-between font-mono text-slate-500">
+          <div className="px-4 py-2 border-t border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-[11px] flex items-center justify-between font-mono text-slate-500 dark:text-slate-400">
             <span>{t('notifications.ingest_active')}</span>
-            <span className="flex items-center gap-1.5 text-green-700 font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span className="flex items-center gap-1.5 text-green-700 dark:text-emerald-400 font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 dark:bg-emerald-400 animate-pulse" />
               {t('notifications.connected')}
             </span>
           </div>

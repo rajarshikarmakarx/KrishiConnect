@@ -52,20 +52,20 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp, onOpenStandards }
         id="btn-profile-menu"
         onClick={() => setOpen(o => !o)}
         aria-label="User Profile"
-        className="flex items-center gap-2 sm:gap-2.5 p-1 sm:pl-1.5 sm:pr-3 sm:py-1 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 cursor-pointer shrink-0 shadow-xs active:scale-95"
+        className="flex items-center gap-1.5 sm:gap-2.5 p-1 sm:pl-1.5 sm:pr-3 sm:py-1 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 cursor-pointer shrink-0 shadow-xs active:scale-95"
       >
         <div className="w-7 h-7 sm:w-8 sm:h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center shrink-0 shadow-xs ring-2 ring-white/20">
-          <User className="w-4 h-4 text-white" />
+          <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
         </div>
         <div className="hidden sm:flex flex-col text-left min-w-0 pr-0.5">
-          <span className="text-xs sm:text-sm font-bold text-white leading-tight truncate max-w-[140px] md:max-w-[180px]">
+          <span className="text-xs sm:text-sm font-bold text-white leading-tight truncate max-w-[120px] md:max-w-[160px]">
             {user.full_name}
           </span>
           <span className="text-[10px] text-emerald-200/90 font-medium leading-tight hidden md:inline truncate">
             {user.village ? translateLocation(`${user.village}, ${user.district}`) : t('nav.farmer_role')}
           </span>
         </div>
-        <ChevronDown className={`w-3.5 h-3.5 text-emerald-200/80 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-200/80 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
@@ -97,6 +97,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp, onOpenStandards }
           <div className="p-2 space-y-1">
             {/* Agmark Standards — opens Quality Standards modal */}
             <button
+              id="btn-quality-standards-menu"
               onClick={() => { onOpenStandards(); setOpen(false) }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 rounded-xl transition-colors font-medium cursor-pointer"
             >
@@ -105,6 +106,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp, onOpenStandards }
             </button>
             {/* MSP Rates — opens MSP modal */}
             <button
+              id="btn-msp-rates-menu"
               onClick={() => { onOpenMsp(); setOpen(false) }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 rounded-xl transition-colors font-medium cursor-pointer"
             >
@@ -378,19 +380,19 @@ export default function FarmerApp() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#060a12] text-slate-900 dark:text-slate-100 flex flex-col w-full max-w-full overflow-x-hidden font-sans transition-colors duration-200">
       {/* Header — deep emerald gradient with tricolor bottom stripe */}
-      <header className="bg-gradient-to-r from-emerald-950 via-[#0b3d27] to-emerald-950 text-white px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 sticky top-0 z-30 shadow-md w-full relative">
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3 sm:gap-6 min-w-0">
+      <header className="bg-gradient-to-r from-emerald-950 via-[#0b3d27] to-emerald-950 text-white px-2.5 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 sticky top-0 z-30 shadow-md w-full backdrop-blur-md">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2 sm:gap-4 lg:gap-6 min-w-0">
           {/* Brand & Gov Emblem */}
-          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 shrink-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center shadow-md ring-2 ring-white/20 shrink-0">
-              <Wheat className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-md ring-2 ring-white/20 shrink-0">
+              <Wheat className="w-4 h-4 sm:w-5.5 sm:h-5.5 text-white" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-xl font-extrabold tracking-tight text-white whitespace-nowrap leading-none select-none font-display">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h1 className="text-sm sm:text-lg lg:text-xl font-extrabold tracking-tight text-white whitespace-nowrap leading-none select-none font-display">
                   {t('common.app_name')}
                 </h1>
-                <span className="hidden md:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/40 shadow-xs">
+                <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/40 shadow-xs">
                   {t('common.gov_portal_badge')}
                 </span>
               </div>
@@ -402,42 +404,30 @@ export default function FarmerApp() {
 
           {/* Right Action Items */}
           <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-2.5 shrink-0">
-            <LanguageSwitcher dark={true} />
-            <ThemeToggle />
-
-            {/* Agmark Quality Standards — pill button, green tint */}
+            {/* Agmark Quality Standards — pill button on desktop */}
             <button
               id="btn-quality-standards-header"
               onClick={() => setShowQualityStandardsModal(true)}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-all cursor-pointer shadow-xs active:scale-95"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
               title={t('quality_standards.modal_title')}
             >
               <Award className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
               <span>Agmark Standards</span>
             </button>
-            {/* Mobile Agmark button (icon only) */}
-            <button
-              id="btn-quality-standards-header-sm"
-              onClick={() => setShowQualityStandardsModal(true)}
-              className="lg:hidden flex items-center gap-1 px-2 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-all cursor-pointer shadow-xs active:scale-95"
-              title={t('quality_standards.modal_title')}
-            >
-              <Award className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
-              <span className="hidden sm:inline">Agmark</span>
-            </button>
 
-            {/* MSP Rates — amber pill button */}
+            {/* MSP Rates — amber pill button on tablet/desktop */}
             <button
               id="btn-msp-rates-header"
               onClick={() => setShowMspModal(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 rounded-full bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-bold border border-amber-400/40 transition-all cursor-pointer shadow-xs shrink-0 active:scale-95"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-bold border border-amber-400/40 transition-all cursor-pointer shadow-xs shrink-0 active:scale-95"
               title={t('msp.title')}
             >
               <Scale className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-              <span className="hidden sm:inline">{t('nav.govt_msp_rates')}</span>
-              <span className="sm:hidden font-bold">MSP</span>
+              <span>{t('nav.govt_msp_rates')}</span>
             </button>
 
+            <LanguageSwitcher dark={true} />
+            <ThemeToggle dark={true} />
             <NotificationCenter dark={true} />
             <ProfileMenu
               user={user}
@@ -450,7 +440,7 @@ export default function FarmerApp() {
         </div>
 
         {/* Indian Tricolor Government Micro-Stripe */}
-        <div className="h-[2px] w-full bg-gradient-to-r from-amber-500 via-white/80 to-emerald-400 absolute bottom-0 left-0 opacity-80" />
+        <div className="h-[2px] w-full bg-gradient-to-r from-amber-500 via-white/80 to-emerald-400 absolute bottom-0 left-0 opacity-80 pointer-events-none" />
       </header>
 
       {/* Active queue banner — glassmorphism */}
