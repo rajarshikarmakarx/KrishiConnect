@@ -182,31 +182,77 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
   const [isManualOverride, setIsManualOverride] = useState(false)
 
   const numMoisture = parseFloat(moisture) || 0
-  const isSpoiled = numMoisture >= 20.0
-  const isMarginal = numMoisture > 17.0 && numMoisture < 20.0
-  const isGradeB = (numMoisture > 14.0 && numMoisture <= 17.0) || chaff > 1.5 || damaged > 2.0
-  const isGradeA = numMoisture <= 14.0 && chaff <= 1.5 && damaged <= 2.0
+  const numChaff = parseFloat(chaff) || 0
+  const numDamaged = parseFloat(damaged) || 0
 
-  let gradeLabel = 'Grade A (FAQ Standard)'
+  // 1. Evaluate Moisture Tier
+  let tierMoisture = 1
+  if (numMoisture <= 14.0) tierMoisture = 1
+  else if (numMoisture <= 17.0) tierMoisture = 2
+  else if (numMoisture < 20.0) tierMoisture = 3
+  else tierMoisture = 4
+
+  // 2. Evaluate Foreign Matter / Chaff Tier
+  let tierChaff = 1
+  if (numChaff <= 1.0) tierChaff = 1
+  else if (numChaff <= 1.5) tierChaff = 2
+  else if (numChaff <= 3.0) tierChaff = 3
+  else tierChaff = 4
+
+  // 3. Evaluate Damaged / Discolored Kernels Tier
+  let tierDamaged = 1
+  if (numDamaged <= 1.0) tierDamaged = 1
+  else if (numDamaged <= 3.0) tierDamaged = 2
+  else if (numDamaged <= 5.0) tierDamaged = 3
+  else tierDamaged = 4
+
+  // Composite 3-Parameter Average Tier
+  const avgTier = (tierMoisture + tierChaff + tierDamaged) / 3.0
+
+  const isSpoiled = numMoisture >= 20.0 || numChaff > 3.0 || numDamaged > 5.0 || avgTier > 3.4
+  const isMarginal = !isSpoiled && (numMoisture > 17.0 || avgTier > 2.4)
+  const isGradeB = !isSpoiled && !isMarginal && avgTier > 1.0
+  const isGradeA = !isSpoiled && !isMarginal && !isGradeB
+
+  let gradeLabel = 'Grade A · FAQ Standard (Grade I Premium)'
   let gradeBadgeColor = 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/30'
   let suggestedRate = mspRate
   let discountPercent = 0
+  let gradeDesc = 'Excellent produce quality! Meets Govt Fair Average Quality (FAQ) Grade I norms for full statutory MSP.'
 
   if (isSpoiled) {
-    gradeLabel = 'Rejected · Silo Spoilage Hazard (≥20% Moisture)'
+    if (numMoisture >= 20.0) {
+      gradeLabel = `Rejected · Silo Spoilage Hazard (${numMoisture.toFixed(1)}% Moisture)`
+      gradeDesc = '⚠️ Severe Spoilage Risk: Moisture (≥20.0%) exceeds safe silo storage limits. Direct intake blocked to prevent fungal aflatoxin rot.'
+    } else if (numChaff > 3.0) {
+      gradeLabel = `Rejected · Sample Grade (${numChaff.toFixed(1)}% Foreign Chaff)`
+      gradeDesc = '⚠️ Sample Grade: Foreign matter / chaff exceeds permissible statutory threshold (3.0%). Produce rejected for direct procurement.'
+    } else if (numDamaged > 5.0) {
+      gradeLabel = `Rejected · Sample Grade (${numDamaged.toFixed(1)}% Damaged Kernels)`
+      gradeDesc = '⚠️ Sample Grade: Damaged/discolored grains exceed permissible statutory threshold (5.0%). Produce rejected for direct procurement.'
+    } else {
+      gradeLabel = `Rejected · Sample Grade (Average Tier ${avgTier.toFixed(2)})`
+      gradeDesc = '⚠️ Sample Grade Rejection: Composite 3-parameter quality score exceeds permissible commercial thresholds.'
+    }
     gradeBadgeColor = 'bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-300 border-red-300 dark:border-red-500/30'
     suggestedRate = 0
     discountPercent = 100
   } else if (isMarginal) {
-    gradeLabel = 'Grade C / High Moisture (17.1-19.9%) · Sun-Drying Needed'
+    gradeLabel = numMoisture > 17.0
+      ? `Grade C / High Moisture (${numMoisture.toFixed(1)}%) · Sun-Drying Needed`
+      : `Grade C / Utility (Grade III & IV) · 10% Value Cut`
     gradeBadgeColor = 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-500/30'
     suggestedRate = Math.round(mspRate * 0.90 * 100) / 100
     discountPercent = 10
+    gradeDesc = numMoisture > 17.0
+      ? 'Moisture is marginal (17.1-19.9%). Mandi courtyard sun-drying grace (2.5h) or 10% Grade C value cut recommended.'
+      : 'Composite quality evaluated as Grade III & IV Utility. Blending or 10% value cut applies.'
   } else if (isGradeB) {
-    gradeLabel = 'Grade B · Permissible Standard'
+    gradeLabel = 'Grade B · Permissible Standard (Grade II)'
     gradeBadgeColor = 'bg-blue-50 dark:bg-blue-950/40 text-blue-900 dark:text-blue-300 border-blue-300 dark:border-blue-500/30'
     suggestedRate = Math.round(mspRate * 0.98 * 100) / 100
     discountPercent = 2
+    gradeDesc = 'Composite Agmark score within permissible Grade II limits. Approved with statutory 2% value cut.'
   }
 
   const [rate, setRate] = useState(String(suggestedRate))
@@ -222,7 +268,7 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
 
   const handleSubmit = async () => {
     if (isSpoiled) {
-      return toast.error('Intake Prohibited: Produce moisture exceeds 20.0% safety threshold. Please reject or grant sun-drying grace.')
+      return toast.error('Intake Prohibited: Produce fails Agmark quality thresholds. Please reject lot or grant sun-drying grace.')
     }
     if (!acceptedQty || !rate) return toast.error('Enter accepted quantity and rate')
     setLoading(true)
@@ -255,7 +301,8 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
         notes: notes || undefined
       })
       if (actionType === 'REJECT') {
-        toast.error(`Token ${token} produce rejected (${numMoisture.toFixed(1)}% moisture). Farmer notified.`, { duration: 4000 })
+        const rejDetail = numMoisture >= 20.0 ? `${numMoisture.toFixed(1)}% moisture` : numChaff > 3.0 ? `${numChaff.toFixed(1)}% chaff` : numDamaged > 5.0 ? `${numDamaged.toFixed(1)}% damaged` : 'defect limits exceeded'
+        toast.error(`Token ${token} produce rejected (${rejDetail}). Farmer notified.`, { duration: 4000 })
       } else {
         toast.success(`Token ${token} granted 2.5h sun-drying grace. Farmer notified.`, { duration: 4000, icon: '☀️' })
       }
@@ -377,13 +424,7 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
                   <p className="font-extrabold text-sm">{gradeLabel}</p>
                 </div>
                 <p className="text-[11px] opacity-90 mt-0.5 leading-relaxed">
-                  {isSpoiled
-                    ? "⚠️ Severe Spoilage Risk: Moisture (≥20.0%) exceeds safety threshold. Direct silo procurement blocked to prevent fungal aflatoxin."
-                    : isMarginal
-                    ? "Moisture is slightly above FAQ limit (17-20%). Granting 2.5h yard drying grace or Grade C valuation is recommended."
-                    : isGradeB
-                    ? "Moisture within permissible limit (14-17%). Approved for intake at standard rate."
-                    : "Excellent produce quality! Meets Govt Fair Average Quality (FAQ) norms for full statutory MSP."}
+                  {gradeDesc}
                 </p>
               </div>
             </div>
@@ -447,11 +488,13 @@ function CompleteModal({ queueId, token, crop, expectedQty, farmerName, initialA
                 </div>
                 <div>
                   <span className="text-slate-500 dark:text-slate-400 block">Grade Adjustment</span>
-                  <span className={`font-bold ${isGradeB ? 'text-blue-600 dark:text-blue-400' : isMarginal ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  <span className={`font-bold ${isGradeB ? 'text-blue-600 dark:text-blue-400' : isMarginal ? 'text-amber-600 dark:text-amber-400' : isSpoiled ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                     {isGradeB
                       ? `-2% (-₹${(mspRate - suggestedRate).toFixed(2)})`
                       : isMarginal
                       ? `-10% (-₹${(mspRate - suggestedRate).toFixed(2)})`
+                      : isSpoiled
+                      ? 'Rejection (₹0.00)'
                       : '0% (Full Rate)'}
                   </span>
                 </div>

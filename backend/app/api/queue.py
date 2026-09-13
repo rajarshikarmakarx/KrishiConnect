@@ -949,6 +949,11 @@ async def complete_procurement(
         )
 
     grade, decision, _, reason = compute_quality_grade(entry.crop, moisture, chaff, damaged)
+    if decision == "REJECTED" or grade == "Rejected":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Safety Hazard: {reason or 'Produce exceeds Agmark defect limits'}. Cannot procure rejected produce. Use 'Reject Lot'."
+        )
 
     if not entry.processing_started_at:
         entry.processing_started_at = datetime.now(timezone.utc)
