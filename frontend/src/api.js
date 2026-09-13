@@ -120,6 +120,7 @@ export const api = {
 
   // Queue operations (operator & assayer)
   cancelBooking: (queueId) => request('POST', `/queue/${queueId}/cancel`),
+  bumpQueueEntry: (queueId, data) => request('POST', `/queue/${queueId}/bump`, data),
   callNext: (centreId) => request('POST', `/queue/centre/${centreId}/call-next`),
   callSpecific: (queueId) => request('POST', `/queue/${queueId}/call`),
   startProcessing: (queueId) => request('POST', `/queue/${queueId}/start`),
@@ -144,6 +145,11 @@ export const api = {
   getMspRates: () => request('GET', '/ai/msp-rates'),
   getQualityStandards: () => request('GET', '/ai/quality-standards'),
   getAiDataInfo: () => request('GET', '/ai/data-info'),
+  getVoiceIntent: (transcript, lang = 'en', centreId = null) =>
+    request('POST', '/ai/voice-intent', { transcript, lang, centre_id: centreId }),
+  sendAiChat: (message, lang = 'en', history = [], farmerName = null, village = null) =>
+    request('POST', '/ai/chat', { message, lang, history, farmer_name: farmerName, village }),
+  getAdminAiOverview: () => request('GET', '/ai/admin-overview'),
 }
 
 export default api

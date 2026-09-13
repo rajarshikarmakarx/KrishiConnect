@@ -505,4 +505,30 @@ export default {
     session_expired: 'Your session has expired. Please log in again.',
   },
 
+  chatbot: {
+    title: 'Krishi Sahayak AI',
+    subtitle: 'Multilingual Agricultural Advisor & Mandi Assistant',
+    badge: 'Groq Llama 3.3 70B',
+    placeholder: 'Ask about MSP rates, mandi queue times, moisture standards...',
+    greeting: 'Namaste! I am Krishi Sahayak, your AI farming & mandi assistant. How can I help you today?',
+    suggested_chips: [
+      'What is today\'s MSP rate for Paddy?',
+      'How to reduce grain moisture before mandi arrival?',
+      'Book a slot for 50 quintal wheat tomorrow',
+      'What are the Agmark quality standards for Mustard?'
+    ],
+    intent_detected: 'Booking Intent Detected',
+    intent_booking_prompt: 'Would you like to book a slot for {crop} ({qty} kg)?',
+    btn_proceed_booking: 'Proceed to Slot Booking',
+    powered_by: 'Powered by Groq Llama 3.3 70B & Mandi Real-Time Data',
+  },
+
+  enam: {
+    title: 'e-NAM APMC Regional Price Surge Forecaster',
+    subtitle: 'Cross-Mandi Price Arbitrage vs Statutory MSP Influx Forecaster',
+    badge: 'e-NAM Live Arbitrage AI',
+    arbitrage_alert: 'High Influx Warning: Regional APMC spot prices are trading below statutory MSP.',
+    arbitrage_desc: 'Farmers are incentivised to route produce to Government MSP centres for higher realized returns.',
+  },
+
 }
