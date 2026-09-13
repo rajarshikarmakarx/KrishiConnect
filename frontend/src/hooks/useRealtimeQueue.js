@@ -7,6 +7,17 @@ export function getWsBaseUrl() {
   return `${protocol}//${hostname}:8000`
 }
 
+function safeCloseWs(ws) {
+  if (!ws) return
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.close()
+  } else if (ws.readyState === WebSocket.CONNECTING) {
+    ws.onopen = () => {
+      try { ws.close() } catch {}
+    }
+  }
+}
+
 /**
  * WebSocket hook for real-time centre queue updates
  * Connects to the centre queue channel and broadcasts updates
@@ -87,9 +98,7 @@ export function useCentreQueue(centreId, onUpdate) {
       mountedRef.current = false
       clearTimeout(reconnectTimer.current)
       clearInterval(pingTimer.current)
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
+      safeCloseWs(wsRef.current)
     }
   }, [connect])
 
@@ -179,9 +188,7 @@ export function useFarmerNotifications(farmerId, token, onNotification) {
       mountedRef.current = false
       clearTimeout(reconnectTimer.current)
       clearInterval(pingTimer.current)
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
+      safeCloseWs(wsRef.current)
     }
   }, [connect])
 
@@ -265,9 +272,7 @@ export function useAdminQueue(onUpdate) {
       mountedRef.current = false
       clearTimeout(reconnectTimer.current)
       clearInterval(pingTimer.current)
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
+      safeCloseWs(wsRef.current)
     }
   }, [connect])
 

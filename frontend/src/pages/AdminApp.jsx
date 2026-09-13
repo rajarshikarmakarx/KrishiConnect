@@ -68,6 +68,64 @@ function CentreRow({ centre }) {
   )
 }
 
+function AiOverviewCard({ title, tag, insight, loading, onRefresh, engine, time }) {
+  return (
+    <div className="mt-4 rounded-2xl bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-amber-500/5 dark:from-emerald-950/25 dark:via-slate-900/40 dark:to-slate-900/60 border border-emerald-500/20 dark:border-emerald-500/30 p-3.5 sm:p-4 shadow-xs relative overflow-hidden transition-all">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-emerald-500/15 dark:bg-emerald-400/15 border border-emerald-500/30 flex items-center justify-center text-emerald-700 dark:text-emerald-300 shrink-0 shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-500 dark:text-amber-400" />
+          </div>
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-display flex items-center gap-1.5">
+            {title || 'AI Overview'}
+            {tag && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                {tag}
+              </span>
+            )}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {engine && (
+            <span className="hidden sm:inline-block text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-white/60 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/10">
+              {engine}
+            </span>
+          )}
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={loading}
+              title="Re-generate AI Insight"
+              className="p-1 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-md hover:bg-emerald-500/10 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-2 text-xs text-slate-400">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+          <span>Generating AI executive insight...</span>
+        </div>
+      ) : (
+        <p className="text-xs sm:text-[13px] leading-relaxed text-slate-700 dark:text-slate-200 font-normal">
+          {insight || 'Analyzing real-time operational telemetry...'}
+        </p>
+      )}
+
+      {time && (
+        <div className="mt-2 pt-1.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500">
+          <span>Official KrishiConnect Decision Support</span>
+          <span>Updated {time}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AdminProfileMenu({ user, logout }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -142,22 +200,41 @@ export default function AdminApp() {
   const [healthData, setHealthData] = useState(null)
   const [aiDataInfo, setAiDataInfo] = useState(null)
   const [mspData, setMspData] = useState(null)
+  const [aiOverview, setAiOverview] = useState(null)
+  const [aiOverviewLoading, setAiOverviewLoading] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  const refreshAiOverview = async () => {
+    setAiOverviewLoading(true)
+    try {
+      const data = await api.getAdminAiOverview()
+      if (data) {
+        setAiOverview(data)
+        toast.success('AI Overviews updated with latest telemetry')
+      }
+    } catch {
+      toast.error('Could not refresh AI Overviews')
+    } finally {
+      setAiOverviewLoading(false)
+    }
+  }
 
   const loadAll = useCallback(async () => {
     try {
-      const [dist, impact, health, aiInfo, msp] = await Promise.all([
+      const [dist, impact, health, aiInfo, msp, aiOver] = await Promise.all([
         api.getDistrictAnalytics(),
         api.getImpactMetrics().catch(() => null),
         api.getSystemHealth().catch(() => null),
         api.getAiDataInfo().catch(() => null),
-        api.getMspRates().catch(() => null)
+        api.getMspRates().catch(() => null),
+        api.getAdminAiOverview().catch(() => null)
       ])
       setAnalytics(dist)
       setImpactData(impact)
       setHealthData(health)
       setAiDataInfo(aiInfo)
       setMspData(msp)
+      if (aiOver) setAiOverview(aiOver)
 
       // District congestion and milestone check
       if (dist) {
@@ -332,6 +409,15 @@ export default function AdminApp() {
                     <Bar dataKey="served" name="Served Today" fill="#15803d" radius={[4,4,0,0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                <AiOverviewCard
+                  title="AI Queue & Bottleneck Overview"
+                  tag="Live Load Balancing"
+                  insight={aiOverview?.queue_overview}
+                  loading={aiOverviewLoading}
+                  onRefresh={refreshAiOverview}
+                  engine={aiOverview?.engine}
+                  time={aiOverview?.generated_at}
+                />
               </div>
 
               {/* Payment Status */}
@@ -368,6 +454,15 @@ export default function AdminApp() {
                     </div>
                   </div>
                 </div>
+                <AiOverviewCard
+                  title="AI Disbursal & DBT Reconciliation Overview"
+                  tag="Direct Payouts"
+                  insight={aiOverview?.settlement_overview}
+                  loading={aiOverviewLoading}
+                  onRefresh={refreshAiOverview}
+                  engine={aiOverview?.engine}
+                  time={aiOverview?.generated_at}
+                />
               </div>
             </div>
 
@@ -387,6 +482,15 @@ export default function AdminApp() {
                     <Line type="monotone" dataKey="served" name="Farmers Served" stroke="#15803d" strokeWidth={2.5} dot={{ fill: '#15803d', strokeWidth: 0, r: 4 }} />
                   </LineChart>
                 </ResponsiveContainer>
+                <AiOverviewCard
+                  title="AI Intake Velocity & Arrival Trend Overview"
+                  tag="Throughput Dynamics"
+                  insight={aiOverview?.throughput_overview}
+                  loading={aiOverviewLoading}
+                  onRefresh={refreshAiOverview}
+                  engine={aiOverview?.engine}
+                  time={aiOverview?.generated_at}
+                />
               </div>
             )}
 
@@ -534,6 +638,15 @@ export default function AdminApp() {
                   </tbody>
                 </table>
               </div>
+              <AiOverviewCard
+                title="AI Benchmark & Field Impact Overview"
+                tag="SIH Statutory Evaluation"
+                insight={aiOverview?.impact_overview}
+                loading={aiOverviewLoading}
+                onRefresh={refreshAiOverview}
+                engine={aiOverview?.engine}
+                time={aiOverview?.generated_at}
+              />
             </div>
 
             {/* Post-deployment KPIs & Scalability Info */}

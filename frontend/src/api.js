@@ -144,6 +144,11 @@ export const api = {
   getAiRecommendation: (village) => request('GET', `/ai/recommend${village ? `?village=${encodeURIComponent(village)}` : ''}`),
   getMspRates: () => request('GET', '/ai/msp-rates'),
   getAiDataInfo: () => request('GET', '/ai/data-info'),
+  getVoiceIntent: (transcript, lang = 'en', centreId = null) =>
+    request('POST', '/api/v1/ai/voice-intent', { transcript, lang, centre_id: centreId }),
+  sendAiChat: (message, lang = 'en', history = [], farmerName = null, village = null) =>
+    request('POST', '/api/v1/ai/chat', { message, lang, history, farmer_name: farmerName, village }),
+  getAdminAiOverview: () => request('GET', '/ai/admin-overview'),
 }
 
 export default api

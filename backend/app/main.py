@@ -64,6 +64,7 @@ app.include_router(queue_router)
 app.include_router(payments_router)
 app.include_router(analytics_router)
 app.include_router(ai_router)
+app.include_router(ai_router, prefix="/api/v1")
 app.include_router(ws_router)
 app.include_router(locations_router)
 

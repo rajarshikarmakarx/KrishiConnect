@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../AuthContext'
 import { useNotifications } from '../NotificationContext'
 import { useTranslation } from '../i18n'
-import { Wheat, MapPin, Clock, Users, Star, ChevronRight, History, Bell, LogOut, X, CheckCircle, Ticket, User, ChevronDown, Settings, Scale, Award } from 'lucide-react'
+import { Wheat, MapPin, Clock, Users, Star, ChevronRight, History, Bell, LogOut, X, CheckCircle, Ticket, User, ChevronDown, Settings, Scale, Award, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
 import NotificationCenter from '../components/NotificationCenter'
@@ -17,6 +17,7 @@ import CompletionConfirmation from '../components/farmer/CompletionConfirmation'
 import ProfileEdit from '../components/farmer/ProfileEdit'
 import FarmerHistory from '../components/farmer/FarmerHistory'
 import MspRatesModal from '../components/farmer/MspRatesModal'
+import KrishiChatbotModal from '../components/farmer/KrishiChatbotModal'
 import { useFarmerNotifications, useCentreQueue } from '../hooks/useRealtimeQueue'
 
 function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
@@ -110,7 +111,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp }) {
 export default function FarmerApp() {
   const { user, logout } = useAuth()
   const { addNotification } = useNotifications()
-  const { t, translateCrop, translateCentreName, formatNumber } = useTranslation()
+  const { t, language, translateCrop, translateCentreName, formatNumber } = useTranslation()
   const [tab, setTab] = useState('centres')
   const [centres, setCentres] = useState([])
   const [loadingCentres, setLoadingCentres] = useState(true)
@@ -121,6 +122,7 @@ export default function FarmerApp() {
   const [newToken, setNewToken] = useState(null)
   const [showProfileEdit, setShowProfileEdit] = useState(false)
   const [showMspModal, setShowMspModal] = useState(false)
+  const [showChatbot, setShowChatbot] = useState(false)
 
   const TABS = [
     { id: 'centres', label: t('nav.centres'), icon: MapPin },
@@ -463,6 +465,40 @@ export default function FarmerApp() {
       {/* MSP Rates Modal */}
       {showMspModal && (
         <MspRatesModal onClose={() => setShowMspModal(false)} />
+      )}
+
+      {/* Floating AI Sahayak Assistant Launcher */}
+      <button
+        type="button"
+        id="btn-krishi-ai-sahayak"
+        onClick={() => setShowChatbot(true)}
+        className="fixed bottom-20 sm:bottom-7 right-4 sm:right-7 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-950 via-[#0b3d27] to-emerald-900 text-white shadow-xl shadow-emerald-950/40 border border-emerald-500/40 hover:border-emerald-400 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+        title="Krishi AI Sahayak"
+      >
+        <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-xs">
+          <Sparkles className="w-4 h-4 text-amber-200 animate-pulse" />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-emerald-950 animate-ping opacity-75" />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-emerald-950" />
+        </div>
+        <div className="flex flex-col text-left">
+          <span className="text-xs font-bold font-display text-white leading-tight flex items-center gap-1.5">
+            {language === 'bn' ? 'কৃষি সহায়ক' : language === 'hi' ? 'कृषि सहायक' : 'Krishi AI'}
+            <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40">
+              AI
+            </span>
+          </span>
+          <span className="text-[10px] text-emerald-300 font-medium leading-tight">
+            {language === 'bn' ? '২৪x৭ প্রশ্ন করুন' : language === 'hi' ? '24x7 सहायता' : '24/7 Advisor'}
+          </span>
+        </div>
+      </button>
+
+      {/* Chatbot Modal */}
+      {showChatbot && (
+        <KrishiChatbotModal
+          user={user}
+          onClose={() => setShowChatbot(false)}
+        />
       )}
     </div>
   )
