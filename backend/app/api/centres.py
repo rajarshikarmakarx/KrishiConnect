@@ -3,14 +3,22 @@ KrishiConnect Centres Router
 Dynamic geographic distance calculation and intelligent centre recommendations.
 Redis cache-aside with sub-millisecond response times and batched aggregation queries.
 """
+import json
 from datetime import date
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, case
+from sqlalchemy import select, func, and_, case, delete
 from app.database import get_db
-from app.models import ProcurementCentre, CentreCounter, TimeSlot, QueueEntry, QueueStatus, User
-from app.schemas import CentreOut, CentreDetailOut, SlotOut, CounterOut
+from app.models import (
+    ProcurementCentre, CentreCounter, TimeSlot, QueueEntry,
+    QueueStatus, User, UserRole, CentreQualityStandard
+)
+from app.schemas import (
+    CentreOut, CentreDetailOut, SlotOut, CounterOut,
+    CentreQualityStandardsOut, UpdateCentreQualityStandardsRequest
+)
+from app.quality_standards_data import get_default_standards, DEFAULT_STATUTORY_STANDARDS
 from app.auth import decode_token
 from app.locations_data import find_village_coordinates
 from app.distance import calculate_distance_and_duration
@@ -35,6 +43,14 @@ async def get_current_user_optional(authorization: str = Header(None), db: Async
         return None
     result = await db.execute(select(User).where(User.id == int(user_id_str)))
     return result.scalar_one_or_none()
+
+
+async def get_current_user_required(authorization: str = Header(None), db: AsyncSession = Depends(get_db)) -> User:
+    """Get current user, raising 401 if unauthenticated."""
+    user = await get_current_user_optional(authorization, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
 
 
 async def compute_centre_stats(db: AsyncSession, centre: ProcurementCentre) -> dict:
@@ -474,3 +490,231 @@ async def get_slots(centre_id: int, slot_date: Optional[date] = None, db: AsyncS
         )
         for s in slots
     ]
+
+
+# ─── Centre Quality Standards Endpoints ──────────────────────────────────────────
+
+@router.get("/{centre_id}/quality-standards", response_model=CentreQualityStandardsOut)
+async def get_centre_quality_standards(
+    centre_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Fetch quality standards for a specific procurement centre.
+    Accommodates decentralized mandi variations:
+    Returns customized centre rules if configured, or falls back to statutory Agmark rules.
+    """
+    # 1. Verify centre exists
+    r_centre = await db.execute(select(ProcurementCentre).where(ProcurementCentre.id == centre_id))
+    centre = r_centre.scalar_one_or_none()
+    if not centre:
+        raise HTTPException(status_code=404, detail="Procurement Centre not found")
+
+    cache_key = f"centre:standards:{centre_id}"
+    if redis_manager.is_available:
+        cached = await redis_manager.get_json(cache_key)
+        if cached:
+            return cached
+
+    # 2. Query centre_quality_standards
+    r_std = await db.execute(
+        select(CentreQualityStandard).where(CentreQualityStandard.centre_id == centre_id)
+    )
+    custom_record = r_std.scalar_one_or_none()
+
+    default_std = get_default_standards()
+
+    if custom_record and custom_record.standards_data:
+        try:
+            parsed = json.loads(custom_record.standards_data)
+        except Exception:
+            parsed = default_std
+
+        result = {
+            "centre_id": centre.id,
+            "centre_name": centre.name,
+            "is_customized": True,
+            "last_updated_at": custom_record.updated_at,
+            "infrastructure_notes": custom_record.infrastructure_notes or parsed.get("infrastructure_notes"),
+            "season": parsed.get("season", default_std["season"]),
+            "authority": parsed.get("authority", default_std["authority"]),
+            "jurisdiction": parsed.get("jurisdiction", f"{centre.district}, West Bengal, India"),
+            "effective_standard": parsed.get("effective_standard", f"Mandi Operational Rules — {centre.name}"),
+            "grading_tiers": parsed.get("grading_tiers", default_std["grading_tiers"]),
+            "crop_standards": parsed.get("crop_standards", default_std["crop_standards"]),
+            "statutory_rules": parsed.get("statutory_rules", default_std["statutory_rules"]),
+        }
+    else:
+        result = {
+            "centre_id": centre.id,
+            "centre_name": centre.name,
+            "is_customized": False,
+            "last_updated_at": None,
+            "infrastructure_notes": default_std.get("infrastructure_notes"),
+            "season": default_std["season"],
+            "authority": default_std["authority"],
+            "jurisdiction": f"{centre.district}, West Bengal, India",
+            "effective_standard": f"Statutory Agmark & Mandi Quality Standards ({centre.name})",
+            "grading_tiers": default_std["grading_tiers"],
+            "crop_standards": default_std["crop_standards"],
+            "statutory_rules": default_std["statutory_rules"],
+        }
+
+    if redis_manager.is_available:
+        await redis_manager.set_json(cache_key, result, expire_seconds=600)
+
+    return result
+
+
+@router.put("/{centre_id}/quality-standards", response_model=CentreQualityStandardsOut)
+async def update_centre_quality_standards(
+    centre_id: int,
+    payload: UpdateCentreQualityStandardsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_required)
+):
+    """
+    Update / customize quality standards for a specific procurement centre.
+    Permitted for:
+    - Procurement Officers (assigned to this centre)
+    - District Admins
+    """
+    # 1. Authorization check
+    if current_user.role not in [UserRole.OPERATOR, UserRole.ADMIN]:
+        raise HTTPException(
+            status_code=403,
+            detail="Access restricted: Only procurement officers or district admins can modify mandi standards."
+        )
+
+    if current_user.role == UserRole.OPERATOR and current_user.assigned_centre_id != centre_id:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied: You are assigned to centre #{current_user.assigned_centre_id}, cannot modify centre #{centre_id}."
+        )
+
+    # 2. Verify centre exists
+    r_centre = await db.execute(select(ProcurementCentre).where(ProcurementCentre.id == centre_id))
+    centre = r_centre.scalar_one_or_none()
+    if not centre:
+        raise HTTPException(status_code=404, detail="Procurement Centre not found")
+
+    # 3. Fetch existing custom record or prepare default baseline
+    r_std = await db.execute(
+        select(CentreQualityStandard).where(CentreQualityStandard.centre_id == centre_id)
+    )
+    custom_record = r_std.scalar_one_or_none()
+
+    default_std = get_default_standards()
+    current_data = default_std
+    if custom_record and custom_record.standards_data:
+        try:
+            current_data = json.loads(custom_record.standards_data)
+        except Exception:
+            current_data = default_std
+
+    # 4. Merge modifications
+    if payload.grading_tiers is not None:
+        current_data["grading_tiers"] = payload.grading_tiers
+    if payload.crop_standards is not None:
+        current_data["crop_standards"] = payload.crop_standards
+    if payload.statutory_rules is not None:
+        current_data["statutory_rules"] = payload.statutory_rules
+    if payload.infrastructure_notes is not None:
+        current_data["infrastructure_notes"] = payload.infrastructure_notes
+    if payload.custom_notes is not None:
+        current_data["custom_notes"] = payload.custom_notes
+
+    current_data["effective_standard"] = f"Mandi Local Quality Standard — {centre.name} (Customized)"
+
+    serialized = json.dumps(current_data)
+
+    if custom_record:
+        custom_record.standards_data = serialized
+        custom_record.is_customized = True
+        if payload.infrastructure_notes is not None:
+            custom_record.infrastructure_notes = payload.infrastructure_notes
+        custom_record.updated_by_id = current_user.id
+    else:
+        custom_record = CentreQualityStandard(
+            centre_id=centre_id,
+            standards_data=serialized,
+            is_customized=True,
+            infrastructure_notes=payload.infrastructure_notes,
+            updated_by_id=current_user.id
+        )
+        db.add(custom_record)
+
+    await db.commit()
+    await db.refresh(custom_record)
+
+    # Bust Redis cache
+    cache_key = f"centre:standards:{centre_id}"
+    if redis_manager.is_available:
+        await redis_manager.delete(cache_key)
+
+    return {
+        "centre_id": centre.id,
+        "centre_name": centre.name,
+        "is_customized": True,
+        "last_updated_at": custom_record.updated_at,
+        "infrastructure_notes": custom_record.infrastructure_notes,
+        "season": current_data.get("season", default_std["season"]),
+        "authority": current_data.get("authority", default_std["authority"]),
+        "jurisdiction": f"{centre.district}, West Bengal, India",
+        "effective_standard": current_data["effective_standard"],
+        "grading_tiers": current_data["grading_tiers"],
+        "crop_standards": current_data["crop_standards"],
+        "statutory_rules": current_data["statutory_rules"],
+    }
+
+
+@router.post("/{centre_id}/quality-standards/reset", response_model=CentreQualityStandardsOut)
+async def reset_centre_quality_standards(
+    centre_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user_required)
+):
+    """
+    Reset centre quality standards back to official state/national Agmark statutory defaults.
+    """
+    if current_user.role not in [UserRole.OPERATOR, UserRole.ADMIN]:
+        raise HTTPException(
+            status_code=403,
+            detail="Access restricted: Only procurement officers or district admins can reset mandi standards."
+        )
+
+    if current_user.role == UserRole.OPERATOR and current_user.assigned_centre_id != centre_id:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied: You are assigned to centre #{current_user.assigned_centre_id}."
+        )
+
+    r_centre = await db.execute(select(ProcurementCentre).where(ProcurementCentre.id == centre_id))
+    centre = r_centre.scalar_one_or_none()
+    if not centre:
+        raise HTTPException(status_code=404, detail="Procurement Centre not found")
+
+    await db.execute(
+        delete(CentreQualityStandard).where(CentreQualityStandard.centre_id == centre_id)
+    )
+    await db.commit()
+
+    cache_key = f"centre:standards:{centre_id}"
+    if redis_manager.is_available:
+        await redis_manager.delete(cache_key)
+
+    default_std = get_default_standards()
+    return {
+        "centre_id": centre.id,
+        "centre_name": centre.name,
+        "is_customized": False,
+        "last_updated_at": None,
+        "infrastructure_notes": default_std.get("infrastructure_notes"),
+        "season": default_std["season"],
+        "authority": default_std["authority"],
+        "jurisdiction": f"{centre.district}, West Bengal, India",
+        "effective_standard": f"Statutory Agmark & Mandi Quality Standards ({centre.name})",
+        "grading_tiers": default_std["grading_tiers"],
+        "crop_standards": default_std["crop_standards"],
+        "statutory_rules": default_std["statutory_rules"],
+    }

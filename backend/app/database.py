@@ -30,17 +30,28 @@ else:
         abs_path = (BASE_DIR / rel_path.lstrip("/")).resolve()
         DATABASE_URL = f"sqlite+aiosqlite:///{abs_path}"
 
+    if ".pooler.supabase.com:5432" in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace(".pooler.supabase.com:5432", ".pooler.supabase.com:6543")
+
 # Engine options
 engine_kwargs = {
     "echo": False,
 }
 
 if "postgresql" in DATABASE_URL or "asyncpg" in DATABASE_URL:
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
     engine_kwargs.update({
-        "pool_size": 10,
-        "max_overflow": 20,
+        "pool_size": 5,
+        "max_overflow": 10,
         "pool_pre_ping": True,
-        "pool_recycle": 300,
+        "pool_recycle": 60,
+        "connect_args": {
+            "ssl": ssl_context,
+            "statement_cache_size": 0
+        }
     })
     # Remove sslmode query param from asyncpg URL if present to avoid driver confusion
     if "?" in DATABASE_URL:

@@ -7,7 +7,10 @@ import os
 import json
 import logging
 from typing import Any, Optional, Union, List
-import redis.asyncio as aioredis
+try:
+    import redis.asyncio as aioredis
+except ImportError:
+    aioredis = None
 
 logger = logging.getLogger("krishiconnect.redis")
 
@@ -16,12 +19,19 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 class RedisManager:
     def __init__(self):
-        self.redis: Optional[aioredis.Redis] = None
+        self.redis: Optional[Any] = None
         self._is_connected: bool = False
         self._logged_offline_warning: bool = False
 
     async def init(self):
         """Initialize connection pool to Redis."""
+        if aioredis is None:
+            self._is_connected = False
+            if not self._logged_offline_warning:
+                logger.info("ℹ️ redis-py not installed. Running in standalone memory-fallback mode.")
+                self._logged_offline_warning = True
+            return
+
         try:
             self.redis = aioredis.from_url(
                 REDIS_URL,

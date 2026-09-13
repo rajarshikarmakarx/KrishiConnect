@@ -88,6 +88,8 @@ secrets.json
 # Databases (If using SQLite locally)
 # ==============================================================================
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
 

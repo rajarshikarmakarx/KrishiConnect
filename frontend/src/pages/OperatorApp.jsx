@@ -5,12 +5,13 @@ import {
   Wheat, Users, CheckCircle, Clock, X, Wifi, WifiOff,
   IndianRupee, User, LogOut, Building2, ChevronDown, Scale,
   Sparkles, AlertCircle, ShieldCheck, Droplets, Sun, AlertTriangle,
-  Zap, Lock
+  Zap, Lock, Award
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
 import NotificationCenter from '../components/NotificationCenter'
 import ThemeToggle from '../components/ThemeToggle'
+import QualityStandardsModal from '../components/farmer/QualityStandardsModal'
 import { useCentreQueue } from '../hooks/useRealtimeQueue'
 
 const MSP_RATES = {
@@ -38,7 +39,7 @@ function StatCard({ label, value, color = 'slate' }) {
   )
 }
 
-function OperatorProfileMenu({ user, logout, centreName }) {
+function OperatorProfileMenu({ user, logout, centreName, onOpenStandards }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -85,11 +86,19 @@ function OperatorProfileMenu({ user, logout, centreName }) {
               <span className="truncate">{centreName || 'Assigned Centre'}</span>
             </div>
           </div>
-          <div className="p-2">
+          <div className="p-2 space-y-1">
+            <button
+              id="btn-quality-standards-menu-op"
+              onClick={() => { onOpenStandards?.(); setOpen(false) }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-xl transition-colors font-medium cursor-pointer"
+            >
+              <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Agmark Standards</span>
+            </button>
             <button
               id="btn-logout"
               onClick={() => { logout(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors font-medium cursor-pointer"
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors font-medium cursor-pointer border-t border-slate-100 dark:border-white/10 mt-1 pt-2"
             >
               <LogOut className="w-4 h-4 shrink-0" />
               Sign Out
@@ -992,6 +1001,7 @@ export default function OperatorApp() {
   const [payingId, setPayingId] = useState(null)
   const [bumpModal, setBumpModal] = useState(null)
   const [auditModal, setAuditModal] = useState(null)
+  const [showQualityStandardsModal, setShowQualityStandardsModal] = useState(false)
 
   const loadQueue = useCallback(async () => {
     try {
@@ -1167,6 +1177,17 @@ export default function OperatorApp() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-3.5 shrink-0">
+            {/* Agmark Quality Standards & Mandi Rules pill button for Operator Desk */}
+            <button
+              id="btn-quality-standards-header"
+              onClick={() => setShowQualityStandardsModal(true)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+              title="Centre Agmark Quality Standards & Mandi Rules"
+            >
+              <Award className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+              <span>Agmark Standards</span>
+            </button>
+
             <div className="flex items-center gap-1 sm:gap-1.5 text-xs bg-black/20 px-2.5 py-1.5 rounded-xl border border-white/15 shrink-0">
               {reconnecting ? (
                 <><WifiOff className="w-3.5 h-3.5 text-yellow-300 shrink-0" /><span className="text-yellow-200 hidden sm:inline">Reconnecting</span></>
@@ -1176,7 +1197,12 @@ export default function OperatorApp() {
             </div>
             <ThemeToggle />
             <NotificationCenter dark={true} />
-            <OperatorProfileMenu user={user} logout={logout} centreName={queue?.centre_name} />
+            <OperatorProfileMenu
+              user={user}
+              logout={logout}
+              centreName={queue?.centre_name}
+              onOpenStandards={() => setShowQualityStandardsModal(true)}
+            />
           </div>
         </div>
       </header>
@@ -1365,6 +1391,15 @@ export default function OperatorApp() {
           onClose={() => setAuditModal(null)}
         />
       )}
+
+      {/* Centre Agmark Quality Standards & Mandi Rules Modal (Editable for Procurement Officers) */}
+      <QualityStandardsModal
+        isOpen={showQualityStandardsModal}
+        onClose={() => setShowQualityStandardsModal(false)}
+        centreId={centreId}
+        centreName={queue?.centre_name || centreDetail?.name}
+        isEditable={true}
+      />
     </div>
   )
 }

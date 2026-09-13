@@ -334,3 +334,28 @@ class NotificationOut(SchemaModel):
     notification_type: str
     is_read: bool
     created_at: datetime
+
+
+# ─── Quality Standards Schemas ──────────────────────────────────────────────
+
+class UpdateCentreQualityStandardsRequest(BaseModel):
+    grading_tiers: Optional[List[dict]] = None
+    crop_standards: Optional[List[dict]] = None
+    statutory_rules: Optional[List[dict]] = None
+    infrastructure_notes: Optional[str] = None
+    custom_notes: Optional[str] = None
+
+
+class CentreQualityStandardsOut(BaseModel):
+    centre_id: int
+    centre_name: str
+    is_customized: bool
+    last_updated_at: Optional[datetime] = None
+    infrastructure_notes: Optional[str] = None
+    season: str
+    authority: str
+    jurisdiction: str
+    effective_standard: str
+    grading_tiers: List[dict]
+    crop_standards: List[dict]
+    statutory_rules: List[dict]

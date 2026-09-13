@@ -145,6 +145,9 @@ export const api = {
   getAiRecommendation: (village) => request('GET', `/ai/recommend${village ? `?village=${encodeURIComponent(village)}` : ''}`),
   getMspRates: () => request('GET', '/ai/msp-rates'),
   getQualityStandards: () => request('GET', '/ai/quality-standards'),
+  getCentreQualityStandards: (centreId) => request('GET', `/centres/${centreId}/quality-standards`),
+  updateCentreQualityStandards: (centreId, data) => request('PUT', `/centres/${centreId}/quality-standards`, data),
+  resetCentreQualityStandards: (centreId) => request('POST', `/centres/${centreId}/quality-standards/reset`),
   getAiDataInfo: () => request('GET', '/ai/data-info'),
   getVoiceIntent: (transcript, lang = 'en', centreId = null, context = {}) =>
     request('POST', '/ai/voice-intent', { transcript, lang, centre_id: centreId, context }),
