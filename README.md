@@ -31,7 +31,7 @@ Traditional agricultural produce procurement at government mandis suffers from u
 2. **AI-Driven Decision Engine**: 5-signal centre recommendation algorithm and 7-day Exponential Moving Average (EMA) wait-time forecasting.
 3. **Produce Quality Assaying & Safety Guards**: Mandatory Agmark grading based on digital moisture testing (8%–25%), foreign chaff %, and damaged grains %, with strict safety guards preventing procurement of spoiled produce (moisture ≥ 20%).
 4. **In-Session Persistent Notification Center**: Real-time event notifications with category icons (Queue 🌾, Assaying 🔬, Payment 💰, Alert ⚠️) and unread counters across all dashboards.
-5. **Demo Mobile OTP Authentication**: Fast mobile login (`123456`) with automatic farmer profile provisioning.
+5. **Demo Mobile OTP Authentication**: Fast mobile login (`482913`) with automatic farmer profile provisioning.
 6. **Instant Treasury DBT Disbursal**: Operator-authorized Direct Benefit Transfer (DBT) with instant WebSocket push notifications to farmers.
 
 ---
@@ -103,7 +103,7 @@ KrishiConnect incorporates a high-performance, zero-reload internationalization 
 ```
 
 1. **Authentication (Demo OTP & Password)**:
-   - Log in using 10-digit mobile number with **Demo OTP (`123456`)**, standard password, or register a new profile.
+   - Log in using 10-digit mobile number with **Demo OTP (`482913`)**, standard password, or register a new profile.
 2. **AI Centre Recommender & MSP Guide**:
    - Evaluates available centres across 5 weighted signals (Queue Pressure, Transit Time, Slot Availability, Throughput, Village Proximity).
    - View statutory Kharif 2025-26 rates via the **MSP Oracle Modal** (e.g. Paddy at ₹23.00/kg).
@@ -201,8 +201,8 @@ KrishiConnect features an enterprise-grade real-time event notification and toas
 
 | Role | Mobile Number | Password / Demo OTP | 1-Click UI Shortcut |
 | :--- | :--- | :--- | :--- |
-| **Farmer (Ramesh Kumar)** | `9876543210` | `demo123` or OTP `123456` | 🌾 1-Click Demo on `/` |
-| **Farmer (Suresh Ghosh)** | `9000000002` | `demo1234` or OTP `123456`| 🚜 1-Click Demo on `/` |
+| **Farmer (Ramesh Kumar)** | `9876543210` | `demo123` or OTP `482913` | 🌾 1-Click Demo on `/` |
+| **Farmer (Suresh Ghosh)** | `9000000002` | `demo1234` or OTP `482913`| 🚜 1-Click Demo on `/` |
 | **Operator (Haripur Centre)** | `9000000001` | `operator123` | 🏢 1-Click Demo on `/admin` |
 | **District Agricultural Officer** | `9000000000` | `admin123` | 🏛️ 1-Click Demo on `/admin` |
 
@@ -283,7 +283,7 @@ Interactive Swagger API documentation is available at `http://localhost:8000/doc
 | Category | Method | Path | Description |
 | :--- | :--- | :--- | :--- |
 | **Auth** | `POST` | `/auth/login` | JWT password authentication |
-| **Auth** | `POST` | `/auth/send-otp` | Generate demo OTP (master code `123456`) |
+| **Auth** | `POST` | `/auth/send-otp` | Generate demo OTP (master code `482913`) |
 | **Auth** | `POST` | `/auth/verify-otp` | Verify OTP & auto-provision farmer account |
 | **Auth** | `POST` | `/auth/register` | Farmer profile registration |
 | **Centres** | `GET` | `/centres` | List procurement centres with live waiting counts |

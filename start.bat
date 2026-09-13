@@ -106,7 +106,7 @@ echo   Mandi Officer / Admin: http://localhost:5173/admin
 echo   FastAPI Swagger Docs:  http://localhost:8000/docs
 echo.
 echo   Demo Credentials:
-echo   - Farmer OTP:    Any 10-digit number (OTP: 123456)
+echo   - Farmer OTP:    Any 10-digit number (OTP: 482913)
 echo   - Operator:      Mobile: 9000000001 ^| Password: operator123
 echo   - Admin:         Mobile: 9000000000 ^| Password: admin123
 echo ============================================================

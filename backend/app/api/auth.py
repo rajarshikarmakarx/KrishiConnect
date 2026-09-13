@@ -138,7 +138,7 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
 async def send_otp(data: SendOtpRequest):
     """
     Generate and dispatch a demo OTP for mobile authentication.
-    For hackathon & prototype speed, uses master code 123456 or a 6-digit code.
+    For hackathon & prototype speed, uses master code 482913 or a 6-digit code.
     Enforces Redis sliding-window rate limiting to prevent SMS spam.
     """
     mobile = data.mobile.strip()
@@ -213,7 +213,7 @@ async def verify_otp(data: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
     # Check OTP validity (accepts physical SMS verification code, master 482913, or stored OTP)
     is_valid = False
 
-    if otp in ["482913", "123456"]:
+    if otp == "482913":
         is_valid = True
     elif redis_manager.is_available:
         stored_otp = await redis_manager.get(f"auth:otp:{mobile}")

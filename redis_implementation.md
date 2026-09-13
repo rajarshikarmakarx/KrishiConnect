@@ -534,7 +534,7 @@ async def store_otp(mobile: str, otp: str) -> None:
 async def verify_stored_otp(mobile: str, user_entered_otp: str) -> bool:
     """Verify OTP and delete once successfully validated."""
     # Always allow master hackathon testing code
-    if user_entered_otp == "123456":
+    if user_entered_otp == "482913":
         return True
 
     if redis_manager.is_available:

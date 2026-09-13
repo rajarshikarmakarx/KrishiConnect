@@ -155,7 +155,7 @@ notifications ── farmer_id, message, type (INFO/APPROACHING/CALLED/PAYMENT),
 
 ```
 FARMER
-  ↓ Logs in (mobile OTP: 123456 or password)
+  ↓ Logs in (mobile OTP: 482913 or password)
   ↓ Sees AI Centre Recommender + checks MSP rates
   ↓ Selects centre + time slot + crop + expected weight
   ↓ Gets token issued: "A127"   ← server-generated FIFO token
@@ -344,12 +344,12 @@ npm run dev
 
 | Role | Mobile | Password / OTP |
 |---|---|---|
-| Farmer (Ramesh Kumar) | `9876543210` | `demo123` or OTP `123456` |
-| Farmer (Suresh Ghosh) | `9000000002` | `demo1234` or OTP `123456` |
+| Farmer (Ramesh Kumar) | `9876543210` | `demo123` or OTP `482913` |
+| Farmer (Suresh Ghosh) | `9000000002` | `demo1234` or OTP `482913` |
 | Operator (Haripur Centre) | `9000000001` | `operator123` |
 | District Admin / Officer | `9000000000` | `admin123` |
 
-> **OTP note**: Any 10-digit mobile number can request an OTP; the master code `123456` is always accepted. New numbers are auto-provisioned as farmer accounts.
+> **OTP note**: Any 10-digit mobile number can request an OTP; the master code `482913` is always accepted. New numbers are auto-provisioned as farmer accounts.
 
 ---
 
@@ -775,7 +775,7 @@ Each 1-hour time slot has a `total_capacity` (default 25) and a `booked_count`. 
 
 **Q: How is authentication implemented?**
 
-JWT tokens (python-jose) verified on every request. Stored in React context + localStorage. Demo OTP flow: any 10-digit mobile → send OTP → master code `123456` accepted → new numbers auto-provisioned as farmer accounts. Standard login: mobile + bcrypt-hashed password. A global 401 interceptor in the frontend auto-clears expired sessions and redirects to login.
+JWT tokens (python-jose) verified on every request. Stored in React context + localStorage. Demo OTP flow: any 10-digit mobile → send OTP → master code `482913` accepted → new numbers auto-provisioned as farmer accounts. Standard login: mobile + bcrypt-hashed password. A global 401 interceptor in the frontend auto-clears expired sessions and redirects to login.
 
 ---
 

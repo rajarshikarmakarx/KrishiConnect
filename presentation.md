@@ -135,7 +135,7 @@
 
 #### 1. Four Pillars of Feasibility
 * **Technical Feasibility:** Lightweight asynchronous stack (FastAPI + AsyncPG) handles $50,000+$ concurrent farmers on standard cloud VMs without memory bloat.
-* **Operational Feasibility:** Zero learning curve; 1-click Demo OTP login (`123456`), visual Agmark sliders for assayers, and color-coded status boards.
+* **Operational Feasibility:** Zero learning curve; 1-click Demo OTP login (`482913`), visual Agmark sliders for assayers, and color-coded status boards.
 * **Economic Feasibility:** Built 100% on open-source frameworks (React, FastAPI, PostgreSQL, Linux); zero recurring per-user licensing fees for state mandis.
 * **Regulatory Feasibility:** Strict adherence to *West Bengal APMC (Regulation) Act Section 14(2)* for Form 'J' issuance and CACP statutory MSP guidelines.
 

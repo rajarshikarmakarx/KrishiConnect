@@ -126,7 +126,7 @@ cd frontend && npm run build && cd ..
 ### 🌾 1. Demo Farmer
 - Mobile:   9876543210
 - Password: demo123
-- Master Demo OTP (Fast Login): 123456
+- Master Demo OTP (Fast Login): 482913
 - Role:     Farmer (Haripur Village, Howrah)
 
 ### 🔬 2. Procurement Centre Operator & Quality Assayer
