@@ -11,75 +11,75 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
 import ThemeToggle from '../components/ThemeToggle'
 
 const NAV_LINKS = [
-  { label: 'Home', href: '#home' },
-  { label: 'Features', href: '#features' },
-  { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Contact', href: '#contact' },
+  { key: 'landing.nav_home', href: '#home', default: 'Home' },
+  { key: 'landing.nav_features', href: '#features', default: 'Features' },
+  { key: 'landing.nav_how_it_works', href: '#how-it-works', default: 'How It Works' },
+  { key: 'landing.nav_contact', href: '#contact', default: 'Contact' },
 ]
 
 const FEATURES = [
   {
     icon: MapPin,
-    title: 'Geo-Routing',
-    desc: 'Nearest MSP Mandi Centres for faster access and reduced travel time.',
+    titleKey: 'landing.feature_geo_title',
+    descKey: 'landing.feature_geo_desc',
     color: 'emerald',
   },
   {
     icon: Ticket,
-    title: 'Smart Tokens',
-    desc: 'Live queue & slot booking for a hassle-free experience.',
+    titleKey: 'landing.feature_token_title',
+    descKey: 'landing.feature_token_desc',
     color: 'blue',
   },
   {
     icon: Scale,
-    title: 'Digital Assaying',
-    desc: 'Moisture & impurity grading with real-time results.',
+    titleKey: 'landing.feature_assay_title',
+    descKey: 'landing.feature_assay_desc',
     color: 'amber',
   },
   {
     icon: IndianRupee,
-    title: 'Direct DBT',
-    desc: "Instant bank payout transfers to farmers' accounts.",
+    titleKey: 'landing.feature_dbt_title',
+    descKey: 'landing.feature_dbt_desc',
     color: 'emerald',
   },
   {
     icon: Shield,
-    title: 'Secure & Transparent',
-    desc: 'End-to-end traceability, ensuring trust and accountability.',
+    titleKey: 'landing.feature_secure_title',
+    descKey: 'landing.feature_secure_desc',
     color: 'slate',
   },
 ]
 
 const STATS = [
-  { value: '5L+', label: 'Farmers Benefited', icon: Users },
-  { value: '200+', label: 'MSP Mandis Connected', icon: Building2 },
-  { value: '₹1,200Cr+', label: 'DBT Disbursed', icon: IndianRupee },
-  { value: '99.8%', label: 'Transaction Success Rate', icon: CheckCircle2 },
+  { value: '5L+', labelKey: 'landing.stat_farmers', icon: Users },
+  { value: '200+', labelKey: 'landing.stat_mandis', icon: Building2 },
+  { value: '₹1,200Cr+', labelKey: 'landing.stat_dbt', icon: IndianRupee },
+  { value: '99.8%', labelKey: 'landing.stat_success', icon: CheckCircle2 },
 ]
 
 const HOW_IT_WORKS = [
   {
     step: '01',
-    title: 'Register & Book Slot',
-    desc: 'Sign up with your mobile number and book a slot at the nearest MSP procurement centre.',
+    titleKey: 'landing.step_1_title',
+    descKey: 'landing.step_1_desc',
     icon: Sprout,
   },
   {
     step: '02',
-    title: 'Smart Queue & Token',
-    desc: 'Receive a digital token with live queue position and estimated wait time.',
+    titleKey: 'landing.step_2_title',
+    descKey: 'landing.step_2_desc',
     icon: Ticket,
   },
   {
     step: '03',
-    title: 'Digital Assaying',
-    desc: 'Your produce is weighed and graded digitally with full transparency.',
+    titleKey: 'landing.step_3_title',
+    descKey: 'landing.step_3_desc',
     icon: Scale,
   },
   {
     step: '04',
-    title: 'Instant DBT Payout',
-    desc: 'Receive payment directly in your bank account — no middlemen, no delays.',
+    titleKey: 'landing.step_4_title',
+    descKey: 'landing.step_4_desc',
     icon: IndianRupee,
   },
 ]
@@ -132,7 +132,7 @@ export default function LandingPage() {
                   KrishiConnect
                 </h1>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-wide leading-none">
-                  Smart Agricultural Procurement
+                  {t('common.app_tagline') || 'Smart Agricultural Procurement'}
                 </p>
               </div>
               <h1 className="sm:hidden text-lg font-bold text-slate-900 dark:text-white font-display">
@@ -148,7 +148,7 @@ export default function LandingPage() {
                   href={link.href}
                   className={`nav-link ${activeSection === link.href.replace('#', '') ? 'active' : ''}`}
                 >
-                  {link.label}
+                  {t(link.key) || link.default}
                 </a>
               ))}
             </div>
@@ -165,7 +165,7 @@ export default function LandingPage() {
                 className="inline-flex items-center gap-2 bg-[#065f46] hover:bg-[#044e3a] text-white px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
               >
                 <User className="w-4 h-4" />
-                <span>Login</span>
+                <span>{t('landing.login') || 'Login'}</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
 
@@ -191,7 +191,7 @@ export default function LandingPage() {
                     onClick={() => setMobileMenuOpen(false)}
                     className="block px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
                   >
-                    {link.label}
+                    {t(link.key) || link.default}
                   </a>
                 ))}
               </div>
@@ -211,28 +211,28 @@ export default function LandingPage() {
             <div className="relative z-10 animate-fade-up">
               <div className="badge-pill mb-5">
                 <Sprout className="w-3.5 h-3.5" />
-                <span>Next-Gen MSP Assurance & Real-Time Queueing</span>
+                <span>{t('landing.hero_badge') || 'Next-Gen MSP Assurance & Real-Time Queueing'}</span>
               </div>
 
               <h2 className="text-4xl sm:text-5xl lg:text-[3.25rem] xl:text-[3.5rem] font-extrabold leading-[1.1] tracking-tight text-slate-900 dark:text-white font-display mb-5">
-                Digital Mandi Intake{' '}
+                {t('landing.hero_title_1') || 'Digital Mandi Intake'}{' '}
                 <span className="text-emerald-600 dark:text-emerald-400">
-                  Empowering Every Farmer
+                  {t('landing.hero_title_2') || 'Empowering Every Farmer'}
                 </span>
               </h2>
 
               <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl mb-8">
-                Transparent moisture assaying, automated Agmark grading, real-time counter routing, and instant Direct Benefit Transfer (DBT) payout — all in one platform.
+                {t('landing.hero_desc') || 'Transparent moisture assaying, automated Agmark grading, real-time counter routing, and instant Direct Benefit Transfer (DBT) payout — all in one platform.'}
               </p>
 
               <div className="flex flex-wrap gap-3">
                 <Link to="/login" className="btn-cta-primary">
-                  Get Started
+                  {t('landing.get_started') || 'Get Started'}
                   <ArrowRight className="w-4.5 h-4.5" />
                 </Link>
                 <a href="#how-it-works" className="btn-cta-secondary">
                   <HelpCircle className="w-4.5 h-4.5" />
-                  How It Works?
+                  {t('landing.how_it_works_btn') || 'How It Works?'}
                 </a>
               </div>
             </div>
@@ -255,8 +255,8 @@ export default function LandingPage() {
                     <Scale className="w-4.5 h-4.5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-800 dark:text-white leading-tight">Moisture Assaying</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">Real-time Analysis</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-white leading-tight">{t('landing.feature_assay_title') || 'Moisture Assaying'}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">{t('landing.realtime_analysis') || 'Real-time Analysis'}</p>
                   </div>
                   <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <Check className="w-3 h-3 stroke-[3]" />
@@ -269,8 +269,8 @@ export default function LandingPage() {
                     <Sprout className="w-4.5 h-4.5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-800 dark:text-white leading-tight">Agmark Grading</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">Automated & Accurate</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-white leading-tight">{t('nav.govt_quality_standards') || 'Agmark Grading'}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">{t('landing.automated_accurate') || 'Automated & Accurate'}</p>
                   </div>
                   <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <Check className="w-3 h-3 stroke-[3]" />
@@ -283,8 +283,8 @@ export default function LandingPage() {
                     <Ticket className="w-4.5 h-4.5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-800 dark:text-white leading-tight">Smart Queueing</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">Fair & Transparent</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-white leading-tight">{t('landing.feature_token_title') || 'Smart Queueing'}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">{t('landing.fair_transparent') || 'Fair & Transparent'}</p>
                   </div>
                   <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <Check className="w-3 h-3 stroke-[3]" />
@@ -297,8 +297,8 @@ export default function LandingPage() {
                     <IndianRupee className="w-4.5 h-4.5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-800 dark:text-white leading-tight">DBT Payout</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">Instant Transfers</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-white leading-tight">{t('landing.feature_dbt_title') || 'DBT Payout'}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">{t('landing.instant_transfers') || 'Instant Transfers'}</p>
                   </div>
                   <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <Check className="w-3 h-3 stroke-[3]" />
@@ -327,14 +327,14 @@ export default function LandingPage() {
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-12 lg:mb-16">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-2">
-                — Key Features
+                — {t('landing.features_subtitle') || 'Key Features'}
               </p>
               <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white font-display">
-                Everything You Need, In One Place
+                {t('landing.features_title') || 'Everything You Need, In One Place'}
               </h3>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md italic">
-              Smarter processes. Fairer markets. Stronger farmers.
+              {t('landing.features_tagline') || 'Smarter processes. Fairer markets. Stronger farmers.'}
             </p>
           </div>
 
@@ -344,20 +344,20 @@ export default function LandingPage() {
               const Icon = feature.icon
               return (
                 <div
-                  key={feature.title}
+                  key={feature.titleKey}
                   className={`feature-card animate-fade-up animate-fade-up-delay-${i + 1}`}
                 >
                   <div className={`w-11 h-11 rounded-xl ${ICON_BG[feature.color]} flex items-center justify-center mb-4`}>
                     <Icon className="w-5 h-5" />
                   </div>
                   <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1.5">
-                    {feature.title}
+                    {t(feature.titleKey)}
                   </h4>
                   <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
-                    {feature.desc}
+                    {t(feature.descKey)}
                   </p>
                   <a href="#" className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:gap-2 transition-all">
-                    Learn more
+                    {t('landing.learn_more') || 'Learn more'}
                     <ChevronRight className="w-4 h-4" />
                   </a>
                 </div>
@@ -372,13 +372,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 lg:mb-16">
             <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-2">
-              — How It Works
+              — {t('landing.how_it_works_subtitle') || 'How It Works'}
             </p>
             <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white font-display">
-              From Farm to Fair Price in 4 Steps
+              {t('landing.how_it_works_title') || 'From Farm to Fair Price in 4 Steps'}
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-3 max-w-lg mx-auto">
-              A streamlined digital workflow that eliminates middlemen and ensures farmers get paid at government MSP rates.
+              {t('landing.how_it_works_desc') || 'A streamlined digital workflow that eliminates middlemen and ensures farmers get paid at government MSP rates.'}
             </p>
           </div>
 
@@ -399,10 +399,10 @@ export default function LandingPage() {
                       <Icon className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2 font-display">
-                      {item.title}
+                      {t(item.titleKey)}
                     </h4>
                     <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                      {item.desc}
+                      {t(item.descKey)}
                     </p>
                   </div>
                 </div>
@@ -411,8 +411,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-
 
       {/* ========================= STATS BAR ========================= */}
       <section className="stats-bar py-10 lg:py-14">
@@ -427,7 +425,7 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <p className="text-xl font-extrabold text-slate-900 dark:text-white font-display">{stat.value}</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">{stat.label}</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">{t(stat.labelKey)}</p>
                   </div>
                 </div>
               )
@@ -435,7 +433,7 @@ export default function LandingPage() {
             <div className="col-span-2 lg:col-span-1 text-right">
               <div className="inline-block relative">
                 <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400 italic tracking-tight font-serif">
-                  Better Markets, Brighter Futures.
+                  {t('landing.quote') || 'Better Markets, Brighter Futures.'}
                 </p>
                 <svg className="w-full h-2.5 text-emerald-600/70 -mt-0.5" viewBox="0 0 220 10" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M2 7C50 2 150 2 218 8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
@@ -450,22 +448,22 @@ export default function LandingPage() {
       <section id="contact" className="py-16 lg:py-24 bg-white dark:bg-[#060a12]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-2">
-            — Get Started Today
+            — {t('landing.cta_subtitle') || 'Get Started Today'}
           </p>
           <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white font-display mb-5">
-            Ready to Transform Your Procurement Journey?
+            {t('landing.cta_title') || 'Ready to Transform Your Procurement Journey?'}
           </h3>
           <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8">
-            Whether you're a farmer looking for the nearest MSP centre, or a government officer managing procurement operations — KrishiConnect has you covered.
+            {t('landing.cta_desc') || "Whether you're a farmer looking for the nearest MSP centre, or a government officer managing procurement operations — KrishiConnect has you covered."}
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link to="/login" className="btn-cta-primary">
-              Farmer Portal
+              {t('landing.farmer_portal') || 'Farmer Portal'}
               <ArrowRight className="w-4.5 h-4.5" />
             </Link>
             <Link to="/admin-login" className="btn-cta-secondary">
               <Building2 className="w-4.5 h-4.5" />
-              Officer / Admin Portal
+              {t('landing.officer_portal') || 'Officer / Admin Portal'}
             </Link>
           </div>
         </div>
@@ -483,25 +481,25 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <h4 className="text-lg font-bold text-white font-display">KrishiConnect</h4>
-                  <p className="text-[10px] text-slate-400 tracking-wide">Smart Agricultural Procurement</p>
+                  <p className="text-[10px] text-slate-400 tracking-wide">{t('common.app_tagline') || 'Smart Agricultural Procurement'}</p>
                 </div>
               </div>
               <p className="text-sm text-slate-400 leading-relaxed max-w-md">
-                An initiative by the Department of Agricultural Marketing, Government of India. Empowering farmers with transparent, digital procurement at Minimum Support Prices.
+                {t('landing.footer_desc') || 'An initiative by the Department of Agricultural Marketing, Government of India. Empowering farmers with transparent, digital procurement at Minimum Support Prices.'}
               </p>
             </div>
 
             {/* Quick Links */}
             <div>
-              <h5 className="text-sm font-semibold text-white mb-4">Quick Links</h5>
+              <h5 className="text-sm font-semibold text-white mb-4">{t('landing.quick_links') || 'Quick Links'}</h5>
               <div className="space-y-2.5">
-                {['Home', 'Features', 'How It Works'].map((link) => (
+                {NAV_LINKS.filter(l => l.href !== '#contact').map((link) => (
                   <a
-                    key={link}
-                    href={`#${link.toLowerCase().replace(/\s+/g, '-')}`}
+                    key={link.href}
+                    href={link.href}
                     className="block text-sm text-slate-400 hover:text-emerald-400 transition-colors"
                   >
-                    {link}
+                    {t(link.key) || link.default}
                   </a>
                 ))}
               </div>
@@ -509,16 +507,16 @@ export default function LandingPage() {
 
             {/* Portals */}
             <div>
-              <h5 className="text-sm font-semibold text-white mb-4">Portals</h5>
+              <h5 className="text-sm font-semibold text-white mb-4">{t('landing.portals') || 'Portals'}</h5>
               <div className="space-y-2.5">
                 <Link to="/login" className="block text-sm text-slate-400 hover:text-emerald-400 transition-colors">
-                  Farmer Login
+                  {t('landing.farmer_login') || 'Farmer Login'}
                 </Link>
                 <Link to="/admin-login" className="block text-sm text-slate-400 hover:text-emerald-400 transition-colors">
-                  Officer Login
+                  {t('landing.officer_login') || 'Officer Login'}
                 </Link>
                 <a href="#" className="block text-sm text-slate-400 hover:text-emerald-400 transition-colors">
-                  Help & Support
+                  {t('landing.help_support') || 'Help & Support'}
                 </a>
               </div>
             </div>
@@ -526,10 +524,10 @@ export default function LandingPage() {
 
           {/* Bottom bar */}
           <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-            <p>© {new Date().getFullYear()} KrishiConnect. Department of Agricultural Marketing, Government of India.</p>
+            <p>{t('landing.copyright', { year: new Date().getFullYear() }) || `© ${new Date().getFullYear()} KrishiConnect. Department of Agricultural Marketing, Government of India.`}</p>
             <div className="flex items-center gap-1.5">
               <Shield className="w-3.5 h-3.5 text-emerald-500" />
-              <span>SSL Secured · NIC Infrastructure</span>
+              <span>{t('landing.ssl_secured_footer') || 'SSL Secured · NIC Infrastructure'}</span>
             </div>
           </div>
         </div>
