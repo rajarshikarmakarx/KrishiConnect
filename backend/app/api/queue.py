@@ -53,12 +53,65 @@ def generate_token(prefix: str = "A") -> str:
 
 def compute_quality_grade(crop: str, moisture: float, chaff: float = 0.0, damaged: float = 0.0) -> tuple:
     """
-    Computes (grade, decision, suggested_multiplier, reason) based on Govt Mandi & FAQ Quality Norms:
-    - Grade A (FAQ Standard): Moisture <= 14.0%, Chaff <= 1.5%, Damaged <= 2.0% -> 100% MSP rate (multiplier 1.0)
-    - Grade B (Permissible Standard): Moisture <= 17.0%, Chaff <= 3.0%, Damaged <= 4.0% -> Automatic 2% value cut (multiplier 0.98)
-    - Grade C (Marginal / Sun-Drying Needed): Moisture 17.1% - 19.9% -> Mandi sun-drying deferral / 10% value cut (multiplier 0.90)
-    - Rejected: Moisture >= 20.0% -> Fungal aflatoxin & spoilage hazard (multiplier 0.0)
+    Computes (grade, decision, suggested_multiplier, reason) based on Govt Mandi & AGMARK Quality Norms:
+    Evaluates parameter tiers (1 to 4) for:
+    1. Moisture (%):
+       - Tier 1 (Grade I): <= 14.0%
+       - Tier 2 (Grade II): 14.1% - 17.0%
+       - Tier 3 (Grade III & IV): 17.1% - 19.9%
+       - Tier 4 (Sample Grade / Rejected): >= 20.0%
+    2. Foreign Matter / Chaff / Insolubles (%):
+       - Tier 1 (Grade I): Extremely Low (<= 1.0%)
+       - Tier 2 (Grade II): Low (<= 1.5%)
+       - Tier 3 (Grade III & IV): Moderate (<= 3.0%)
+       - Tier 4 (Sample Grade / Rejected): High (> 3.0%)
+    3. Damaged / Discolored Kernels (%):
+       - Tier 1 (Grade I): Negligible (<= 1.0%)
+       - Tier 2 (Grade II): Low (<= 3.0%)
+       - Tier 3 (Grade III & IV): Moderate (<= 5.0%)
+       - Tier 4 (Sample Grade / Rejected): High (> 5.0%)
+
+    Composite Grade Determination:
+    - Calculates average tier: avg_tier = (tier_moisture + tier_chaff + tier_damaged) / 3.0
+    - Safety guard: moisture >= 20.0% or chaff > 3.0% or damaged > 5.0% or avg_tier > 3.4 -> Rejected
+    - Sun-drying deferral: moisture > 17.0% or avg_tier > 2.4 -> Grade C (DEFERRED_SUN_DRYING)
+    - Standard commercial: avg_tier > 1.0 -> Grade B (APPROVED)
+    - Premium / FAQ Standard: avg_tier <= 1.0 -> Grade A (APPROVED)
     """
+    # 1. Evaluate Moisture Tier
+    if moisture <= 14.0:
+        tier_moisture = 1
+    elif moisture <= 17.0:
+        tier_moisture = 2
+    elif moisture < 20.0:
+        tier_moisture = 3
+    else:
+        tier_moisture = 4
+
+    # 2. Evaluate Foreign Matter / Chaff / Insolubles Tier
+    if chaff <= 1.0:
+        tier_chaff = 1
+    elif chaff <= 1.5:
+        tier_chaff = 2
+    elif chaff <= 3.0:
+        tier_chaff = 3
+    else:
+        tier_chaff = 4
+
+    # 3. Evaluate Damaged / Discolored Kernels Tier
+    if damaged <= 1.0:
+        tier_damaged = 1
+    elif damaged <= 3.0:
+        tier_damaged = 2
+    elif damaged <= 5.0:
+        tier_damaged = 3
+    else:
+        tier_damaged = 4
+
+    # Composite average tier calculation
+    avg_tier = (tier_moisture + tier_chaff + tier_damaged) / 3.0
+
+    # Spoilage & Contamination Safety Guard (Hard Rejection)
     if moisture >= 20.0:
         return (
             "Rejected",
@@ -66,20 +119,44 @@ def compute_quality_grade(crop: str, moisture: float, chaff: float = 0.0, damage
             GRADE_PRICE_CONFIG["Rejected"]["multiplier"],
             f"Excessive moisture ({moisture:.1f}% >= 20.0%) presents high risk of fungal aflatoxin and silo rot. Produce must be rejected or sun-dried."
         )
-    elif moisture > 17.0:
+    elif chaff > 3.0 or damaged > 5.0 or avg_tier > 3.4:
+        reasons = []
+        if chaff > 3.0:
+            reasons.append(f"Foreign matter ({chaff:.1f}%) exceeds max permissible limit (3.0%)")
+        if damaged > 5.0:
+            reasons.append(f"Damaged/discolored kernels ({damaged:.1f}%) exceed max limit (5.0%)")
+        if avg_tier > 3.4 and not reasons:
+            reasons.append(f"Composite quality tier index ({avg_tier:.2f}) falls into Sample Grade / Rejected")
+        return (
+            "Rejected",
+            "REJECTED",
+            GRADE_PRICE_CONFIG["Rejected"]["multiplier"],
+            f"Sample Grade Rejection: {'; '.join(reasons)}. Produce allocated to animal feed or biofuel extraction."
+        )
+
+    # Sun-Drying Deferral / Grade C (Marginal Moisture or Utility Blending)
+    elif moisture > 17.0 or avg_tier > 2.4:
+        if moisture > 17.0:
+            reason_msg = f"Moisture ({moisture:.1f}%) exceeds FAQ gate standard (17.0%). Mandi yard sun-drying grace recommended."
+        else:
+            reason_msg = f"Composite quality index ({avg_tier:.2f}) evaluated as Grade III & IV Utility. Mandi courtyard sun-drying grace or 10% value cut applies."
         return (
             "Grade C",
             "DEFERRED_SUN_DRYING",
             GRADE_PRICE_CONFIG["Grade C"]["multiplier"],
-            f"Moisture ({moisture:.1f}%) exceeds FAQ gate standard (17.0%). Mandi yard sun-drying grace recommended."
+            reason_msg
         )
-    elif moisture > 14.0 or chaff > 1.5 or damaged > 2.0:
+
+    # Grade B (Permissible Standard / Commercial Consumer Distribution)
+    elif avg_tier > 1.0:
         return (
             "Grade B",
             "APPROVED",
             GRADE_PRICE_CONFIG["Grade B"]["multiplier"],
             None
         )
+
+    # Grade A (FAQ Standard / Premium Retail & Export Quality)
     else:
         return (
             "Grade A",

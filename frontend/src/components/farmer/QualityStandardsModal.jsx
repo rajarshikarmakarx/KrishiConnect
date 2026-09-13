@@ -24,44 +24,60 @@ const FALLBACK_DATA = {
   grading_tiers: [
     {
       grade: 'Grade A',
-      label: 'Grade A (FAQ Standard)',
+      tier_title: 'Grade I (Premium / Choice)',
+      label: 'Grade A / Grade I (Premium / Choice)',
       payout_percentage: '100%',
       moisture_threshold: '≤ 14.0%',
-      chaff_threshold: '≤ 1.5%',
-      damaged_threshold: '≤ 2.0%',
+      chaff_threshold: '≤ 1.0%',
+      damaged_threshold: '≤ 1.0%',
+      foreign_matter_chaff: 'Extremely Low (≤ 0.5% - 1.0%)',
+      damaged_discolored: 'Negligible (≤ 1.0%)',
+      typical_market_destination: 'Premium retail food, export quality, milling.',
       status: 'APPROVED',
       color: 'emerald',
       description: 'Fair Average Quality (FAQ) certified produce. Premium lot quality entitled to 100% statutory MSP floor price without deductions.'
     },
     {
       grade: 'Grade B',
-      label: 'Grade B (Permissible Standard)',
+      tier_title: 'Grade II (Standard)',
+      label: 'Grade B / Grade II (Standard)',
       payout_percentage: '98%',
       moisture_threshold: '14.1% - 17.0%',
-      chaff_threshold: '≤ 3.0%',
-      damaged_threshold: '≤ 4.0%',
+      chaff_threshold: '≤ 1.5%',
+      damaged_threshold: '≤ 3.0%',
+      foreign_matter_chaff: 'Low (≤ 1.5%)',
+      damaged_discolored: 'Low (≤ 2.0% - 3.0%)',
+      typical_market_destination: 'Standard consumer distribution, general food processing.',
       status: 'APPROVED',
       color: 'blue',
       description: 'Permissible quality produce within statutory tolerance limits. Accepted with standard 2% moisture adjustment.'
     },
     {
       grade: 'Grade C',
-      label: 'Grade C (Sun-Drying Deferral)',
+      tier_title: 'Grade III & IV (Utility)',
+      label: 'Grade C / Grade III & IV (Utility)',
       payout_percentage: '90%',
       moisture_threshold: '17.1% - 19.9%',
-      chaff_threshold: '≤ 4.0%',
+      chaff_threshold: '≤ 3.0%',
       damaged_threshold: '≤ 5.0%',
+      foreign_matter_chaff: 'Moderate (≤ 2.0% - 3.0%)',
+      damaged_discolored: 'Moderate (≤ 4.0% - 5.0%)',
+      typical_market_destination: 'Commercial blending, industrial processing.',
       status: 'DEFERRED_SUN_DRYING',
       color: 'amber',
       description: 'Marginal high moisture lot. Entitled to statutory 2.5-hour mandi courtyard sun-drying grace period before mandatory re-assaying.'
     },
     {
       grade: 'Rejected',
-      label: 'Rejected (Spoilage Hazard)',
+      tier_title: 'Sample Grade / Rejected',
+      label: 'Sample Grade / Rejected',
       payout_percentage: '0%',
       moisture_threshold: '≥ 20.0%',
-      chaff_threshold: '> 4.0%',
+      chaff_threshold: '> 3.0%',
       damaged_threshold: '> 5.0%',
+      foreign_matter_chaff: 'High (> 3.0%)',
+      damaged_discolored: 'High (> 5.0%)',
+      typical_market_destination: 'Animal feed, biofuel extraction, or rejected due to toxins/odor.',
       status: 'REJECTED',
       color: 'red',
       description: 'Excessive moisture and spoilage hazard. Intake blocked by safety guards to prevent Aspergillus flavus fungal rot in central silos.'
@@ -270,7 +286,8 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4 text-slate-800 dark:text-slate-200">
           {/* TAB 1: Grading Tiers */}
           {activeTab === 'tiers' && (
-            <div className="space-y-3.5">
+            <div className="space-y-4">
+              {/* Statutory Farmer Rights Banner */}
               <div className="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-500/30 rounded-2xl p-3.5 flex items-start gap-3 text-xs text-emerald-900 dark:text-emerald-200">
                 <ShieldCheck className="w-5 h-5 text-emerald-700 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                 <div>
@@ -281,16 +298,111 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                 </div>
               </div>
 
+              {/* Agmark 3-Parameter Composite Average Formula Callout */}
+              <div className="bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-3.5 flex items-start gap-3 text-xs text-blue-900 dark:text-blue-200 shadow-xs">
+                <Scale className="w-5 h-5 text-blue-700 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-bold text-sm font-display">
+                      {t('quality_standards.composite_formula_title') || 'Agmark Composite 3-Parameter Grading'}
+                    </p>
+                    <span className="text-[10px] bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 font-bold px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-500/30">
+                      Average Rule
+                    </span>
+                  </div>
+                  <p className="text-blue-800 dark:text-blue-300 text-[11px] sm:text-xs mt-0.5 leading-relaxed">
+                    {t('quality_standards.composite_formula_desc') || 'Final Grade is determined by taking the combined average tier of Moisture %, Foreign Matter / Chaff %, and Damaged / Discolored Kernels % evaluated against statutory Agmark standards.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Official AGMARK Standards Comparison Table */}
+              <div className="rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden bg-white dark:bg-[#0e1626] shadow-xs">
+                <div className="bg-slate-100 dark:bg-white/5 px-4 py-2.5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5 font-display">
+                    <Award className="w-4 h-4 text-amber-500" />
+                    AGMARK Standards Reference Matrix
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
+                    DMI / FCI Norms
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse min-w-[620px]">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                        <th className="p-3">Grading Tier</th>
+                        <th className="p-3">Moisture (%)</th>
+                        <th className="p-3">Foreign Matter / Chaff (%)</th>
+                        <th className="p-3">Damaged / Discolored (%)</th>
+                        <th className="p-3">Typical Market Destination</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                      {/* Grade I */}
+                      <tr className="hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 transition-colors">
+                        <td className="p-3 font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                          <div className="font-extrabold text-xs">Grade I</div>
+                          <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">(Premium / Choice)</div>
+                        </td>
+                        <td className="p-3 font-black text-emerald-800 dark:text-emerald-300 whitespace-nowrap">≤ 14.0%</td>
+                        <td className="p-3 text-slate-700 dark:text-slate-300">Extremely Low (≤ 0.5% - 1.0%)</td>
+                        <td className="p-3 text-slate-700 dark:text-slate-300">Negligible (≤ 1.0%)</td>
+                        <td className="p-3 text-slate-600 dark:text-slate-300">Premium retail food, export quality, milling.</td>
+                      </tr>
+                      {/* Grade II */}
+                      <tr className="hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors">
+                        <td className="p-3 font-bold text-blue-700 dark:text-blue-400 whitespace-nowrap">
+                          <div className="font-extrabold text-xs">Grade II</div>
+                          <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">(Standard)</div>
+                        </td>
+                        <td className="p-3 font-black text-blue-800 dark:text-blue-300 whitespace-nowrap">14.1% - 17.0%</td>
+                        <td className="p-3 text-slate-700 dark:text-slate-300">Low (≤ 1.5%)</td>
+                        <td className="p-3 text-slate-700 dark:text-slate-300">Low (≤ 2.0% - 3.0%)</td>
+                        <td className="p-3 text-slate-600 dark:text-slate-300">Standard consumer distribution, general food processing.</td>
+                      </tr>
+                      {/* Grade III & IV */}
+                      <tr className="hover:bg-amber-50/40 dark:hover:bg-amber-950/20 transition-colors">
+                        <td className="p-3 font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">
+                          <div className="font-extrabold text-xs">Grade III & IV</div>
+                          <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">(Utility)</div>
+                        </td>
+                        <td className="p-3 font-black text-amber-800 dark:text-amber-300 whitespace-nowrap">17.1% - 19.9%</td>
+                        <td className="p-3 text-slate-700 dark:text-slate-300">Moderate (≤ 2.0% - 3.0%)</td>
+                        <td className="p-3 text-slate-700 dark:text-slate-300">Moderate (≤ 4.0% - 5.0%)</td>
+                        <td className="p-3 text-slate-600 dark:text-slate-300">Commercial blending, industrial processing.</td>
+                      </tr>
+                      {/* Sample Grade / Rejected */}
+                      <tr className="hover:bg-red-50/40 dark:hover:bg-red-950/20 transition-colors">
+                        <td className="p-3 font-bold text-red-700 dark:text-red-400 whitespace-nowrap">
+                          <div className="font-extrabold text-xs">Sample Grade</div>
+                          <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">/ Rejected</div>
+                        </td>
+                        <td className="p-3 font-black text-red-800 dark:text-red-300 whitespace-nowrap">≥ 20.0%</td>
+                        <td className="p-3 text-slate-700 dark:text-slate-300">High (&gt; 3.0%)</td>
+                        <td className="p-3 text-slate-700 dark:text-slate-300">High (&gt; 5.0%)</td>
+                        <td className="p-3 text-slate-600 dark:text-slate-300">Animal feed, biofuel extraction, or rejected due to toxins/odor.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               <div className="space-y-3">
                 {/* Grade A Card */}
                 <div className="bg-white dark:bg-[#0e1626] rounded-2xl border-2 border-emerald-300 dark:border-emerald-500/40 p-4 shadow-xs relative overflow-hidden">
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
                       <span className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-black text-sm flex items-center justify-center border border-emerald-200 dark:border-emerald-500/30">
-                        A
+                        I
                       </span>
                       <div>
-                        <h4 className="font-extrabold text-slate-900 dark:text-white text-sm font-display">{t('quality_standards.grade_a_title')}</h4>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-extrabold text-slate-900 dark:text-white text-sm font-display">Grade I (Premium / Choice)</h4>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                            Grade A
+                          </span>
+                        </div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
                           {t('quality_standards.badge_faq')} · 100% MSP Payout
                         </span>
@@ -310,12 +422,22 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.foreign_chaff')}</p>
-                      <p className="font-black text-emerald-900 dark:text-emerald-300 text-sm">≤ 1.5%</p>
+                      <p className="font-black text-emerald-900 dark:text-emerald-300 text-sm">≤ 1.0%</p>
+                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block">Extremely Low</span>
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.damaged_grain')}</p>
-                      <p className="font-black text-emerald-900 dark:text-emerald-300 text-sm">≤ 2.0%</p>
+                      <p className="font-black text-emerald-900 dark:text-emerald-300 text-sm">≤ 1.0%</p>
+                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block">Negligible</span>
                     </div>
+                  </div>
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/5 flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                    <span className="font-bold text-slate-500 dark:text-slate-400 shrink-0 text-[11px]">
+                      Destination:
+                    </span>
+                    <span className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300">
+                      Premium retail food, export quality, milling.
+                    </span>
                   </div>
                 </div>
 
@@ -324,10 +446,15 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
                       <span className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-300 font-black text-sm flex items-center justify-center border border-blue-200 dark:border-blue-500/30">
-                        B
+                        II
                       </span>
                       <div>
-                        <h4 className="font-extrabold text-slate-900 dark:text-white text-sm font-display">{t('quality_standards.grade_b_title')}</h4>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-extrabold text-slate-900 dark:text-white text-sm font-display">Grade II (Standard)</h4>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                            Grade B
+                          </span>
+                        </div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400">
                           {t('quality_standards.badge_permissible')} · 98% Standard Payout
                         </span>
@@ -347,12 +474,22 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.foreign_chaff')}</p>
-                      <p className="font-black text-blue-900 dark:text-blue-300 text-sm">≤ 3.0%</p>
+                      <p className="font-black text-blue-900 dark:text-blue-300 text-sm">≤ 1.5%</p>
+                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block">Low</span>
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.damaged_grain')}</p>
-                      <p className="font-black text-blue-900 dark:text-blue-300 text-sm">≤ 4.0%</p>
+                      <p className="font-black text-blue-900 dark:text-blue-300 text-sm">≤ 3.0%</p>
+                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block">Low (≤ 2.0% - 3.0%)</span>
                     </div>
+                  </div>
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/5 flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                    <span className="font-bold text-slate-500 dark:text-slate-400 shrink-0 text-[11px]">
+                      Destination:
+                    </span>
+                    <span className="text-[11px] font-medium text-blue-800 dark:text-blue-300">
+                      Standard consumer distribution, general food processing.
+                    </span>
                   </div>
                 </div>
 
@@ -361,10 +498,15 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
                       <span className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-black text-sm flex items-center justify-center border border-amber-200 dark:border-amber-500/30">
-                        C
+                        III/IV
                       </span>
                       <div>
-                        <h4 className="font-extrabold text-slate-900 dark:text-white text-sm font-display">{t('quality_standards.grade_c_title')}</h4>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-extrabold text-slate-900 dark:text-white text-sm font-display">Grade III & IV (Utility)</h4>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                            Grade C
+                          </span>
+                        </div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                           {t('quality_standards.badge_deferral')} · 2.5h Yard Sun-Drying Grace
                         </span>
@@ -384,12 +526,22 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.foreign_chaff')}</p>
-                      <p className="font-black text-amber-900 dark:text-amber-300 text-sm">≤ 4.0%</p>
+                      <p className="font-black text-amber-900 dark:text-amber-300 text-sm">≤ 3.0%</p>
+                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block">Moderate (≤ 2.0% - 3.0%)</span>
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.damaged_grain')}</p>
                       <p className="font-black text-amber-900 dark:text-amber-300 text-sm">≤ 5.0%</p>
+                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block">Moderate (≤ 4.0% - 5.0%)</span>
                     </div>
+                  </div>
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/5 flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                    <span className="font-bold text-slate-500 dark:text-slate-400 shrink-0 text-[11px]">
+                      Destination:
+                    </span>
+                    <span className="text-[11px] font-medium text-amber-800 dark:text-amber-300">
+                      Commercial blending, industrial processing.
+                    </span>
                   </div>
                 </div>
 
@@ -401,7 +553,12 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                         ✕
                       </span>
                       <div>
-                        <h4 className="font-extrabold text-slate-900 dark:text-white text-sm font-display">{t('quality_standards.grade_rej_title')}</h4>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-extrabold text-slate-900 dark:text-white text-sm font-display">Sample Grade / Rejected</h4>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300">
+                            Rejected
+                          </span>
+                        </div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400">
                           {t('quality_standards.badge_rejection')} · Silo Rot Hazard Guard
                         </span>
@@ -421,12 +578,22 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.foreign_chaff')}</p>
-                      <p className="font-black text-red-900 dark:text-red-300 text-sm">&gt; 4.0%</p>
+                      <p className="font-black text-red-900 dark:text-red-300 text-sm">&gt; 3.0%</p>
+                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block">High (&gt; 3.0%)</span>
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.damaged_grain')}</p>
                       <p className="font-black text-red-900 dark:text-red-300 text-sm">&gt; 5.0%</p>
+                      <span className="text-[9px] text-slate-400 dark:text-slate-500 block">High (&gt; 5.0%)</span>
                     </div>
+                  </div>
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/5 flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                    <span className="font-bold text-slate-500 dark:text-slate-400 shrink-0 text-[11px]">
+                      Destination:
+                    </span>
+                    <span className="text-[11px] font-medium text-red-800 dark:text-red-300">
+                      Animal feed, biofuel extraction, or rejected due to toxins/odor.
+                    </span>
                   </div>
                 </div>
               </div>

@@ -397,6 +397,13 @@ export default {
     rule_sundrying_desc: 'Farmers whose lot exhibits 17.1% - 19.9% moisture are entitled by law to a 2.5-hour free mandi yard sun-drying window before any refusal.',
     rule_meter_title: 'Digital Meter Calibration Standard (Sec 12C)',
     rule_meter_desc: 'All moisture meters and weighbridges at procurement counters must be calibrated per ISO 712 and Legal Metrology standards.',
+    grading_tier_col: 'Grading Tier',
+    foreign_matter_col: 'Foreign Matter / Chaff / Insolubles (%)',
+    damaged_kernels_col: 'Damaged / Discolored Kernels (%)',
+    market_destination_col: 'Typical Market Destination',
+    market_destination_label: 'Typical Market Destination',
+    composite_formula_title: 'Agmark Composite 3-Parameter Grading',
+    composite_formula_desc: 'Final Grade is determined by averaging the statutory tiers of Moisture %, Foreign Matter / Chaff %, and Damaged / Discolored Kernels %.'
   },
 
   notifications: {
