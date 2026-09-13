@@ -562,13 +562,13 @@ async def cancel_booking(
     result = await db.execute(select(QueueEntry).where(QueueEntry.id == queue_id))
     entry = result.scalar_one_or_none()
     if not entry:
-        raise HTTPException(status_code=404, detail="Queue entry not found")
+        return {"message": "Booking already cancelled or removed", "token": "N/A"}
 
     if current_user.role == UserRole.FARMER and entry.farmer_id != current_user.id:
         raise HTTPException(status_code=403, detail="You can only cancel your own bookings")
 
     if entry.status not in [QueueStatus.WAITING, QueueStatus.CALLED]:
-        raise HTTPException(status_code=400, detail=f"Cannot cancel entry in status {entry.status}")
+        return {"message": "Booking already cancelled", "token": entry.token}
 
     entry.status = QueueStatus.CANCELLED
     entry.cancelled_at = datetime.now(timezone.utc)

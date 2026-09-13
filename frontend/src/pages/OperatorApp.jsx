@@ -1086,7 +1086,17 @@ export default function OperatorApp() {
       setCancelModal(null)
       await loadQueue()
     } catch (e) {
-      toast.error(e.message || 'Failed to cancel booking')
+      if (e.message && (e.message.includes('not found') || e.message.includes('404') || e.message.includes('Not found') || e.message.includes('already cancelled'))) {
+        setQueue(prev => prev ? {
+          ...prev,
+          entries: prev.entries.filter(en => en.id !== queueId)
+        } : prev)
+        setCancelModal(null)
+        toast('Queue booking already removed from active list.', { icon: 'ℹ️' })
+        await loadQueue()
+      } else {
+        toast.error(e.message || 'Failed to cancel booking')
+      }
     } finally {
       setCancelling(false)
     }
