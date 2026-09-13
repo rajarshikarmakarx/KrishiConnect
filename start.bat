@@ -47,24 +47,26 @@ if not exist ".env" (
     )
 )
 
-if not exist "venv\Scripts\python.exe" (
-    echo      Creating Python virtual environment (venv)...
-    %PY_CMD% -m venv venv
+:: Check if system python already has all requirements
+set "RUN_PY=%PY_CMD%"
+%PY_CMD% -c "import fastapi, uvicorn, sqlalchemy, dotenv" >nul 2>&1
+if %ERRORLEVEL% equ 0 (
+    set "RUN_PY=%PY_CMD%"
+) else (
+    if not exist "venv\Scripts\python.exe" (
+        echo      Creating Python virtual environment...
+        %PY_CMD% -m venv venv
+    )
+    set "RUN_PY=%~dp0backend\venv\Scripts\python.exe"
+    set "RUN_PIP=%~dp0backend\venv\Scripts\pip.exe"
+    echo      Installing backend packages...
+    "!RUN_PIP!" install --disable-pip-version-check -r requirements.txt
 )
 
-set "VENV_PY=%~dp0backend\venv\Scripts\python.exe"
-set "VENV_PIP=%~dp0backend\venv\Scripts\pip.exe"
-
-echo      Checking backend dependencies...
-"%VENV_PY%" -c "import fastapi, uvicorn, sqlalchemy, jose, bcrypt, tzdata, redis" >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo      Installing backend packages (this may take a minute on first run)...
-    "%VENV_PIP%" install --disable-pip-version-check -r requirements.txt
-)
-
-echo      Initializing database & seed data...
+echo      Initializing database and seed data...
 set PYTHONPATH=%~dp0backend
-"%VENV_PY%" -c "import asyncio; from app.database import init_db; from app.seed import seed; asyncio.run(init_db()); asyncio.run(seed())"
+set PYTHONIOENCODING=utf-8
+%RUN_PY% -m app.seed
 
 :: ── 4. Configure Frontend ───────────────────────────────────
 echo.
@@ -79,7 +81,7 @@ if not exist ".env" (
 )
 
 if not exist "node_modules" (
-    echo      Installing npm packages (first time setup)...
+    echo      Installing npm packages...
     call npm install
 )
 
@@ -87,14 +89,14 @@ if not exist "node_modules" (
 echo.
 echo [3/4] Starting FastAPI Backend on port 8000...
 cd "%~dp0backend"
-start "KrishiConnect Backend Server" cmd /k "set PYTHONPATH=%~dp0backend && "%VENV_PY%" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+start "KrishiConnect Backend Server" cmd /k "set PYTHONPATH=%~dp0backend&& set PYTHONIOENCODING=utf-8&& %RUN_PY% -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
 echo [4/4] Starting Vite React Frontend on port 5173...
 cd "%~dp0frontend"
-start "KrishiConnect Frontend Server" cmd /k "npm run dev"
+start "KrishiConnect Frontend Server" cmd /k "npm run dev -- --host"
 
-:: Wait 3 seconds then open browser
-timeout /t 3 >nul
+:: Wait 2 seconds then open browser
+ping -n 3 127.0.0.1 >nul
 start http://localhost:5173
 
 echo.
@@ -106,9 +108,9 @@ echo   Mandi Officer / Admin: http://localhost:5173/admin
 echo   FastAPI Swagger Docs:  http://localhost:8000/docs
 echo.
 echo   Demo Credentials:
-echo   - Farmer OTP:    Any 10-digit number (OTP: 482913)
-echo   - Operator:      Mobile: 9000000001 ^| Password: operator123
-echo   - Admin:         Mobile: 9000000000 ^| Password: admin123
+echo   - Farmer OTP:    Any 10-digit number, e.g. 9800000000 (OTP: 482913)
+echo   - Operator:      Mobile: 9000000001 or operator@krishi.gov.in (Password: password123)
+echo   - Admin:         Mobile: 9000000000 or admin@krishi.gov.in (Password: password123)
 echo ============================================================
 echo   Close the two server command windows to stop the application.
 echo ============================================================
