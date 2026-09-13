@@ -27,6 +27,8 @@ const FALLBACK_DATA = {
       tier_title: 'Grade I (Premium / Choice)',
       label: 'Grade A / Grade I (Premium / Choice)',
       payout_percentage: '100%',
+      penalty_percentage: '0%',
+      penalty_label: '0% (No Penalty)',
       moisture_threshold: '≤ 14.0%',
       chaff_threshold: '≤ 1.0%',
       damaged_threshold: '≤ 1.0%',
@@ -42,6 +44,8 @@ const FALLBACK_DATA = {
       tier_title: 'Grade II (Standard)',
       label: 'Grade B / Grade II (Standard)',
       payout_percentage: '98%',
+      penalty_percentage: '-2%',
+      penalty_label: '-2% Value Cut',
       moisture_threshold: '14.1% - 17.0%',
       chaff_threshold: '≤ 1.5%',
       damaged_threshold: '≤ 3.0%',
@@ -57,6 +61,8 @@ const FALLBACK_DATA = {
       tier_title: 'Grade III & IV (Utility)',
       label: 'Grade C / Grade III & IV (Utility)',
       payout_percentage: '90%',
+      penalty_percentage: '-10%',
+      penalty_label: '-10% Penalty (or Courtyard Sun-Drying)',
       moisture_threshold: '17.1% - 19.9%',
       chaff_threshold: '≤ 3.0%',
       damaged_threshold: '≤ 5.0%',
@@ -72,6 +78,8 @@ const FALLBACK_DATA = {
       tier_title: 'Sample Grade / Rejected',
       label: 'Sample Grade / Rejected',
       payout_percentage: '0%',
+      penalty_percentage: '-100%',
+      penalty_label: '-100% Deduction / Intake Blocked',
       moisture_threshold: '≥ 20.0%',
       chaff_threshold: '> 3.0%',
       damaged_threshold: '> 5.0%',
@@ -86,6 +94,7 @@ const FALLBACK_DATA = {
   crop_standards: [
     {
       crop: 'Paddy',
+      base_msp: 23.00,
       faq_moisture_max: 14.0,
       permissible_moisture_max: 17.0,
       max_foreign_chaff: 1.5,
@@ -96,6 +105,7 @@ const FALLBACK_DATA = {
     },
     {
       crop: 'Wheat',
+      base_msp: 22.75,
       faq_moisture_max: 12.0,
       permissible_moisture_max: 12.0,
       max_foreign_chaff: 0.75,
@@ -106,6 +116,7 @@ const FALLBACK_DATA = {
     },
     {
       crop: 'Mustard',
+      base_msp: 59.50,
       faq_moisture_max: 8.0,
       permissible_moisture_max: 9.0,
       max_foreign_chaff: 2.0,
@@ -116,6 +127,7 @@ const FALLBACK_DATA = {
     },
     {
       crop: 'Jute',
+      base_msp: 53.35,
       faq_moisture_max: 18.0,
       permissible_moisture_max: 20.0,
       max_foreign_chaff: 1.0,
@@ -136,6 +148,7 @@ const FALLBACK_DATA = {
     },
     {
       crop: 'Potato',
+      base_msp: 10.25,
       faq_moisture_max: 0.0,
       permissible_moisture_max: 0.0,
       max_foreign_chaff: 1.0,
@@ -146,6 +159,7 @@ const FALLBACK_DATA = {
     },
     {
       crop: 'Onion',
+      base_msp: 18.25,
       faq_moisture_max: 0.0,
       permissible_moisture_max: 0.0,
       max_foreign_chaff: 1.0,
@@ -172,6 +186,16 @@ const FALLBACK_DATA = {
       description: 'All moisture meters and weighbridges at procurement counters must be calibrated per ISO 712 and Legal Metrology standards.'
     }
   ]
+}
+
+const CROP_BASE_PRICES = {
+  Paddy: 23.00,
+  Wheat: 22.75,
+  Mustard: 59.50,
+  Jute: 53.35,
+  Potato: 10.25,
+  Onion: 18.25,
+  Maize: 22.25
 }
 
 export default function QualityStandardsModal({ isOpen = true, onClose, initialCrop = 'Paddy' }) {
@@ -208,6 +232,7 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
 
   const cropStandardsList = data.crop_standards || FALLBACK_DATA.crop_standards
   const currentCropSpec = cropStandardsList.find(c => c.crop.toLowerCase() === selectedCrop.toLowerCase()) || cropStandardsList[0]
+  const activeBaseMsp = currentCropSpec?.base_msp || CROP_BASE_PRICES[selectedCrop] || CROP_BASE_PRICES.Paddy
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
@@ -316,6 +341,37 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                 </div>
               </div>
 
+              {/* Reference Crop Price Quick Bar */}
+              <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-100/90 dark:bg-white/5 p-2.5 rounded-2xl border border-slate-200/80 dark:border-white/10">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <Wheat className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Reference Crop MSP:</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {Object.keys(CROP_BASE_PRICES).slice(0, 6).map(cropName => {
+                    const isSelected = selectedCrop.toLowerCase() === cropName.toLowerCase()
+                    const price = CROP_BASE_PRICES[cropName]
+                    return (
+                      <button
+                        key={cropName}
+                        type="button"
+                        onClick={() => setSelectedCrop(cropName)}
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-white dark:bg-[#0e1626] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                        }`}
+                      >
+                        <span>{translateCrop(cropName)}</span>
+                        <span className={`text-[10px] ${isSelected ? 'text-emerald-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                          ₹{formatNumber(price)}/kg
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               {/* Official AGMARK Standards Comparison Table */}
               <div className="rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden bg-white dark:bg-[#0e1626] shadow-xs">
                 <div className="bg-slate-100 dark:bg-white/5 px-4 py-2.5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
@@ -328,13 +384,14 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                   </span>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse min-w-[620px]">
+                  <table className="w-full text-left text-xs border-collapse min-w-[720px]">
                     <thead>
                       <tr className="border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] text-[11px] font-bold text-slate-500 dark:text-slate-400">
                         <th className="p-3">Grading Tier</th>
                         <th className="p-3">Moisture (%)</th>
                         <th className="p-3">Foreign Matter / Chaff (%)</th>
                         <th className="p-3">Damaged / Discolored (%)</th>
+                        <th className="p-3">Statutory Price Penalty</th>
                         <th className="p-3">Typical Market Destination</th>
                       </tr>
                     </thead>
@@ -348,6 +405,19 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                         <td className="p-3 font-black text-emerald-800 dark:text-emerald-300 whitespace-nowrap">≤ 14.0%</td>
                         <td className="p-3 text-slate-700 dark:text-slate-300">Extremely Low (≤ 0.5% - 1.0%)</td>
                         <td className="p-3 text-slate-700 dark:text-slate-300">Negligible (≤ 1.0%)</td>
+                        <td className="p-3 whitespace-nowrap">
+                          <div className="flex flex-col items-start gap-0.5">
+                            <span className="inline-flex items-center gap-1 font-black text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-100/90 dark:bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-500/40">
+                              0% Penalty
+                            </span>
+                            <span className="text-[11px] font-bold text-slate-900 dark:text-white">
+                              ₹{formatNumber(activeBaseMsp.toFixed(2))}/kg
+                            </span>
+                            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">
+                              100% MSP · No Deduction
+                            </span>
+                          </div>
+                        </td>
                         <td className="p-3 text-slate-600 dark:text-slate-300">Premium retail food, export quality, milling.</td>
                       </tr>
                       {/* Grade II */}
@@ -359,6 +429,19 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                         <td className="p-3 font-black text-blue-800 dark:text-blue-300 whitespace-nowrap">14.1% - 17.0%</td>
                         <td className="p-3 text-slate-700 dark:text-slate-300">Low (≤ 1.5%)</td>
                         <td className="p-3 text-slate-700 dark:text-slate-300">Low (≤ 2.0% - 3.0%)</td>
+                        <td className="p-3 whitespace-nowrap">
+                          <div className="flex flex-col items-start gap-0.5">
+                            <span className="inline-flex items-center gap-1 font-black text-xs text-blue-700 dark:text-blue-300 bg-blue-100/90 dark:bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-300 dark:border-blue-500/40">
+                              -2% Value Cut
+                            </span>
+                            <span className="text-[11px] font-bold text-slate-900 dark:text-white">
+                              ₹{formatNumber((activeBaseMsp * 0.98).toFixed(2))}/kg
+                            </span>
+                            <span className="text-[10px] text-blue-700 dark:text-blue-400 font-medium">
+                              -₹{formatNumber((activeBaseMsp * 0.02).toFixed(2))}/kg penalty (98% Payout)
+                            </span>
+                          </div>
+                        </td>
                         <td className="p-3 text-slate-600 dark:text-slate-300">Standard consumer distribution, general food processing.</td>
                       </tr>
                       {/* Grade III & IV */}
@@ -370,6 +453,19 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                         <td className="p-3 font-black text-amber-800 dark:text-amber-300 whitespace-nowrap">17.1% - 19.9%</td>
                         <td className="p-3 text-slate-700 dark:text-slate-300">Moderate (≤ 2.0% - 3.0%)</td>
                         <td className="p-3 text-slate-700 dark:text-slate-300">Moderate (≤ 4.0% - 5.0%)</td>
+                        <td className="p-3 whitespace-nowrap">
+                          <div className="flex flex-col items-start gap-0.5">
+                            <span className="inline-flex items-center gap-1 font-black text-xs text-amber-700 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-500/40">
+                              -10% Penalty
+                            </span>
+                            <span className="text-[11px] font-bold text-slate-900 dark:text-white">
+                              ₹{formatNumber((activeBaseMsp * 0.90).toFixed(2))}/kg
+                            </span>
+                            <span className="text-[10px] text-amber-700 dark:text-amber-400 font-medium">
+                              -₹{formatNumber((activeBaseMsp * 0.10).toFixed(2))}/kg (or Sun-Dry Grace)
+                            </span>
+                          </div>
+                        </td>
                         <td className="p-3 text-slate-600 dark:text-slate-300">Commercial blending, industrial processing.</td>
                       </tr>
                       {/* Sample Grade / Rejected */}
@@ -381,6 +477,19 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                         <td className="p-3 font-black text-red-800 dark:text-red-300 whitespace-nowrap">≥ 20.0%</td>
                         <td className="p-3 text-slate-700 dark:text-slate-300">High (&gt; 3.0%)</td>
                         <td className="p-3 text-slate-700 dark:text-slate-300">High (&gt; 5.0%)</td>
+                        <td className="p-3 whitespace-nowrap">
+                          <div className="flex flex-col items-start gap-0.5">
+                            <span className="inline-flex items-center gap-1 font-black text-xs text-red-700 dark:text-red-300 bg-red-100/90 dark:bg-red-500/20 px-2 py-0.5 rounded-full border border-red-300 dark:border-red-500/40">
+                              -100% Blocked
+                            </span>
+                            <span className="text-[11px] font-bold text-slate-900 dark:text-white">
+                              ₹0.00/kg
+                            </span>
+                            <span className="text-[10px] text-red-700 dark:text-red-400 font-medium">
+                              Intake Prohibited (Total Loss)
+                            </span>
+                          </div>
+                        </td>
                         <td className="p-3 text-slate-600 dark:text-slate-300">Animal feed, biofuel extraction, or rejected due to toxins/odor.</td>
                       </tr>
                     </tbody>
@@ -415,7 +524,7 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
                     {t('quality_standards.grade_a_desc')}
                   </p>
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs bg-emerald-50/60 dark:bg-emerald-950/30 rounded-xl p-2.5 border border-emerald-100 dark:border-emerald-500/20">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs bg-emerald-50/60 dark:bg-emerald-950/30 rounded-xl p-2.5 border border-emerald-100 dark:border-emerald-500/20">
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.moisture')}</p>
                       <p className="font-black text-emerald-900 dark:text-emerald-300 text-sm">≤ 14.0%</p>
@@ -429,6 +538,11 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.damaged_grain')}</p>
                       <p className="font-black text-emerald-900 dark:text-emerald-300 text-sm">≤ 1.0%</p>
                       <span className="text-[9px] text-slate-400 dark:text-slate-500 block">Negligible</span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Price Penalty</p>
+                      <p className="font-black text-emerald-900 dark:text-emerald-300 text-sm">0% Penalty</p>
+                      <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold block">100% Rate (₹{formatNumber(activeBaseMsp.toFixed(2))})</span>
                     </div>
                   </div>
                   <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/5 flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300">
@@ -467,7 +581,7 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
                     {t('quality_standards.grade_b_desc')}
                   </p>
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs bg-blue-50/60 dark:bg-blue-950/30 rounded-xl p-2.5 border border-blue-100 dark:border-blue-500/20">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs bg-blue-50/60 dark:bg-blue-950/30 rounded-xl p-2.5 border border-blue-100 dark:border-blue-500/20">
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.moisture')}</p>
                       <p className="font-black text-blue-900 dark:text-blue-300 text-sm">14.1% - 17.0%</p>
@@ -481,6 +595,11 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.damaged_grain')}</p>
                       <p className="font-black text-blue-900 dark:text-blue-300 text-sm">≤ 3.0%</p>
                       <span className="text-[9px] text-slate-400 dark:text-slate-500 block">Low (≤ 2.0% - 3.0%)</span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Price Penalty</p>
+                      <p className="font-black text-blue-900 dark:text-blue-300 text-sm">-2% Value Cut</p>
+                      <span className="text-[9px] text-blue-600 dark:text-blue-400 font-bold block">-₹{formatNumber((activeBaseMsp * 0.02).toFixed(2))}/kg (98% Rate)</span>
                     </div>
                   </div>
                   <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/5 flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300">
@@ -519,7 +638,7 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
                     {t('quality_standards.grade_c_desc')}
                   </p>
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs bg-amber-50/60 dark:bg-amber-950/30 rounded-xl p-2.5 border border-amber-100 dark:border-amber-500/20">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs bg-amber-50/60 dark:bg-amber-950/30 rounded-xl p-2.5 border border-amber-100 dark:border-amber-500/20">
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.moisture')}</p>
                       <p className="font-black text-amber-900 dark:text-amber-300 text-sm">17.1% - 19.9%</p>
@@ -533,6 +652,11 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.damaged_grain')}</p>
                       <p className="font-black text-amber-900 dark:text-amber-300 text-sm">≤ 5.0%</p>
                       <span className="text-[9px] text-slate-400 dark:text-slate-500 block">Moderate (≤ 4.0% - 5.0%)</span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Price Penalty</p>
+                      <p className="font-black text-amber-900 dark:text-amber-300 text-sm">-10% Penalty</p>
+                      <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold block">-₹{formatNumber((activeBaseMsp * 0.10).toFixed(2))}/kg or Sun-Dry</span>
                     </div>
                   </div>
                   <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/5 flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300">
@@ -571,7 +695,7 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
                     {t('quality_standards.grade_rej_desc')}
                   </p>
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs bg-red-50/60 dark:bg-red-950/30 rounded-xl p-2.5 border border-red-100 dark:border-red-500/20">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs bg-red-50/60 dark:bg-red-950/30 rounded-xl p-2.5 border border-red-100 dark:border-red-500/20">
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.moisture')}</p>
                       <p className="font-black text-red-900 dark:text-red-300 text-sm">≥ 20.0%</p>
@@ -585,6 +709,11 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{t('completion.damaged_grain')}</p>
                       <p className="font-black text-red-900 dark:text-red-300 text-sm">&gt; 5.0%</p>
                       <span className="text-[9px] text-slate-400 dark:text-slate-500 block">High (&gt; 5.0%)</span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Price Penalty</p>
+                      <p className="font-black text-red-900 dark:text-red-300 text-sm">-100% Loss</p>
+                      <span className="text-[9px] text-red-600 dark:text-red-400 font-bold block">Intake Blocked (₹0)</span>
                     </div>
                   </div>
                   <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-white/5 flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300">
@@ -689,6 +818,61 @@ export default function QualityStandardsModal({ isOpen = true, onClose, initialC
                       <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1 line-clamp-2">
                         {currentCropSpec.special_parameter}
                       </p>
+                    </div>
+                  </div>
+
+                  {/* Gradewise Price & Statutory Penalty Matrix for this Crop */}
+                  <div className="bg-white dark:bg-[#0a101d] rounded-2xl p-4 border border-slate-200 dark:border-white/10 space-y-3 shadow-xs">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-2.5 flex-wrap gap-2">
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5 font-display">
+                        <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        {translateCrop(currentCropSpec.crop)} Statutory Price Penalty by Grade
+                      </span>
+                      <span className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                        Base MSP: ₹{formatNumber(activeBaseMsp.toFixed(2))}/kg (₹{formatNumber((activeBaseMsp * 100).toFixed(0))}/Q)
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                      {/* Grade I */}
+                      <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-500/30">
+                        <p className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300">Grade I (Premium)</p>
+                        <p className="text-sm font-black text-emerald-700 dark:text-emerald-400 mt-0.5 font-mono">
+                          ₹{formatNumber(activeBaseMsp.toFixed(2))}/kg
+                        </p>
+                        <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                          0% Penalty (100% MSP)
+                        </span>
+                      </div>
+                      {/* Grade II */}
+                      <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-500/30">
+                        <p className="text-[10px] font-bold text-blue-800 dark:text-blue-300">Grade II (Standard)</p>
+                        <p className="text-sm font-black text-blue-700 dark:text-blue-400 mt-0.5 font-mono">
+                          ₹{formatNumber((activeBaseMsp * 0.98).toFixed(2))}/kg
+                        </p>
+                        <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 block mt-0.5">
+                          -2% Value Cut (-₹{formatNumber((activeBaseMsp * 0.02).toFixed(2))})
+                        </span>
+                      </div>
+                      {/* Grade III & IV */}
+                      <div className="p-2.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-500/30">
+                        <p className="text-[10px] font-bold text-amber-800 dark:text-amber-300">Grade III/IV (Utility)</p>
+                        <p className="text-sm font-black text-amber-700 dark:text-amber-400 mt-0.5 font-mono">
+                          ₹{formatNumber((activeBaseMsp * 0.90).toFixed(2))}/kg
+                        </p>
+                        <span className="text-[10px] font-extrabold text-amber-600 dark:text-amber-400 block mt-0.5">
+                          -10% Cut (or Sun-Dry)
+                        </span>
+                      </div>
+                      {/* Rejected */}
+                      <div className="p-2.5 rounded-xl bg-red-50/70 dark:bg-red-950/30 border border-red-200/80 dark:border-red-500/30">
+                        <p className="text-[10px] font-bold text-red-800 dark:text-red-300">Sample / Rejected</p>
+                        <p className="text-sm font-black text-red-700 dark:text-red-400 mt-0.5 font-mono">
+                          ₹0.00/kg
+                        </p>
+                        <span className="text-[10px] font-extrabold text-red-600 dark:text-red-400 block mt-0.5">
+                          -100% (Intake Blocked)
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
