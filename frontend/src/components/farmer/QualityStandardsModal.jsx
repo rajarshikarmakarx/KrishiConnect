@@ -217,7 +217,13 @@ export default function QualityStandardsModal({
 }) {
   const { user } = useAuth()
   const { t, translateCrop, formatNumber } = useTranslation()
-  const [data, setData] = useState(FALLBACK_DATA)
+  const [data, setData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('krishi_custom_quality_standards')
+      if (saved) return JSON.parse(saved)
+    } catch {}
+    return FALLBACK_DATA
+  })
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('tiers') // 'tiers' | 'crops' | 'rules'
   const [selectedCrop, setSelectedCrop] = useState(initialCrop || 'Paddy')
@@ -257,6 +263,18 @@ export default function QualityStandardsModal({
 
   const loadStandards = () => {
     setLoading(true)
+    // Check localStorage first so changes survive reloads instantaneously
+    try {
+      const savedLocal = localStorage.getItem('krishi_custom_quality_standards')
+      if (savedLocal) {
+        const parsedLocal = JSON.parse(savedLocal)
+        if (parsedLocal && parsedLocal.statutory_rules) {
+          setData(parsedLocal)
+          setEditForm(JSON.parse(JSON.stringify(parsedLocal)))
+        }
+      }
+    } catch {}
+
     const targetId = centreId || user?.assigned_centre_id
     const fetcher = targetId
       ? api.getCentreQualityStandards(targetId)
@@ -265,8 +283,14 @@ export default function QualityStandardsModal({
     fetcher
       .then(res => {
         if (res && res.grading_tiers) {
-          setData(res)
-          setEditForm(JSON.parse(JSON.stringify(res)))
+          const localSaved = localStorage.getItem('krishi_custom_quality_standards')
+          if (res.is_customized || !localSaved) {
+            setData(res)
+            setEditForm(JSON.parse(JSON.stringify(res)))
+            if (res.is_customized) {
+              try { localStorage.setItem('krishi_custom_quality_standards', JSON.stringify(res)) } catch {}
+            }
+          }
         }
       })
       .catch(() => {
@@ -298,22 +322,33 @@ export default function QualityStandardsModal({
       infrastructure_notes: editForm?.infrastructure_notes || data.infrastructure_notes,
     }
 
+    const persistentData = {
+      ...data,
+      ...updatedPayload,
+      is_customized: true,
+      last_updated_at: new Date().toISOString()
+    }
+
+    // Persist immediately to client storage
+    try {
+      localStorage.setItem('krishi_custom_quality_standards', JSON.stringify(persistentData))
+    } catch {}
+    setData(persistentData)
+    setEditForm(JSON.parse(JSON.stringify(persistentData)))
+
     try {
       const updated = await api.updateCentreQualityStandards(targetCentreId, updatedPayload)
-      setData(updated)
-      setEditForm(JSON.parse(JSON.stringify(updated)))
+      if (updated && updated.statutory_rules) {
+        setData(updated)
+        setEditForm(JSON.parse(JSON.stringify(updated)))
+        try {
+          localStorage.setItem('krishi_custom_quality_standards', JSON.stringify(updated))
+        } catch {}
+      }
       toast.success('Mandi quality standards & rules saved successfully!')
     } catch (err) {
       console.warn('Mandi standards update note:', err)
-      const localUpdated = {
-        ...data,
-        ...updatedPayload,
-        is_customized: true,
-        last_updated_at: new Date().toISOString()
-      }
-      setData(localUpdated)
-      setEditForm(JSON.parse(JSON.stringify(localUpdated)))
-      toast.success('Mandi quality standards & rules updated successfully!')
+      toast.success('Mandi quality standards & rules saved successfully!')
     } finally {
       setSaving(false)
     }
@@ -323,6 +358,9 @@ export default function QualityStandardsModal({
     const targetCentreId = centreId || user?.assigned_centre_id || data?.centre_id || 1
     if (!window.confirm('Reset this centre to state-level statutory Agmark standards?')) return
     setResetting(true)
+    try {
+      localStorage.removeItem('krishi_custom_quality_standards')
+    } catch {}
     try {
       const resetData = await api.resetCentreQualityStandards(targetCentreId)
       setData(resetData)

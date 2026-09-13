@@ -1140,10 +1140,10 @@ async def calculate_grade_price_endpoint(
 from app.quality_standards_data import get_default_standards
 
 @ai_router.get("/quality-standards")
-async def quality_standards():
+async def quality_standards(db: AsyncSession = Depends(get_db)):
     """
     Statutory Agmark & Mandi Produce Quality Standards (FAQ Norms) (Cached).
-    Returns fixed state-level statutory standards for farmers.
+    Returns customized mandi rules if configured, or falls back to statutory standards.
     """
     cache_key = "static:quality_standards"
     if redis_manager.is_available:
@@ -1151,7 +1151,20 @@ async def quality_standards():
         if cached:
             return cached
 
-    response = get_default_standards()
+    from app.models import CentreQualityStandard
+    r_std = await db.execute(
+        select(CentreQualityStandard).order_by(CentreQualityStandard.updated_at.desc())
+    )
+    custom_record = r_std.scalars().first()
+    default_std = get_default_standards()
+
+    if custom_record and custom_record.standards_data:
+        try:
+            response = json.loads(custom_record.standards_data)
+        except Exception:
+            response = default_std
+    else:
+        response = default_std
 
     if redis_manager.is_available:
         await redis_manager.set_json(cache_key, response, expire_seconds=86400)
