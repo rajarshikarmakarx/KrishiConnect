@@ -17,7 +17,7 @@ services:
       - key: ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
-        value: "10080"
+        value: "1440"
       - key: OPERATOR_REG_SECRET
         value: krishi-admin-2026
       - key: ALLOWED_ORIGINS

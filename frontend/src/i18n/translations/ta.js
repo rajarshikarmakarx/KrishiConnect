@@ -66,7 +66,7 @@ export default {
     tab_otp: 'மொபைல் OTP',
     tab_password: 'கடவுச்சொல்',
     tab_register: 'பதிவு செய்',
-    remember_me: 'என்னை 7 நாட்களுக்கு உள்நுழைந்திருக்கச் செய்',
+    remember_me: 'என்னை உள்நுழைந்திருக்கச் செய்',
     mobile_label: 'மொபைல் எண்',
     mobile_placeholder: '10 இலக்க மொபைல் எண்ணை உள்ளிடுக',
     mobile_password_placeholder: '10 இலக்க மொபைல் எண்ணை உள்ளிடுக',

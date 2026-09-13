@@ -1,7 +1,7 @@
 /**
  * Cross-tab Authentication Synchronization Bus for KrishiConnect
  * Enables seamless auth session sharing across multiple browser tabs
- * while preserving the 7-day remember-me configuration.
+ * while preserving the 24-hour remember-me configuration.
  */
 
 const CHANNEL_NAME = 'krishi_auth_bus'

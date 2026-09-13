@@ -66,7 +66,7 @@ export default {
     tab_otp: 'মোবাইল ওটিপি',
     tab_password: 'পাসওয়ার্ড',
     tab_register: 'নিবন্ধন',
-    remember_me: 'আমাকে ৭ দিনের জন্য লগইন রাখুন',
+    remember_me: 'আমাকে সাইন ইন রাখুন',
     mobile_label: 'মোবাইল নম্বর',
     mobile_placeholder: '১০ অঙ্কের মোবাইল নম্বর লিখুন',
     mobile_password_placeholder: '১০ অঙ্কের মোবাইল নম্বর লিখুন',

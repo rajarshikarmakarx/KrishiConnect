@@ -1,8 +1,8 @@
 /**
- * Multi-tab Auth Synchronization & 7-Day Remember-Me Unit / Integration Verification
+ * Multi-tab Auth Synchronization & 24-Hour Keep Me Signed In Unit / Integration Verification
  */
 
-const REMEMBER_DAYS = 7
+const REMEMBER_HOURS = 24
 const REMEMBER_KEY = 'krishi_remember_until'
 
 // Storage helpers directly mirroring AuthContext
@@ -12,7 +12,7 @@ function saveSession(token, userObj, rememberMe) {
   store.setItem('krishi_user', JSON.stringify(userObj))
 
   if (rememberMe) {
-    const expiresAt = Date.now() + REMEMBER_DAYS * 24 * 60 * 60 * 1000
+    const expiresAt = Date.now() + REMEMBER_HOURS * 60 * 60 * 1000
     localStorage.setItem(REMEMBER_KEY, expiresAt.toString())
     sessionStorage.removeItem('krishi_token')
     sessionStorage.removeItem('krishi_user')
@@ -176,27 +176,27 @@ async function runTests() {
     throw new Error('Tab 2 failed to store synced session')
   }
 
-  // Test 4: 7-Day Remember-Me Login (rememberMe = true)
-  console.log('\n4️⃣  Testing 7-Day Remember-Me Option (rememberMe = true)...')
+  // Test 4: 24-Hour Keep Me Signed In Login (rememberMe = true)
+  console.log('\n4️⃣  Testing 24-Hour Keep Me Signed In Option (rememberMe = true)...')
   wipeSession()
   saveSession(validToken, demoUser, true)
 
   const rememberStamp = globalLocalStorage.getItem('krishi_remember_until')
   if (globalLocalStorage.getItem('krishi_token') === validToken && rememberStamp) {
-    const remainingDays = (parseInt(rememberStamp, 10) - Date.now()) / (24 * 60 * 60 * 1000)
-    console.log(`   ✓ Remember-me session saved in localStorage with expiry ~${remainingDays.toFixed(1)} days`)
+    const remainingHours = (parseInt(rememberStamp, 10) - Date.now()) / (60 * 60 * 1000)
+    console.log(`   ✓ Remember-me session saved in localStorage with expiry ~${remainingHours.toFixed(1)} hours`)
   } else {
     throw new Error('Remember-me session not saved in localStorage')
   }
 
   if (!isRememberMeExpired()) {
-    console.log('   ✓ Active 7-day remember-me session confirmed valid')
+    console.log('   ✓ Active 24-hour remember-me session confirmed valid')
   } else {
     throw new Error('Active remember-me session flagged as expired')
   }
 
-  // Test 5: Simulated 7-day expiry threshold
-  console.log('\n5️⃣  Testing 7-Day Expiry Boundary...')
+  // Test 5: Simulated 24-hour expiry threshold
+  console.log('\n5️⃣  Testing 24-Hour Expiry Boundary...')
   const pastStamp = Date.now() - 1000
   globalLocalStorage.setItem('krishi_remember_until', pastStamp.toString())
   if (isRememberMeExpired()) {

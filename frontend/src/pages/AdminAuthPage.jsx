@@ -119,7 +119,7 @@ export default function AdminAuthPage() {
                 className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500 cursor-pointer"
               />
               <label htmlFor="admin-remember" className="text-xs text-slate-300 font-medium cursor-pointer select-none">
-                Keep me logged in for 7 days
+                Keep me signed in
               </label>
             </div>
 
