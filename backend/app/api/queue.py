@@ -7,7 +7,7 @@ from datetime import datetime, date, timezone
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, text, and_
+from sqlalchemy import select, func, text, and_, or_
 from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models import (
@@ -255,12 +255,26 @@ async def my_queue(current_user: User = Depends(get_current_user), db: AsyncSess
 async def my_active_queue(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(QueueEntry).where(
-            QueueEntry.farmer_id == current_user.id,
-            QueueEntry.status.in_([QueueStatus.WAITING, QueueStatus.CALLED, QueueStatus.PROCESSING, QueueStatus.COMPLETED])
+            QueueEntry.farmer_id == current_user.id
         ).order_by(QueueEntry.booked_at.desc()).limit(1)
     )
     entry = result.scalar_one_or_none()
-    if not entry:
+    if not entry or entry.status == QueueStatus.CANCELLED:
+        return None
+
+    if entry.status == QueueStatus.COMPLETED:
+        start_utc, _ = get_local_today_range_utc()
+        if not entry.completed_at or entry.completed_at < start_utc:
+            return None
+
+    if entry.status not in [
+        QueueStatus.WAITING,
+        QueueStatus.CALLED,
+        QueueStatus.PROCESSING,
+        QueueStatus.DEFERRED_SUN_DRYING,
+        QueueStatus.REJECTED,
+        QueueStatus.COMPLETED
+    ]:
         return None
 
     # Get centre info
@@ -439,9 +453,29 @@ async def cancel_booking(
 
     entry.status = QueueStatus.CANCELLED
     entry.cancelled_at = datetime.now(timezone.utc)
+    if entry.counter_id:
+        entry.counter_id = None
+
+    if entry.slot_id:
+        r_slot = await db.execute(select(TimeSlot).where(TimeSlot.id == entry.slot_id))
+        slot = r_slot.scalar_one_or_none()
+        if slot and slot.booked_count > 0:
+            slot.booked_count -= 1
+
     await db.commit()
 
+    # Broadcast queue changed across centre & admin channels
     await manager.broadcast_queue_changed(entry.centre_id, "cancel")
+
+    # Broadcast direct push notification to the farmer whose booking was cancelled
+    await manager.broadcast_farmer_update(entry.farmer_id, {
+        "type": "CANCELLED",
+        "queue_id": entry.id,
+        "token": entry.token,
+        "centre_id": entry.centre_id,
+        "cancelled_by": current_user.role,
+        "message": "Your booking has been cancelled by the mandi administration."
+    })
     return {"message": "Booking cancelled", "token": entry.token}
 
 

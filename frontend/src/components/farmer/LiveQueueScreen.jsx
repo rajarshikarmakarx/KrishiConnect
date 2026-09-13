@@ -16,13 +16,11 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
   const [notification, setNotification] = useState(initialStatus?.notification)
   const [showStandardsModal, setShowStandardsModal] = useState(false)
 
-  // Sync prop updates into internal state
+  // Sync prop updates into internal state immediately
   useEffect(() => {
-    if (initialStatus) {
-      setStatus(initialStatus)
-      if (initialStatus.notification && initialStatus.notification !== notification) {
-        setNotification(initialStatus.notification)
-      }
+    setStatus(initialStatus || null)
+    if (initialStatus?.notification && initialStatus.notification !== notification) {
+      setNotification(initialStatus.notification)
     }
   }, [initialStatus, notification])
 
@@ -30,11 +28,9 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
     setLoading(true)
     try {
       const data = await api.getMyActiveQueue()
-      if (data) {
-        setStatus(data)
-        if (data.notification && data.notification !== notification) {
-          setNotification(data.notification)
-        }
+      setStatus(data || null)
+      if (data?.notification && data.notification !== notification) {
+        setNotification(data.notification)
       }
       if (onRefresh) onRefresh()
     } catch {} finally {
@@ -55,7 +51,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
 
   const { connected, reconnecting } = useCentreQueue(
     status?.queue_entry?.centre_id,
-    useCallback(() => { refresh() }, [refresh])
+    refresh
   )
 
   if (!status) return null

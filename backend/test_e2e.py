@@ -87,7 +87,7 @@ async def run_tests():
         eta_resp = await ai_eta(test_c.id, db)
         assert "ema_wait_minutes" in eta_resp
         assert "predicted_wait_minutes" in eta_resp
-        assert "days_with_historical_data" in eta_resp
+        assert "historical_records_7d" in eta_resp
         assert eta_resp["confidence"] in ["high", "medium", "low"]
         print(f"   Centre {test_c.id} AI ETA: {eta_resp['predicted_wait_minutes']} min (Confidence: {eta_resp['confidence']}, 7-day EMA: {eta_resp['ema_wait_minutes']} min)")
         print("   ✅ AI EMA wait predictor verified.")

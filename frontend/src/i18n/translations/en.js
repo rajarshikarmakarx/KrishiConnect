@@ -420,6 +420,8 @@ export default {
     rejection_msg: 'Produce exceeded safe moisture limit (20%+) and failed mandatory Mandi Safety Code standards.',
     slot_booked_title: 'Queue Slot Booked: Token {token}',
     slot_booked_msg: 'Successfully booked for {crop} at {centre}. Track live queue in \'My Queue\' tab.',
+    booking_cancelled_title: 'Queue Booking Cancelled',
+    booking_cancelled_msg: 'Your queue booking was cancelled by the mandi administration.',
   },
 
   crops: {

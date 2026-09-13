@@ -19,7 +19,9 @@ async def centre_websocket(websocket: WebSocket, centre_id: int):
             data = await websocket.receive_text()
             if data == "ping":
                 await websocket.send_text("pong")
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, Exception):
+        pass
+    finally:
         manager.disconnect_centre(websocket, centre_id)
 
 
@@ -38,7 +40,9 @@ async def farmer_websocket(websocket: WebSocket, farmer_id: int, token: str = Qu
             data = await websocket.receive_text()
             if data == "ping":
                 await websocket.send_text("pong")
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, Exception):
+        pass
+    finally:
         manager.disconnect_farmer(websocket, farmer_id)
 
 
@@ -51,5 +55,7 @@ async def admin_websocket(websocket: WebSocket):
             data = await websocket.receive_text()
             if data == "ping":
                 await websocket.send_text("pong")
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, Exception):
+        pass
+    finally:
         manager.disconnect_admin(websocket)

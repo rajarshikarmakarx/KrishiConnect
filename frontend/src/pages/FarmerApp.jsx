@@ -17,7 +17,7 @@ import ProfileEdit from '../components/farmer/ProfileEdit'
 import FarmerHistory from '../components/farmer/FarmerHistory'
 import MspRatesModal from '../components/farmer/MspRatesModal'
 import QualityStandardsModal from '../components/farmer/QualityStandardsModal'
-import { useFarmerNotifications, useCentreQueue } from '../hooks/useRealtimeQueue'
+import { useFarmerNotifications, useCentreQueue, useAdminQueue } from '../hooks/useRealtimeQueue'
 
 function ProfileMenu({ user, logout, onEditProfile, onOpenMsp, onOpenStandards }) {
   const { t, translateLocation } = useTranslation()
@@ -161,9 +161,13 @@ export default function FarmerApp() {
       const entryId = data?.queue_entry?.id
       const status = data?.queue_entry?.status
 
+      if (!data || status === 'CANCELLED') {
+        if (newToken) setNewToken(null)
+      }
+
       if (isInitialLoad) {
         // On first mount: if entry is actively in-progress, track it
-        if (data && status !== 'COMPLETED') {
+        if (data && status !== 'COMPLETED' && status !== 'CANCELLED') {
           activeEntryIdRef.current = entryId
           setTab('queue')
         }
@@ -172,7 +176,7 @@ export default function FarmerApp() {
         // completes, record it as completed in this session
         if (status === 'COMPLETED' && (activeEntryIdRef.current === entryId || entryId === sessionCompletedEntryId)) {
           setSessionCompletedEntryId(entryId)
-        } else if (status && status !== 'COMPLETED') {
+        } else if (status && status !== 'COMPLETED' && status !== 'CANCELLED') {
           activeEntryIdRef.current = entryId
         }
       }
@@ -180,7 +184,17 @@ export default function FarmerApp() {
       if (isInitialLoad) initialQueueLoadDone.current = true
       setLoadingQueue(false)
     }
-  }, [sessionCompletedEntryId])
+  }, [sessionCompletedEntryId, newToken])
+
+  // Unified debounced queue and centres loader to handle real-time broadcasts
+  const debounceTimerRef = useRef(null)
+  const debouncedRefresh = useCallback(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = setTimeout(() => {
+      loadActiveQueue()
+      loadCentres()
+    }, 250)
+  }, [loadActiveQueue, loadCentres])
 
   useEffect(() => { loadCentres(); loadActiveQueue() }, [])
 
@@ -204,7 +218,7 @@ export default function FarmerApp() {
           type: 'payment',
           eventKey: `payment-${data.payment_id || data.token || Date.now()}`
         })
-        loadActiveQueue()
+        debouncedRefresh()
       } else if (data.type === 'COMPLETED') {
         setNewToken(null)
         if (data.queue_id || activeEntryIdRef.current) {
@@ -220,7 +234,7 @@ export default function FarmerApp() {
           type: 'success',
           eventKey: `completed-${data.queue_id || data.token || Date.now()}`
         })
-        loadActiveQueue()
+        debouncedRefresh()
       } else if (data.type === 'CALLED') {
         const counterLabel = data.counter || t('queue.default_counter')
         toast(t('toasts.turn_called_toast', { counter: counterLabel }), {
@@ -234,7 +248,7 @@ export default function FarmerApp() {
           type: 'queue',
           eventKey: `called-${data.queue_id || data.token || Date.now()}`
         })
-        loadActiveQueue()
+        debouncedRefresh()
       } else if (data.type === 'PROCESSING') {
         toast(t('toasts.processing_toast'), {
           id: 'farmer-processing',
@@ -247,7 +261,7 @@ export default function FarmerApp() {
           type: 'info',
           eventKey: `processing-${data.queue_id || data.token || Date.now()}`
         })
-        loadActiveQueue()
+        debouncedRefresh()
       } else if (data.type === 'QUALITY_DECISION') {
         if (data.status === 'DEFERRED_SUN_DRYING') {
           toast(t('toasts.sun_drying_toast'), {
@@ -273,9 +287,25 @@ export default function FarmerApp() {
             eventKey: `rejected-${data.queue_id || data.token || Date.now()}`
           })
         }
-        loadActiveQueue()
+        debouncedRefresh()
+      } else if (data.type === 'CANCELLED') {
+        setNewToken(null)
+        setActiveQueue(null)
+        activeEntryIdRef.current = null
+        toast.error(t('notifications.booking_cancelled_msg'), {
+          id: 'farmer-booking-cancelled',
+          duration: 5000,
+          icon: '❌'
+        })
+        addNotification({
+          title: t('notifications.booking_cancelled_title'),
+          message: t('notifications.booking_cancelled_msg'),
+          type: 'alert',
+          eventKey: `cancelled-${data.queue_id || data.token || Date.now()}`
+        })
+        debouncedRefresh()
       }
-    }, [loadActiveQueue, addNotification, t])
+    }, [debouncedRefresh, addNotification, t])
   )
 
   // Clear newToken if activeQueue is already completed
@@ -296,8 +326,9 @@ export default function FarmerApp() {
     }
   }, [activeQueue?.queue_entry?.status, loadActiveQueue])
 
-  // Listen to centre queue changes when active queue is present
-  useCentreQueue(activeQueue?.queue_entry?.centre_id, loadActiveQueue)
+  // Real-time synchronization: listen to district-wide queue events & active centre channel
+  useAdminQueue(debouncedRefresh)
+  useCentreQueue(activeQueue?.queue_entry?.centre_id, debouncedRefresh)
 
   const handleBookingSuccess = (entry) => {
     activeEntryIdRef.current = entry.id
