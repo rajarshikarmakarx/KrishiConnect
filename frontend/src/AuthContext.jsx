@@ -4,8 +4,8 @@ import { createAuthBus } from './utils/authSync'
 
 const AuthContext = createContext(null)
 
-const REMEMBER_DAYS = 7
-const REMEMBER_KEY  = 'krishi_remember_until'  // epoch-ms expiry, only set when rememberMe=true
+const REMEMBER_HOURS = 24
+const REMEMBER_KEY   = 'krishi_remember_until'  // epoch-ms expiry, only set when rememberMe=true
 
 // ---------------------------------------------------------------------------
 // Storage helpers — token + user live in the same store (local vs session)
@@ -17,7 +17,7 @@ export function saveSession(token, userObj, rememberMe) {
   store.setItem('krishi_user', JSON.stringify(userObj))
 
   if (rememberMe) {
-    const expiresAt = Date.now() + REMEMBER_DAYS * 24 * 60 * 60 * 1000
+    const expiresAt = Date.now() + REMEMBER_HOURS * 60 * 60 * 1000
     localStorage.setItem(REMEMBER_KEY, expiresAt.toString())
     // Clean any tab-isolated sessionStorage duplicate
     sessionStorage.removeItem('krishi_token')
@@ -72,7 +72,7 @@ export function isJwtExpired(token) {
   }
 }
 
-/** Returns true if a remember-me session has passed its 7-day wall-clock expiry */
+/** Returns true if a remember-me session has passed its 24-hour wall-clock expiry */
 export function isRememberMeExpired() {
   const raw = localStorage.getItem(REMEMBER_KEY)
   if (!raw) return false
@@ -212,7 +212,7 @@ export function AuthProvider({ children }) {
     }
 
     const initAuth = async () => {
-      // 1. Check if session already exists in localStorage (7-day remember-me) or sessionStorage (active tab)
+      // 1. Check if session already exists in localStorage (24-hour remember-me) or sessionStorage (active tab)
       const session = readSession()
 
       if (session) {

@@ -66,7 +66,7 @@ export default {
     tab_otp: 'ମୋବାଇଲ୍ OTP',
     tab_password: 'ପାସୱାର୍ଡ',
     tab_register: 'ପଞ୍ଜୀକରଣ',
-    remember_me: 'ମୋତେ ୭ ଦିନ ପର୍ଯ୍ୟନ୍ତ ଲଗ୍ ଇନ୍ ରଖନ୍ତୁ',
+    remember_me: 'ମୋତେ ସାଇନ୍ ଇନ୍ ରଖନ୍ତୁ',
     mobile_label: 'ମୋବାଇଲ୍ ନମ୍ବର',
     mobile_placeholder: '୧୦ ଅଙ୍କର ମୋବାଇଲ୍ ନମ୍ବର ଲେଖନ୍ତୁ',
     mobile_password_placeholder: '୧୦ ଅଙ୍କର ମୋବାଇଲ୍ ନମ୍ବର ଲେଖନ୍ତୁ',
