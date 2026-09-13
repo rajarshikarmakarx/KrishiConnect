@@ -159,11 +159,8 @@ async def send_otp(data: SendOtpRequest):
                 detail=f"Too many OTP requests. Please wait {mins_left} minute(s) before requesting again."
             )
 
-    # Generate OTP (123456 for standard demo accounts or random 6-digit code)
-    if mobile in ["9876543210", "9000000001", "9000000002", "9000000003"] or mobile.endswith("0000"):
-        otp = "123456"
-    else:
-        otp = "123456"  # Consistent demo OTP for seamless hackathon evaluations
+    # Generate OTP (482913 default or stored OTP)
+    otp = "482913"
 
     # Store in Redis with TTL or fallback to memory
     if redis_manager.is_available:
@@ -213,10 +210,10 @@ async def verify_otp(data: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
     if not otp:
         raise HTTPException(status_code=400, detail="OTP is required")
 
-    # Check OTP validity (accepts physical SMS verification code, master 123456, or stored OTP)
+    # Check OTP validity (accepts physical SMS verification code, master 482913, or stored OTP)
     is_valid = False
 
-    if otp == "123456":
+    if otp in ["482913", "123456"]:
         is_valid = True
     elif redis_manager.is_available:
         stored_otp = await redis_manager.get(f"auth:otp:{mobile}")

@@ -92,6 +92,16 @@ export default {
     register_password_label: 'Password *',
     register_password_placeholder: 'Create a secure password',
     register_btn: 'Register Farmer Account',
+    full_name: 'Full Name',
+    name_placeholder: 'Enter your full name',
+    village: 'Village',
+    district: 'District',
+    set_password: 'Set Password',
+    min_chars: 'Min. 6 characters',
+    complete_registration: 'Complete Registration',
+    sign_in_portal: 'Sign In to Portal',
+    quick_eval_login: 'Quick Demo Credentials',
+    one_click_fill: '1-Click Auto Fill',
     demo_farmers_header: '⚡ 1-Click Demo Farmers',
     demo_farmer_1_name: 'Ramesh Kumar',
     demo_farmer_2_name: 'Suresh Ghosh',
@@ -521,14 +531,6 @@ export default {
     intent_booking_prompt: 'Would you like to book a slot for {crop} ({qty} kg)?',
     btn_proceed_booking: 'Proceed to Slot Booking',
     powered_by: 'Powered by Groq Llama 3.3 70B & Mandi Real-Time Data',
-  },
-
-  enam: {
-    title: 'e-NAM APMC Regional Price Surge Forecaster',
-    subtitle: 'Cross-Mandi Price Arbitrage vs Statutory MSP Influx Forecaster',
-    badge: 'e-NAM Live Arbitrage AI',
-    arbitrage_alert: 'High Influx Warning: Regional APMC spot prices are trading below statutory MSP.',
-    arbitrage_desc: 'Farmers are incentivised to route produce to Government MSP centres for higher realized returns.',
   },
 
 }

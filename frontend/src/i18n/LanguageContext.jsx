@@ -85,7 +85,12 @@ export function LanguageProvider({ children }) {
           break
         }
       }
-      value = fallbackValue !== null && fallbackValue !== undefined ? fallbackValue : keyPath
+      if (fallbackValue !== null && fallbackValue !== undefined) {
+        value = fallbackValue
+      } else {
+        const lastPart = keys[keys.length - 1] || keyPath
+        value = lastPart.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      }
     }
 
     // 3. String interpolation: replace {param} or {{param}}

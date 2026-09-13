@@ -49,7 +49,7 @@ def _format_sms_text(msg_type: str, lang: str, params: Dict[str, Any]) -> str:
         lang = "en"
 
     if msg_type == "OTP":
-        otp = params.get("otp", "123456")
+        otp = params.get("otp", "482913")
         templates = {
             "bn": f"কৃষিকানেক্ট ওটিপি: {otp}। আপনার কৃষক অ্যাকাউন্ট যাচাই করতে এই কোডটি ব্যবহার করুন। মেয়াদ ১০ মিনিট। Govt of India DoCA.",
             "hi": f"कृषिकनेक्ट ओटीपी: {otp}। अपना किसान खाता सत्यापित करने के लिए इस कोड का उपयोग करें। वैधता 10 मिनट। Govt of India DoCA.",

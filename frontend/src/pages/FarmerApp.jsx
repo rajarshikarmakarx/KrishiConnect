@@ -14,8 +14,7 @@ import {
   Settings,
   Scale,
   Award,
-  Sparkles,
-  Bot
+  Sparkles
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api'
@@ -48,39 +47,46 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp, onOpenStandards }
 
   return (
     <div className="relative shrink-0" ref={ref}>
+      {/* Pill-shaped profile button with ring effect */}
       <button
         id="btn-profile-menu"
         onClick={() => setOpen(o => !o)}
         aria-label="User Profile"
-        className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/20 cursor-pointer shrink-0 active:scale-95 shadow-xs"
+        className="flex items-center gap-2 sm:gap-2.5 p-1 sm:pl-1.5 sm:pr-3 sm:py-1 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 cursor-pointer shrink-0 shadow-xs active:scale-95"
       >
-        <div className="w-7 h-7 sm:w-7.5 sm:h-7.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center shrink-0 shadow-xs">
+        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center shrink-0 shadow-xs ring-2 ring-white/20">
           <User className="w-4 h-4 text-white" />
         </div>
-        <div className="hidden sm:flex flex-col text-left leading-none min-w-0">
-          <span className="text-xs sm:text-sm font-bold text-white max-w-[140px] md:max-w-[180px] lg:max-w-[220px] truncate">
+        <div className="hidden sm:flex flex-col text-left min-w-0 pr-0.5">
+          <span className="text-xs sm:text-sm font-bold text-white leading-tight truncate max-w-[140px] md:max-w-[180px]">
             {user.full_name}
           </span>
-          <span className="text-[10px] text-emerald-200/90 font-medium hidden md:inline truncate mt-0.5">
+          <span className="text-[10px] text-emerald-200/90 font-medium leading-tight hidden md:inline truncate">
             {user.village ? translateLocation(`${user.village}, ${user.district}`) : t('nav.farmer_role')}
           </span>
         </div>
-        <ChevronDown className={`w-3.5 h-3.5 text-white/80 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-emerald-200/80 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-[#0e1626] rounded-2xl shadow-2xl border border-slate-100 dark:border-white/10 z-50 overflow-hidden animate-fade-in origin-top-right">
-          <div className="bg-gradient-to-br from-emerald-800 to-emerald-950 p-4">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-2 shadow-inner">
-              <User className="w-5 h-5 text-white" />
+        /* Glassmorphism dropdown */
+        <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-1.5rem)] bg-white/95 dark:bg-[#0a101d]/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/90 dark:border-white/10 z-50 overflow-hidden animate-fade-in origin-top-right">
+          <div className="bg-gradient-to-br from-emerald-50 via-slate-50 to-white dark:from-[#0a101d] dark:via-[#0e1626] dark:to-[#0a101d] p-4 border-b border-slate-200/80 dark:border-white/10">
+            <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 rounded-2xl flex items-center justify-center mb-2 text-emerald-700 dark:text-emerald-400 shadow-xs">
+              <User className="w-5 h-5" />
             </div>
-            <p className="font-bold text-white text-sm font-display">{user.full_name}</p>
-            <p className="text-emerald-200 text-xs">{t('nav.farmer_role')} · {user.mobile}</p>
+            <p className="font-bold text-slate-900 dark:text-white text-sm font-display">{user.full_name}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
+                {t('nav.farmer_role')}
+              </span>
+              <span className="text-slate-500 dark:text-slate-400 text-xs font-mono">{user.mobile}</span>
+            </div>
           </div>
-          <div className="p-3 space-y-1 border-b border-slate-100 dark:border-white/10">
+          <div className="p-3 space-y-1 border-b border-slate-100 dark:border-slate-800/80">
             {user.village && (
               <div className="flex items-center gap-2 px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
-                <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
+                <MapPin className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
                 <span className="truncate">{translateLocation(`${user.village}, ${user.district}`)}</span>
               </div>
             )}
@@ -89,31 +95,33 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp, onOpenStandards }
             )}
           </div>
           <div className="p-2 space-y-1">
+            {/* Agmark Standards — opens Quality Standards modal */}
             <button
               onClick={() => { onOpenStandards(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl transition-colors font-medium cursor-pointer"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 rounded-xl transition-colors font-medium cursor-pointer"
             >
-              <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <Award className="w-4 h-4 text-emerald-500 shrink-0" />
               {t('nav.govt_quality_standards')}
             </button>
+            {/* MSP Rates — opens MSP modal */}
             <button
               onClick={() => { onOpenMsp(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl transition-colors font-medium cursor-pointer"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 rounded-xl transition-colors font-medium cursor-pointer"
             >
-              <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <Scale className="w-4 h-4 text-amber-500 shrink-0" />
               {t('nav.govt_msp_rates')}
             </button>
             <button
               onClick={() => { onEditProfile(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-colors font-medium cursor-pointer"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-colors font-medium cursor-pointer"
             >
-              <Settings className="w-4 h-4 text-slate-500 shrink-0" />
+              <Settings className="w-4 h-4 text-slate-400 shrink-0" />
               {t('nav.edit_profile')}
             </button>
             <button
               id="btn-logout"
               onClick={() => { logout(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors font-medium cursor-pointer"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors font-medium cursor-pointer"
             >
               <LogOut className="w-4 h-4 shrink-0" />
               {t('nav.sign_out')}
@@ -128,7 +136,7 @@ function ProfileMenu({ user, logout, onEditProfile, onOpenMsp, onOpenStandards }
 export default function FarmerApp() {
   const { user, token, logout } = useAuth()
   const { addNotification } = useNotifications()
-  const { t, translateCrop, translateCentreName, formatNumber } = useTranslation()
+  const { t, language, translateCrop, translateCentreName, formatNumber } = useTranslation()
   const [tab, setTab] = useState('centres')
   const [centres, setCentres] = useState([])
   const [loadingCentres, setLoadingCentres] = useState(true)
@@ -371,55 +379,64 @@ export default function FarmerApp() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#060a12] text-slate-900 dark:text-slate-100 flex flex-col w-full max-w-full overflow-x-hidden font-sans transition-colors duration-200">
-      {/* Header */}
-      <header className="gov-header text-white px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 safe-bottom sticky top-0 z-30 shadow-md w-full">
+      {/* Header — deep emerald gradient with tricolor bottom stripe */}
+      <header className="bg-gradient-to-r from-emerald-950 via-[#0b3d27] to-emerald-950 text-white px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 sticky top-0 z-30 shadow-md w-full relative">
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3 sm:gap-6 min-w-0">
           {/* Brand & Gov Emblem */}
           <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 shrink-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white/15 rounded-xl sm:rounded-2xl flex items-center justify-center border border-white/25 shadow-inner backdrop-blur-sm shrink-0">
-              <Wheat className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300 drop-shadow-sm" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center shadow-md ring-2 ring-white/20 shrink-0">
+              <Wheat className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-base sm:text-xl font-extrabold tracking-tight text-white whitespace-nowrap leading-none select-none font-display">
                   {t('common.app_name')}
                 </h1>
-                <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-400/20 text-amber-200 border border-amber-400/30">
+                <span className="hidden md:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/40 shadow-xs">
                   {t('common.gov_portal_badge')}
                 </span>
               </div>
-              <p className="hidden sm:block text-emerald-200/90 text-xs font-medium truncate mt-1 leading-none">
+              <p className="hidden sm:block text-emerald-200/80 text-xs font-medium truncate mt-0.5 leading-none">
                 {t('common.app_tagline')}
               </p>
             </div>
           </div>
 
           {/* Right Action Items */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-3.5 shrink-0">
-            <ThemeToggle />
+          <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-2.5 shrink-0">
             <LanguageSwitcher dark={true} />
+            <ThemeToggle />
 
-            {/* Agmark Standards Modal Button */}
+            {/* Agmark Quality Standards — pill button, green tint */}
             <button
               id="btn-quality-standards-header"
               onClick={() => setShowQualityStandardsModal(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-emerald-400/20 hover:bg-emerald-400/30 text-emerald-100 text-xs font-semibold border border-emerald-400/40 transition-all cursor-pointer shrink-0 shadow-xs active:scale-95"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-all cursor-pointer shadow-xs active:scale-95"
               title={t('quality_standards.modal_title')}
             >
-              <Award className="w-4 h-4 text-emerald-300 shrink-0" />
-              <span className="hidden sm:inline font-semibold">{t('nav.govt_quality_standards')}</span>
-              <span className="sm:hidden font-bold">Agmark</span>
+              <Award className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+              <span>Agmark Standards</span>
+            </button>
+            {/* Mobile Agmark button (icon only) */}
+            <button
+              id="btn-quality-standards-header-sm"
+              onClick={() => setShowQualityStandardsModal(true)}
+              className="lg:hidden flex items-center gap-1 px-2 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition-all cursor-pointer shadow-xs active:scale-95"
+              title={t('quality_standards.modal_title')}
+            >
+              <Award className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+              <span className="hidden sm:inline">Agmark</span>
             </button>
 
-            {/* MSP Rates Modal Button */}
+            {/* MSP Rates — amber pill button */}
             <button
               id="btn-msp-rates-header"
               onClick={() => setShowMspModal(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-100 text-xs font-semibold border border-amber-400/40 transition-all cursor-pointer shrink-0 shadow-xs active:scale-95"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 rounded-full bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 text-xs font-bold border border-amber-400/40 transition-all cursor-pointer shadow-xs shrink-0 active:scale-95"
               title={t('msp.title')}
             >
-              <Scale className="w-4 h-4 text-amber-300 shrink-0" />
-              <span className="hidden sm:inline font-semibold">{t('nav.govt_msp_rates')}</span>
+              <Scale className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+              <span className="hidden sm:inline">{t('nav.govt_msp_rates')}</span>
               <span className="sm:hidden font-bold">MSP</span>
             </button>
 
@@ -433,28 +450,31 @@ export default function FarmerApp() {
             />
           </div>
         </div>
+
+        {/* Indian Tricolor Government Micro-Stripe */}
+        <div className="h-[2px] w-full bg-gradient-to-r from-amber-500 via-white/80 to-emerald-400 absolute bottom-0 left-0 opacity-80" />
       </header>
 
-      {/* Active queue banner */}
+      {/* Active queue banner — glassmorphism */}
       {activeQueue && activeQueue.queue_entry.status !== 'COMPLETED' && (
-        <div className="bg-emerald-700/95 dark:bg-emerald-950/90 text-white px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 border-b border-emerald-600 dark:border-emerald-800 shadow-inner w-full">
+        <div className="bg-gradient-to-r from-emerald-50 via-teal-50/50 to-emerald-100/60 dark:from-emerald-950 dark:via-emerald-900 dark:to-slate-950 text-slate-900 dark:text-white px-4 py-3 border-b border-emerald-200/80 dark:border-emerald-500/20 shadow-xs backdrop-blur-xl">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <div className="live-dot shrink-0" />
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse ring-4 ring-emerald-500/20 dark:ring-emerald-400/20 shrink-0" />
               <div className="flex items-center gap-2 flex-wrap min-w-0">
-                <span className="font-mono font-black text-base sm:text-lg bg-white/15 px-2.5 py-0.5 rounded-lg border border-white/20">
+                <span className="font-mono font-bold text-base sm:text-lg tracking-wide text-emerald-900 dark:text-white bg-white/90 dark:bg-white/10 px-2.5 py-0.5 rounded-lg border border-emerald-200 dark:border-white/10 shadow-2xs">
                   {activeQueue.queue_entry.token}
                 </span>
-                <span className="text-emerald-100 text-xs sm:text-sm font-medium truncate">
+                <span className="text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm font-medium truncate">
                   · {formatNumber(activeQueue.farmers_ahead)} {t('queue.farmers_ahead')} · ~{formatNumber(Math.round(activeQueue.estimated_wait_minutes))} {t('common.min')}
                 </span>
               </div>
             </div>
             <button
               onClick={() => setTab('queue')}
-              className="text-white hover:text-amber-200 text-xs sm:text-sm font-bold flex items-center gap-1 cursor-pointer bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl border border-white/20 transition-colors shrink-0 font-display"
+              className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white bg-white/90 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 px-3.5 py-1.5 rounded-full border border-emerald-200 dark:border-white/15 transition-all flex items-center gap-1 cursor-pointer shadow-2xs shrink-0"
             >
-              {t('common.view')} <ChevronRight className="w-4 h-4" />
+              {t('common.view')} <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -511,49 +531,62 @@ export default function FarmerApp() {
         {tab === 'history' && <FarmerHistory />}
       </main>
 
-      {/* Floating Krishi Sahayak AI Assistant Button */}
+      {/* Floating Krishi Sahayak AI Assistant Button — multilingual, wide, animated */}
       <button
+        type="button"
         id="btn-open-krishi-ai"
         onClick={() => setShowChatbot(true)}
-        className="fixed right-5 bottom-20 sm:bottom-8 z-40 flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 text-white rounded-full shadow-2xl hover:shadow-emerald-500/25 hover:scale-105 active:scale-95 transition-all border border-emerald-400/40 cursor-pointer group"
+        className="fixed bottom-20 sm:bottom-7 right-4 sm:right-7 z-40 flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-950 via-[#0b3d27] to-emerald-900 text-white shadow-xl shadow-emerald-950/40 border border-emerald-500/40 hover:border-emerald-400 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+        title="Krishi AI Sahayak"
       >
-        <div className="relative">
-          <Bot className="w-5 h-5 text-amber-300" />
-          <span className="absolute -top-1 -right-1 flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
+        <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-xs shrink-0">
+          <Sparkles className="w-4 h-4 text-amber-200 animate-pulse" />
+          {/* Double pulse ring */}
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-emerald-950 animate-ping opacity-75" />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-emerald-950" />
+        </div>
+        <div className="flex flex-col text-left">
+          <span className="text-xs font-bold font-display text-white leading-tight flex items-center gap-1.5">
+            {language === 'bn' ? 'কৃষি সহায়ক' : language === 'hi' ? 'कृषि सहायक' : 'Krishi AI'}
+            <span className="text-[9px] font-extrabold px-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40">
+              AI
+            </span>
+          </span>
+          <span className="text-[10px] text-emerald-300 font-medium leading-tight">
+            {language === 'bn' ? '২৪x৭ প্রশ্ন করুন' : language === 'hi' ? '24x7 सहायता' : '24/7 Advisor'}
           </span>
         </div>
-        <span className="font-bold text-xs sm:text-sm font-display tracking-wide">Krishi Sahayak AI</span>
-        <Sparkles className="w-3.5 h-3.5 text-amber-300 group-hover:rotate-12 transition-transform" />
       </button>
 
       {/* Bottom Navigation */}
-      <nav className="bg-white/95 dark:bg-[#0a101d]/95 backdrop-blur-md border-t border-slate-200 dark:border-white/10 px-4 py-2 safe-bottom sticky bottom-0 z-20 shadow-lg">
-        <div className="max-w-md sm:max-w-lg mx-auto flex items-center justify-around">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              id={`tab-${id}`}
-              onClick={() => setTab(id)}
-              className={`flex-1 flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl transition-all cursor-pointer ${
-                tab === id
-                  ? 'text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50/80 dark:bg-emerald-950/40 shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-white/5'
-              }`}
-            >
-              <div className="relative">
-                <Icon className="w-5 h-5" />
-                {id === 'queue' && activeQueue && (
-                  activeQueue.queue_entry?.status !== 'COMPLETED' ||
-                  sessionCompletedEntryId === activeQueue.queue_entry?.id
-                ) && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-[#0a101d]" />
-                )}
-              </div>
-              <span className="text-xs leading-none font-medium">{label}</span>
-            </button>
-          ))}
+      <nav className="bg-white/95 dark:bg-[#0a101d]/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/10 px-4 py-2 safe-bottom sticky bottom-0 z-20 shadow-xl">
+        <div className="max-w-md mx-auto flex items-center justify-between gap-1">
+          {TABS.map(({ id, label, icon: Icon }) => {
+            const active = tab === id
+            return (
+              <button
+                key={id}
+                id={`tab-${id}`}
+                onClick={() => setTab(id)}
+                className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-2xl transition-all cursor-pointer ${
+                  active
+                    ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold shadow-xs'
+                    : 'text-slate-400 dark:text-slate-500 font-medium hover:text-slate-600 dark:hover:text-slate-300'
+                }`}
+              >
+                <div className="relative">
+                  <Icon className={`w-5 h-5 transition-transform duration-200 ${active ? 'scale-110' : ''}`} />
+                  {id === 'queue' && activeQueue && (
+                    activeQueue.queue_entry?.status !== 'COMPLETED' ||
+                    sessionCompletedEntryId === activeQueue.queue_entry?.id
+                  ) && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white dark:ring-[#0a101d] animate-pulse" />
+                  )}
+                </div>
+                <span className="text-[11px] tracking-tight">{label}</span>
+              </button>
+            )
+          })}
         </div>
       </nav>
 
@@ -596,6 +629,7 @@ export default function FarmerApp() {
 
       {/* Krishi AI Chatbot Modal */}
       <KrishiChatbotModal
+        user={user}
         isOpen={showChatbot}
         onClose={() => setShowChatbot(false)}
         onOpenBooking={handleVoiceBooking}

@@ -399,13 +399,13 @@ async def system_health(db: AsyncSession = Depends(get_db)):
 
 # ── Impact Metrics ────────────────────────────────────────────────────────────
 
-PAPER_BASELINE_WAIT_MIN = 90.0  # Published SIH baseline: avg 90-min paper queue wait
+PAPER_BASELINE_WAIT_MIN = 90.0  # Published operational baseline: avg 90-min paper queue wait
 
 @analytics_router.get("/impact")
 async def impact_metrics(db: AsyncSession = Depends(get_db)):
     """
     Before-vs-after impact panel with Redis cache-aside.
-    Baseline: 90-min avg wait from SIH 2024 problem domain research.
+    Baseline: 90-min avg wait from problem domain research.
     """
     cache_key = "analytics:impact"
     if redis_manager.is_available:
@@ -466,7 +466,7 @@ async def impact_metrics(db: AsyncSession = Depends(get_db)):
 
     result = {
         "baseline": {
-            "source": "SIH 2024 problem-domain research; published WBAMB field reports",
+            "source": "Mandi problem-domain research; published WBAMB field reports",
             "avg_wait_minutes_paper_queue": PAPER_BASELINE_WAIT_MIN,
             "description": "Without digital queue, farmers queue physically for ~90 min on avg"
         },

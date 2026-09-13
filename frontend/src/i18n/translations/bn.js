@@ -92,6 +92,16 @@ export default {
     register_password_label: 'পাসওয়ার্ড তৈরি করুন *',
     register_password_placeholder: 'একটি সুরক্ষিত পাসওয়ার্ড লিখুন',
     register_btn: 'কৃষক অ্যাকাউন্ট নিবন্ধন করুন',
+    full_name: 'পুরো নাম',
+    name_placeholder: 'আপনার পুরো নাম লিখুন',
+    village: 'গ্রাম',
+    district: 'জেলা',
+    set_password: 'পাসওয়ার্ড তৈরি করুন',
+    min_chars: 'কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড',
+    complete_registration: 'নিবন্ধন সম্পন্ন করুন',
+    sign_in_portal: 'পোর্টালে সাইন ইন করুন',
+    quick_eval_login: 'দ্রুত ডেমো ক্ৰেডেনশিয়ালস',
+    one_click_fill: '১-ক্লিক অটো ফিল',
     demo_farmers_header: '⚡ ১-ক্লিক ডেমো কৃষক',
     demo_farmer_1_name: 'রমেশ কুমার',
     demo_farmer_2_name: 'সুরেশ ঘোষ',
@@ -521,14 +531,6 @@ export default {
     intent_booking_prompt: 'আপনি কি {crop} ({qty} কেজি)-এর জন্য একটি স্লট বুক করতে চান?',
     btn_proceed_booking: 'স্লট বুকিং করতে এগিয়ে যান',
     powered_by: 'Groq Llama 3.3 70B এবং রিয়েল-টাইম মান্ডি ডেটা দ্বারা পরিচালিত',
-  },
-
-  enam: {
-    title: 'e-NAM এপিএমসি আঞ্চলিক মূল্য বৃদ্ধি পূর্বাভাস',
-    subtitle: 'এমএসপির সাথে আঞ্চলিক মূল্যের পার্থক্য ও আগমন পূর্বাভাস',
-    badge: 'e-NAM লাইভ আরবিট্রেজ AI',
-    arbitrage_alert: 'উচ্চ আগমন সতর্কতা: আঞ্চলিক এপিএমসি স্পট মূল্য সরকারি এমএসপির নিচে লেনদেন হচ্ছে।',
-    arbitrage_desc: 'কৃষকদের উচ্চতর আয়ের জন্য সরকারি এমএসপি কেন্দ্রে ফসল পাঠানোর সুবিধা রয়েছে।',
   },
 
 }

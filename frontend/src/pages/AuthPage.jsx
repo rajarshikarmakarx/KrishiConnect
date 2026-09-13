@@ -60,7 +60,7 @@ export default function AuthPage() {
       } else if (res.sms_provider === 'FAST2SMS_REAL') {
         toast.success(`📱 Real SMS delivered to +91 ${form.mobile} in ${language.toUpperCase()}!`, { duration: 6000 })
       } else {
-        toast.success(t('toasts.demo_otp_sent', { otp: res.otp || '123456' }), { duration: 6000 })
+        toast.success(`📱 OTP sent to +91 ${form.mobile}!`, { duration: 6000 })
       }
       if (res.otp) {
         setOtpCode(res.otp)
@@ -114,13 +114,13 @@ export default function AuthPage() {
     if (role === 'farmer-1') {
       update('mobile', '9876543210')
       update('password', 'demo123')
-      setOtpCode('123456')
+      setOtpCode('482913')
       setOtpSent(true)
       toast.success(t('toasts.loaded_demo_farmer', { name: 'Ramesh Kumar' }))
     } else if (role === 'farmer-2') {
       update('mobile', '9000000002')
       update('password', 'demo1234')
-      setOtpCode('123456')
+      setOtpCode('482913')
       setOtpSent(true)
       toast.success(t('toasts.loaded_demo_farmer', { name: 'Suresh Ghosh' }))
     }
@@ -269,13 +269,10 @@ export default function AuthPage() {
             {mode === 'otp' && (
               <form onSubmit={handleOtpLogin} className="space-y-4">
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="mb-1.5">
                     <label htmlFor="otp-mobile" className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                       {t('auth.mobile_label')}
                     </label>
-                    <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-500/30">
-                      {t('auth.demo_otp_hint')}
-                    </span>
                   </div>
                   <div className="relative flex items-center">
                     <Phone className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none z-10" />
@@ -300,17 +297,10 @@ export default function AuthPage() {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="mb-1.5">
                     <label htmlFor="otp-code" className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                       {t('auth.otp_code_label')}
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setOtpCode('123456')}
-                      className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <Sparkles className="w-3 h-3" /> {t('auth.auto_fill_otp')}
-                    </button>
                   </div>
                   <div className="relative flex items-center">
                     <KeyRound className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none z-10" />
@@ -327,12 +317,7 @@ export default function AuthPage() {
                   </div>
                 </div>
 
-                <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-500/30 rounded-xl text-xs text-amber-900 dark:text-amber-300 flex items-start gap-2">
-                  <span className="text-sm shrink-0">💡</span>
-                  <p className="leading-relaxed">
-                    <strong>{t('auth.demo_hackathon_mode')}</strong> {t('auth.demo_hackathon_desc')}
-                  </p>
-                </div>
+
 
                 <div className="flex items-center gap-2.5 pt-1">
                   <input

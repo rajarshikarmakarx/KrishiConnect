@@ -263,7 +263,7 @@ export default function CompletionConfirmation({ queueEntry }) {
                       ₹{formatNumber((proc?.payment?.amount || displayTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 }))}
                     </p>
                     <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
-                      isPaid ? 'bg-emerald-600 text-white shadow-sm' : 'bg-amber-500 text-white animate-pulse'
+                      isPaid ? 'bg-emerald-600 text-white shadow-sm' : 'bg-amber-500 text-white shadow-xs'
                     }`}>
                       {isPaid ? (
                         <>
@@ -316,7 +316,7 @@ export default function CompletionConfirmation({ queueEntry }) {
               </div>
             ) : (
               <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-500/30 text-xs text-amber-800 dark:text-amber-300 text-center flex items-center justify-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <div className="w-2 h-2 rounded-full bg-amber-500" />
                 <span>{t('completion.officer_issuing_notice')}</span>
               </div>
             )}

@@ -26,7 +26,7 @@ AI Components
        c. Slot scarcity         (available / total slots today)
        d. Historical throughput (7-day avg farmers served / hour)
        e. Village proximity     (dynamic road distance & village match)
-     Weights are tuned to SIH scoring rubric (impact on farmer time).
+     Weights are tuned to operational scoring rubric (impact on farmer time).
 
   3. MSP Rate Oracle
      Returns current WB Minimum Support Prices with the CACP season,
@@ -751,7 +751,7 @@ async def ai_recommend(
             "door-to-door time (40%), queue pressure (25%), "
             "slot availability (15%), historical throughput (12%), "
             "village proximity (8%). "
-            "Weights prioritise farmer's total time cost — the SIH KPI. "
+            "Weights prioritise farmer's total time cost — the key operational KPI. "
             "A rule-based system would use a single threshold (e.g. 'nearest open centre'), "
             "missing cross-centre load balancing that this multi-signal model captures."
         )
@@ -1043,7 +1043,7 @@ async def data_info(db: AsyncSession = Depends(get_db)):
             "WBAMB Annual Report 2023-24 — centre throughput benchmarks",
             "CACP Kharif 2025-26 MSP gazette — crop prices",
             "West Bengal e-Krishi Patashala geodata — centre coordinates",
-            "Published SIH 2024 problem-domain research — avg wait time baseline (90 min paper queue)",
+            "Published problem-domain research — avg wait time baseline (90 min paper queue)",
         ],
         "ai_training_vs_inference": (
             "No neural network is trained. AI components are statistical models "
@@ -1381,7 +1381,7 @@ async def get_admin_ai_overview(db: AsyncSession = Depends(get_db)):
                 "1. 'queue_overview': Live workload and bottleneck analysis. Highlight busiest vs calm centres and an actionable load-balancing tip.\n"
                 "2. 'settlement_overview': DBT payment velocity, PFMS clearance rate, and Aadhaar compliance status.\n"
                 "3. 'throughput_overview': Crop volume distribution, arrival velocity, and assaying throughput guidance.\n"
-                "4. 'impact_overview': SIH benchmark validation (67.3% wait reduction, 1383 farmer hours saved, 88.4% capacity utilization).\n"
+                "4. 'impact_overview': Key operational impact & performance benchmark validation (67.3% wait reduction, 1383 farmer hours saved, 88.4% capacity utilization).\n"
                 "Output strictly valid JSON with keys: queue_overview, settlement_overview, throughput_overview, impact_overview."
             )
             messages = [

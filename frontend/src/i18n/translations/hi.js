@@ -92,6 +92,16 @@ export default {
     register_password_label: 'सुरक्षित पासवर्ड बनाएं *',
     register_password_placeholder: 'एक सुरक्षित पासवर्ड बनाएं',
     register_btn: 'किसान खाता पंजीकृत करें',
+    full_name: 'पूरा नाम',
+    name_placeholder: 'अपना पूरा नाम दर्ज करें',
+    village: 'गाँव',
+    district: 'ज़िला',
+    set_password: 'पासवर्ड सेट करें',
+    min_chars: 'कम से कम 6 अक्षर',
+    complete_registration: 'पंजीकरण पूरा करें',
+    sign_in_portal: 'पोर्टल में साइन इन करें',
+    quick_eval_login: 'त्वरित डेमो क्रेडेंशियल्स',
+    one_click_fill: '1-क्लिक ऑटो फिल',
     demo_farmers_header: '⚡ 1-क्लिक डेमो किसान',
     demo_farmer_1_name: 'रमेश कुमार',
     demo_farmer_2_name: 'सुरेश घोष',
@@ -521,14 +531,6 @@ export default {
     intent_booking_prompt: 'क्या आप {crop} ({qty} किग्रा) के लिए स्लॉट बुक करना चाहते हैं?',
     btn_proceed_booking: 'स्लॉट बुकिंग के लिए आगे बढ़ें',
     powered_by: 'Groq Llama 3.3 70B और रियल-टाइम मंडी डेटा द्वारा संचालित',
-  },
-
-  enam: {
-    title: 'e-NAM एपीएमसी क्षेत्रीय मूल्य उछाल पूर्वानुमान',
-    subtitle: 'एमएसपी के विरुद्ध क्षेत्रीय मूल्य अंतर व आवक पूर्वानुमान',
-    badge: 'e-NAM लाइव आर्बिट्रेज AI',
-    arbitrage_alert: 'उच्च आवक चेतावनी: क्षेत्रीय एपीएमसी हाजिर भाव सरकारी एमएसपी से नीचे चल रहे हैं।',
-    arbitrage_desc: 'किसानों को अधिक लाभ के लिए सरकारी एमएसपी केंद्रों पर उपज भेजने का प्रोत्साहन है।',
   },
 
 }

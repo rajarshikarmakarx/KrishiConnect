@@ -15,7 +15,6 @@ import toast from 'react-hot-toast'
 import api from '../api'
 import NotificationCenter from '../components/NotificationCenter'
 import ThemeToggle from '../components/ThemeToggle'
-import EnamSurgeForecaster from '../components/EnamSurgeForecaster'
 import { useAdminQueue } from '../hooks/useRealtimeQueue'
 
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6']
@@ -82,36 +81,43 @@ function AdminProfileMenu({ user, logout }) {
 
   return (
     <div className="relative shrink-0" ref={ref}>
+      {/* Pill-shaped admin profile button with ring effect */}
       <button
         id="btn-profile-menu"
         onClick={() => setOpen(o => !o)}
         aria-label="Admin Profile"
-        className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/20 cursor-pointer shrink-0 active:scale-95 shadow-xs"
+        className="flex items-center gap-2 sm:gap-2.5 p-1 sm:pl-1.5 sm:pr-3 sm:py-1 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all border border-white/20 cursor-pointer shrink-0 shadow-xs active:scale-95"
       >
-        <div className="w-7 h-7 sm:w-7.5 sm:h-7.5 bg-gradient-to-br from-amber-500 to-amber-700 rounded-lg flex items-center justify-center shrink-0 shadow-xs">
+        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-amber-500 text-white rounded-full flex items-center justify-center shrink-0 shadow-xs ring-2 ring-white/20">
           <ShieldCheck className="w-4 h-4 text-white" />
         </div>
-        <div className="hidden sm:flex flex-col text-left leading-none min-w-0">
-          <span className="text-xs sm:text-sm font-bold text-white max-w-[140px] md:max-w-[180px] lg:max-w-[220px] truncate">
+        <div className="hidden sm:flex flex-col text-left min-w-0 pr-0.5">
+          <span className="text-xs sm:text-sm font-bold text-white leading-tight truncate max-w-[140px] md:max-w-[180px]">
             {user.full_name}
           </span>
-          <span className="text-[10px] text-amber-200/90 font-medium hidden md:inline truncate mt-0.5">
+          <span className="text-[10px] text-amber-200/90 font-medium leading-tight hidden md:inline truncate">
             District Administration
           </span>
         </div>
-        <ChevronDown className={`w-3.5 h-3.5 text-white/80 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-amber-200/80 transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-[#0e1626] rounded-2xl shadow-2xl border border-slate-100 dark:border-white/10 z-50 overflow-hidden animate-fade-in origin-top-right">
-          <div className="bg-gradient-to-br from-emerald-900 to-emerald-950 p-4">
-            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mb-2 shadow-inner">
-              <ShieldCheck className="w-5 h-5 text-emerald-300" />
+        /* Glassmorphism dropdown */
+        <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-1.5rem)] bg-white/95 dark:bg-[#0a101d]/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/90 dark:border-white/10 z-50 overflow-hidden animate-fade-in origin-top-right">
+          <div className="bg-gradient-to-br from-amber-50 via-slate-50 to-white dark:from-[#0a101d] dark:via-[#0e1626] dark:to-[#0a101d] p-4 border-b border-slate-200/80 dark:border-white/10">
+            <div className="w-10 h-10 bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 rounded-2xl flex items-center justify-center mb-2 text-amber-700 dark:text-amber-400 shadow-xs">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <p className="font-bold text-white text-sm font-display">{user.full_name}</p>
-            <p className="text-emerald-300 text-xs">District Agricultural Officer · {user.mobile}</p>
+            <p className="font-bold text-slate-900 dark:text-white text-sm font-display">{user.full_name}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30">
+                District Officer
+              </span>
+              <span className="text-slate-500 dark:text-slate-400 text-xs font-mono">{user.mobile}</span>
+            </div>
           </div>
-          <div className="p-3 border-b border-slate-100 dark:border-white/10">
+          <div className="p-3 border-b border-slate-100 dark:border-slate-800/80">
             <div className="px-2 py-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               Full district-level access to all procurement centres, AI models, and impact analytics.
             </div>
@@ -120,7 +126,7 @@ function AdminProfileMenu({ user, logout }) {
             <button
               id="btn-logout"
               onClick={() => { logout(); setOpen(false) }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors font-medium cursor-pointer"
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors font-medium cursor-pointer"
             >
               <LogOut className="w-4 h-4 shrink-0" />
               Sign Out
@@ -236,23 +242,23 @@ export default function AdminApp() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#060a12] text-slate-900 dark:text-slate-100 flex flex-col w-full max-w-full overflow-x-hidden font-sans transition-colors duration-200">
-      {/* Header */}
-      <header className="gov-header text-white px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 sticky top-0 z-40 shadow-md w-full">
+      {/* Header — deep emerald gradient with tricolor bottom stripe */}
+      <header className="bg-gradient-to-r from-emerald-950 via-[#0b3d27] to-emerald-950 text-white px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 sticky top-0 z-40 shadow-md w-full relative">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-6 w-full min-w-0">
           <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white/15 rounded-xl sm:rounded-2xl flex items-center justify-center border border-white/25 shadow-inner backdrop-blur-sm shrink-0">
-              <Wheat className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300 drop-shadow-sm" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center shadow-md ring-2 ring-white/20 shrink-0">
+              <Wheat className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="font-extrabold text-base sm:text-xl text-white tracking-tight truncate font-display">
                   KrishiConnect District Admin
                 </h1>
-                <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-400/20 text-amber-200 border border-amber-400/30">
+                <span className="hidden md:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/40 shadow-xs">
                   Howrah HQ
                 </span>
               </div>
-              <p className="hidden sm:block text-emerald-200/90 text-xs font-medium truncate mt-1 leading-none">
+              <p className="hidden sm:block text-emerald-200/80 text-xs font-medium truncate mt-0.5 leading-none">
                 Department of Agricultural Marketing · Government of West Bengal
               </p>
             </div>
@@ -282,7 +288,6 @@ export default function AdminApp() {
         <div className="max-w-7xl mx-auto mt-3 sm:mt-4 flex border-b border-emerald-700/50 space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none -mx-3 px-3 sm:mx-0 sm:px-0 text-xs sm:text-sm font-semibold">
           {[
             { id: 'operations', label: 'Live Operations', icon: TrendingUp },
-            { id: 'enam', label: 'e-NAM Surge Forecaster', icon: Zap, badge: 'AI Predictor' },
             { id: 'impact', label: 'Impact & Scalability', icon: ShieldCheck, badge: `${impactData?.current_performance?.wait_reduction_percent || 70}% Faster` },
             { id: 'ai_data', label: 'AI & Data Transparency', icon: Cpu },
             { id: 'msp', label: 'MSP Reference Rates', icon: Scale },
@@ -311,6 +316,8 @@ export default function AdminApp() {
             )
           })}
         </div>
+        {/* Indian Tricolor Government Micro-Stripe */}
+        <div className="h-[2px] w-full bg-gradient-to-r from-amber-500 via-white/80 to-emerald-400 absolute bottom-0 left-0 opacity-80" />
       </header>
 
       {/* Main Content Area */}
@@ -384,7 +391,7 @@ export default function AdminApp() {
                 <div className="p-3.5 rounded-2xl bg-black/30 border border-white/10 space-y-1">
                   <div className="flex items-center gap-2 text-purple-300 font-bold">
                     <ShieldCheck className="w-4 h-4" />
-                    <span>SIH Impact & Benchmarks</span>
+                    <span>Impact & Benchmarks</span>
                   </div>
                   <p className="text-slate-300 leading-relaxed text-[11px] sm:text-xs">
                     {aiOverview?.impact_overview || 'Validating time reduction metrics against traditional 90m paper queues...'}
@@ -521,25 +528,18 @@ export default function AdminApp() {
           </div>
         )}
 
-        {/* ── TAB 2: e-NAM SURGE FORECASTER ─────────────────────────────────── */}
-        {tab === 'enam' && (
-          <div className="animate-fade-in">
-            <EnamSurgeForecaster />
-          </div>
-        )}
-
-        {/* ── TAB 3: IMPACT & SCALABILITY ──────────────────────────────────── */}
+        {/* ── TAB 2: IMPACT & SCALABILITY ──────────────────────────────────── */}
         {tab === 'impact' && (
           <div className="space-y-6 animate-fade-in">
             {/* Impact Headline */}
             <div className="bg-gradient-to-r from-emerald-950 via-[#0b3d27] to-teal-950 rounded-3xl p-6 text-white shadow-xl border border-emerald-500/30">
               <div className="flex items-center gap-2 mb-2 text-amber-300 text-xs font-semibold uppercase tracking-wider">
                 <ShieldCheck className="w-4 h-4" />
-                SIH Impact & post-deployment validation
+                Impact & Post-Deployment Validation
               </div>
               <h2 className="text-2xl font-bold mb-2 font-display">Measurable Farmer Time & Congestion Reduction</h2>
               <p className="text-emerald-100 text-sm max-w-3xl leading-relaxed">
-                Evaluated against the published SIH baseline (90-minute paper queue wait).
+                Evaluated against the published operational baseline (90-minute paper queue wait).
                 KrishiConnect delivers an auditable <strong>{impactData?.current_performance?.wait_reduction_percent || 70}% reduction in farmer waiting time</strong>,
                 saving over <strong>{impactData?.current_performance?.farmer_hours_saved || 1600} farmer hours</strong> across 30 days of operation.
               </p>
@@ -701,7 +701,7 @@ export default function AdminApp() {
                     <li>WBAMB Annual Report 2023-24 (Throughput & counter metrics)</li>
                     <li>CACP Kharif 2025-26 Gazette (Govt of India MSP rates)</li>
                     <li>West Bengal e-Krishi Patashala geodata (Howrah coordinates)</li>
-                    <li>Published SIH 2024 problem domain baseline (90 min wait)</li>
+                    <li>Published operational baseline (90 min wait)</li>
                   </ul>
                 </div>
 

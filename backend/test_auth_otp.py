@@ -39,13 +39,13 @@ async def test_auth_otp_flow():
         print("\n2️⃣  Testing /auth/send-otp endpoint...")
         send_res = await send_otp(SendOtpRequest(mobile=farmer_obj.mobile))
         assert send_res.mobile == farmer_obj.mobile
-        assert send_res.otp == "123456"
+        assert send_res.otp == "482913"
         assert send_res.dev_mode is True
         print(f"   ✓ OTP Generated: {send_res.otp} for mobile {send_res.mobile}")
 
-        # 3. Test verify-otp with master code 123456 for existing user
+        # 3. Test verify-otp with master code 482913 for existing user
         print("\n3️⃣  Testing /auth/verify-otp with existing farmer...")
-        verify_res = await verify_otp(VerifyOtpRequest(mobile=farmer_obj.mobile, otp="123456"), db=db)
+        verify_res = await verify_otp(VerifyOtpRequest(mobile=farmer_obj.mobile, otp="482913"), db=db)
         assert verify_res.role == UserRole.FARMER
         assert verify_res.full_name == farmer_obj.full_name
         assert verify_res.access_token is not None
@@ -59,7 +59,7 @@ async def test_auth_otp_flow():
         await db.commit()
 
         await send_otp(SendOtpRequest(mobile=new_mobile))
-        new_user_res = await verify_otp(VerifyOtpRequest(mobile=new_mobile, otp="123456"), db=db)
+        new_user_res = await verify_otp(VerifyOtpRequest(mobile=new_mobile, otp="482913"), db=db)
         assert new_user_res.user_id is not None
         assert new_user_res.role == UserRole.FARMER
         assert new_user_res.access_token is not None

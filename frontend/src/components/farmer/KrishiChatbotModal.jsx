@@ -154,7 +154,7 @@ function FormattedMessage({ content }) {
   return <div className="space-y-0.5">{elements}</div>
 }
 
-export default function KrishiChatbotModal({ user, onClose, onOpenBooking }) {
+export default function KrishiChatbotModal({ user, isOpen, onClose, onOpenBooking }) {
   const { language } = useTranslation()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -475,6 +475,8 @@ export default function KrishiChatbotModal({ user, onClose, onOpenBooking }) {
 
     playChunk()
   }
+
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
