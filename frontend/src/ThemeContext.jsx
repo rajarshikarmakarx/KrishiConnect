@@ -8,9 +8,6 @@ export function ThemeProvider({ children }) {
     try {
       const saved = localStorage.getItem(THEME_KEY)
       if (saved === 'dark' || saved === 'light') return saved
-      if (typeof window !== 'undefined' && window.matchMedia) {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      }
     } catch {
       // Ignore storage access errors
     }
@@ -30,20 +27,6 @@ export function ThemeProvider({ children }) {
       // Ignore storage errors
     }
   }, [theme])
-
-  // Sync with system OS changes if user hasn't explicitly set preference
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    const handleChange = (e) => {
-      const userSelected = localStorage.getItem(THEME_KEY)
-      if (!userSelected) {
-        setThemeState(e.matches ? 'dark' : 'light')
-      }
-    }
-    mediaQuery.addEventListener?.('change', handleChange)
-    return () => mediaQuery.removeEventListener?.('change', handleChange)
-  }, [])
 
   const toggleTheme = () => {
     setThemeState(prev => (prev === 'dark' ? 'light' : 'dark'))

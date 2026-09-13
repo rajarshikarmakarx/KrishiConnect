@@ -4,7 +4,7 @@ import { useTranslation } from '../i18n'
 import { useTheme } from '../ThemeContext'
 import {
   Wheat, MapPin, Ticket, Scale, Zap, Shield, ArrowRight,
-  PlayCircle, Users, User, Building2, IndianRupee, CheckCircle2,
+  HelpCircle, Users, User, Building2, IndianRupee, CheckCircle2,
   Menu, X, ChevronRight, Sprout, Globe, BarChart3, Check
 } from 'lucide-react'
 import LanguageSwitcher from '../components/LanguageSwitcher'
@@ -12,7 +12,6 @@ import ThemeToggle from '../components/ThemeToggle'
 
 const NAV_LINKS = [
   { label: 'Home', href: '#home' },
-  { label: 'About', href: '#about' },
   { label: 'Features', href: '#features' },
   { label: 'How It Works', href: '#how-it-works' },
   { label: 'Contact', href: '#contact' },
@@ -104,7 +103,7 @@ export default function LandingPage() {
       setScrolled(window.scrollY > 20)
 
       // Track active section
-      const sections = ['home', 'about', 'features', 'how-it-works', 'contact']
+      const sections = ['home', 'features', 'how-it-works', 'contact']
       for (const id of sections.reverse()) {
         const el = document.getElementById(id)
         if (el && el.getBoundingClientRect().top <= 120) {
@@ -232,8 +231,8 @@ export default function LandingPage() {
                   <ArrowRight className="w-4.5 h-4.5" />
                 </Link>
                 <a href="#how-it-works" className="btn-cta-secondary">
-                  <PlayCircle className="w-4.5 h-4.5" />
-                  Watch Demo
+                  <HelpCircle className="w-4.5 h-4.5" />
+                  How It Works?
                 </a>
               </div>
             </div>
@@ -413,63 +412,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ========================= ABOUT ========================= */}
-      <section id="about" className="py-16 lg:py-24 bg-white dark:bg-[#060a12]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-2">
-                — About KrishiConnect
-              </p>
-              <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white font-display mb-5">
-                Transforming Agricultural Procurement Across India
-              </h3>
-              <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
-                KrishiConnect is a next-generation digital platform built for the Department of Agricultural Marketing, Government of India. We digitize the entire mandi intake workflow — from farmer registration to final DBT payout — eliminating paper-based queues, manual grading disputes, and payment delays.
-              </p>
-              <div className="space-y-3">
-                {[
-                  'Geo-intelligent MSP centre routing with live congestion data',
-                  'Tamper-proof digital moisture assaying & Agmark grading',
-                  'Real-time WebSocket queue tracking with ETA predictions',
-                  'Instant Direct Benefit Transfer (DBT) to farmer bank accounts',
-                ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <p className="text-sm text-slate-700 dark:text-slate-300">{item}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8">
-                <Link to="/login" className="btn-cta-primary">
-                  Join the Platform
-                  <ArrowRight className="w-4.5 h-4.5" />
-                </Link>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { icon: Globe, label: 'Pan-India Coverage', value: '28 States', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-                { icon: BarChart3, label: 'Throughput', value: '10K+ /day', bg: 'bg-blue-50 dark:bg-blue-500/10' },
-                { icon: Shield, label: 'Data Integrity', value: '100% Auditable', bg: 'bg-amber-50 dark:bg-amber-500/10' },
-                { icon: Zap, label: 'Avg Wait Reduction', value: '70% Faster', bg: 'bg-emerald-50 dark:bg-emerald-500/10' },
-              ].map((stat, i) => {
-                const Icon = stat.icon
-                return (
-                  <div
-                    key={i}
-                    className={`${stat.bg} rounded-2xl p-5 border border-slate-200/60 dark:border-white/8 animate-fade-up animate-fade-up-delay-${i + 1}`}
-                  >
-                    <Icon className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mb-3" />
-                    <p className="text-2xl font-extrabold text-slate-900 dark:text-white font-display">{stat.value}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{stat.label}</p>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
+
 
       {/* ========================= STATS BAR ========================= */}
       <section className="stats-bar py-10 lg:py-14">
@@ -552,7 +495,7 @@ export default function LandingPage() {
             <div>
               <h5 className="text-sm font-semibold text-white mb-4">Quick Links</h5>
               <div className="space-y-2.5">
-                {['Home', 'About', 'Features', 'How It Works'].map((link) => (
+                {['Home', 'Features', 'How It Works'].map((link) => (
                   <a
                     key={link}
                     href={`#${link.toLowerCase().replace(/\s+/g, '-')}`}
