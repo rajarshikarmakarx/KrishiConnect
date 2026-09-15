@@ -150,6 +150,15 @@ class QueueEntry(Base):
     bumped_at = Column(DateTime(timezone=True), nullable=True)
     bumped_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
+    # SOS Priority Pleading Layer (District Admin Discretionary Workflow)
+    sos_status = Column(String(20), default="NONE", nullable=False)  # "NONE", "PENDING", "APPROVED", "REJECTED"
+    sos_reason = Column(String(500), nullable=True)
+    sos_requested_at = Column(DateTime(timezone=True), nullable=True)
+    sos_requested_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    sos_approved_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    sos_rejection_reason = Column(String(500), nullable=True)
+    sos_action_at = Column(DateTime(timezone=True), nullable=True)
+
     booked_at = Column(DateTime(timezone=True), default=utc_now)
     called_at = Column(DateTime(timezone=True), nullable=True)
     processing_started_at = Column(DateTime(timezone=True), nullable=True)
@@ -161,6 +170,8 @@ class QueueEntry(Base):
     slot = relationship("TimeSlot", back_populates="queue_entries")
     counter = relationship("CentreCounter", back_populates="queue_entries")
     bumped_by = relationship("User", foreign_keys=[bumped_by_id])
+    sos_requested_by = relationship("User", foreign_keys=[sos_requested_by_id])
+    sos_approved_by = relationship("User", foreign_keys=[sos_approved_by_id])
     procurement = relationship("Procurement", back_populates="queue_entry", uselist=False)
     assay_record = relationship("AssayRecord", back_populates="queue_entry", uselist=False)
 

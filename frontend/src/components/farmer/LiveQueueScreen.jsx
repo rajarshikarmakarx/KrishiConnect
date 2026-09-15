@@ -87,16 +87,16 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Priority Bump Notification Banner */}
+      {/* SOS Priority Queueing Notification Banner */}
       {entry?.is_bumped && (
         <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 rounded-2xl p-4 flex items-start gap-3">
           <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
             <Zap className="w-4 h-4 fill-current" />
           </div>
           <div>
-            <p className="text-amber-900 dark:text-amber-200 text-sm font-bold">Fast-Track Priority Authorized by Gate Assayer</p>
+            <p className="text-amber-900 dark:text-amber-200 text-sm font-bold">⚡ SOS - Priority Queueing Authorized</p>
             <p className="text-amber-800/90 dark:text-amber-300/90 text-xs mt-0.5">
-              Reason: <span className="font-semibold">{entry.bump_reason}</span>
+              Reason: <span className="font-semibold">{entry.bump_reason || entry.sos_reason}</span>
             </p>
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
                 <div className="mt-2 flex items-center justify-center">
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40">
                     <Zap className="w-2.5 h-2.5 fill-current text-amber-600 dark:text-amber-400" />
-                    Priority Bumped
+                    SOS Priority
                   </span>
                 </div>
               )}
@@ -183,7 +183,7 @@ export default function LiveQueueScreen({ queueStatus: initialStatus, onRefresh 
           )}
 
           {entry.status === 'CALLED' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-center animate-pulse">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-center">
               <p className="text-blue-800 font-bold text-lg">{t('queue.your_turn')}</p>
               <p className="text-blue-600 text-sm mt-1">
                 {t('queue.proceed_to_counter', { counter: translateCounter(entry.counter_label) })}

@@ -106,14 +106,21 @@ async def init_db():
             except Exception as e:
                 pass
 
-        # Ensure priority bump audit columns exist in queue_entries
+        # Ensure priority bump & SOS pleading audit columns exist in queue_entries
         if "postgresql" in DATABASE_URL or "asyncpg" in DATABASE_URL:
             bump_migration_stmts = [
                 "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS is_bumped BOOLEAN DEFAULT FALSE;",
                 "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS bump_priority INTEGER DEFAULT 0;",
                 "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS bump_reason VARCHAR(500);",
                 "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS bumped_at TIMESTAMP WITH TIME ZONE;",
-                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS bumped_by_id INTEGER REFERENCES users(id);"
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS bumped_by_id INTEGER REFERENCES users(id);",
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS sos_status VARCHAR(20) DEFAULT 'NONE';",
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS sos_reason VARCHAR(500);",
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS sos_requested_at TIMESTAMP WITH TIME ZONE;",
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS sos_requested_by_id INTEGER REFERENCES users(id);",
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS sos_approved_by_id INTEGER REFERENCES users(id);",
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS sos_rejection_reason VARCHAR(500);",
+                "ALTER TABLE queue_entries ADD COLUMN IF NOT EXISTS sos_action_at TIMESTAMP WITH TIME ZONE;"
             ]
         else:
             bump_migration_stmts = [
@@ -121,7 +128,14 @@ async def init_db():
                 "ALTER TABLE queue_entries ADD COLUMN bump_priority INTEGER DEFAULT 0;",
                 "ALTER TABLE queue_entries ADD COLUMN bump_reason VARCHAR(500);",
                 "ALTER TABLE queue_entries ADD COLUMN bumped_at TIMESTAMP;",
-                "ALTER TABLE queue_entries ADD COLUMN bumped_by_id INTEGER REFERENCES users(id);"
+                "ALTER TABLE queue_entries ADD COLUMN bumped_by_id INTEGER REFERENCES users(id);",
+                "ALTER TABLE queue_entries ADD COLUMN sos_status VARCHAR(20) DEFAULT 'NONE';",
+                "ALTER TABLE queue_entries ADD COLUMN sos_reason VARCHAR(500);",
+                "ALTER TABLE queue_entries ADD COLUMN sos_requested_at TIMESTAMP;",
+                "ALTER TABLE queue_entries ADD COLUMN sos_requested_by_id INTEGER REFERENCES users(id);",
+                "ALTER TABLE queue_entries ADD COLUMN sos_approved_by_id INTEGER REFERENCES users(id);",
+                "ALTER TABLE queue_entries ADD COLUMN sos_rejection_reason VARCHAR(500);",
+                "ALTER TABLE queue_entries ADD COLUMN sos_action_at TIMESTAMP;"
             ]
         for stmt in bump_migration_stmts:
             try:

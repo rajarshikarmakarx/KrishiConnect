@@ -4,7 +4,7 @@ import { useNotifications } from '../NotificationContext'
 import {
   Wheat, Users, CheckCircle, Clock, X, Wifi, WifiOff,
   IndianRupee, User, LogOut, Building2, ChevronDown, Scale,
-  Sparkles, AlertCircle, ShieldCheck, Droplets, Sun, AlertTriangle,
+  Sparkles, AlertCircle, ShieldCheck, ShieldAlert, Droplets, Sun, AlertTriangle,
   Zap, Lock, Award
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -708,19 +708,17 @@ function BumpPriorityModal({ entry, allCountersOccupied, onClose, onSuccess }) {
     }
     setLoading(true)
     try {
-      await api.bumpQueueEntry(entry.id, {
+      await api.requestSOSPriority(entry.id, {
         reason: effectiveReason,
+        preset: selectedPreset,
+        remarks: customReason.trim(),
         priority_level: 1,
         call_now: true
       })
-      if (!allCountersOccupied) {
-        toast.success(`Token ${entry.token} priority-bumped and called to counter!`, { duration: 4000 })
-      } else {
-        toast.success(`Token ${entry.token} priority-bumped to #1 in queue!`, { duration: 4000 })
-      }
+      toast.success(`SOS Priority Authorization requested for Token ${entry.token}. Sent to District Admin in real-time.`, { duration: 5000 })
       onSuccess()
     } catch (err) {
-      toast.error(err.message || 'Failed to authorize priority bump')
+      toast.error(err.message || 'Failed to request SOS priority authorization')
     } finally {
       setLoading(false)
     }
@@ -737,11 +735,9 @@ function BumpPriorityModal({ entry, allCountersOccupied, onClose, onSuccess }) {
               ⚡
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Gate Assayer Priority Bump & Call</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {allCountersOccupied 
-                  ? 'Statutory priority authorization (#1 in queue · all counters currently busy)'
-                  : 'Statutory priority authorization & immediate counter call'}
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Gate Assayer SOS Priority Queueing</h3>
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold tracking-wide">
+                *SOS - priority queueing
               </p>
             </div>
           </div>
@@ -786,7 +782,7 @@ function BumpPriorityModal({ entry, allCountersOccupied, onClose, onSuccess }) {
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-              Additional Assayer Remarks <span className="text-red-500 font-bold">*</span>
+              Additional Assayer Remarks (Pleading Details) <span className="text-red-500 font-bold">*</span>
             </label>
             <span className="text-[11px] text-slate-400 font-medium">
               {customReason.trim().length}/5 chars min
@@ -805,16 +801,16 @@ function BumpPriorityModal({ entry, allCountersOccupied, onClose, onSuccess }) {
           />
           {!isRemarksValid && (
             <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium">
-              * Additional remarks are required for all statutory bump authorizations (minimum 5 characters).
+              * Additional remarks are required for all statutory SOS requests (minimum 5 characters).
             </p>
           )}
         </div>
 
-        {/* Legal Immutability Notice Banner */}
+        {/* Real-time District Pleading Notice Banner */}
         <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-300/80 dark:border-amber-500/30 rounded-2xl p-3 flex items-start gap-2.5">
-          <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="text-[11px] text-amber-900 dark:text-amber-300 leading-relaxed font-medium">
-            <strong>Permanent Statutory Audit Lock:</strong> Once authorized, this reason is sealed in state procurement records and <u>CANNOT</u> be modified, edited, or cleared by anyone (including District Admin).
+            <strong>Statutory Pleading Layer:</strong> Submitting this form dispatches a real-time SOS priority request to the District Administrator. Priority queue jump will be granted upon District Admin review & discretion.
           </div>
         </div>
 
@@ -838,7 +834,7 @@ function BumpPriorityModal({ entry, allCountersOccupied, onClose, onSuccess }) {
             {loading ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              allCountersOccupied ? 'Authorize Priority Bump (#1 in Queue)' : 'Authorize Bump & Call'
+              'Request Authorization'
             )}
           </button>
         </div>
@@ -859,8 +855,8 @@ function BumpAuditViewModal({ entry, onClose }) {
               <Zap className="w-4 h-4 fill-current" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Statutory Priority Bump Audit</h3>
-              <p className="text-[11px] text-slate-400">Official Gate Assayer Record</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Statutory SOS Priority Audit</h3>
+              <p className="text-[11px] text-slate-400">Official State Mandi Record</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
@@ -878,19 +874,25 @@ function BumpAuditViewModal({ entry, onClose }) {
             <span className="font-semibold text-slate-800 dark:text-slate-200">{entry.farmer_name}</span>
           </div>
           <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
-            <span className="text-slate-500 dark:text-slate-400">Authorized By</span>
-            <span className="font-semibold text-slate-800 dark:text-slate-200">{entry.bumped_by_name || 'Gate Assayer'}</span>
+            <span className="text-slate-500 dark:text-slate-400">Requested By (Assayer)</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{entry.sos_requested_by_name || entry.bumped_by_name || 'Gate Assayer'}</span>
           </div>
+          {entry.sos_approved_by_name && (
+            <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-slate-500 dark:text-slate-400">Approved By (Admin)</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{entry.sos_approved_by_name}</span>
+            </div>
+          )}
           <div className="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-800">
             <span className="text-slate-500 dark:text-slate-400">Timestamp</span>
             <span className="font-semibold text-slate-800 dark:text-slate-200">
-              {entry.bumped_at ? new Date(entry.bumped_at).toLocaleString('en-IN') : 'N/A'}
+              {entry.bumped_at ? new Date(entry.bumped_at).toLocaleString('en-IN') : (entry.sos_requested_at ? new Date(entry.sos_requested_at).toLocaleString('en-IN') : 'N/A')}
             </span>
           </div>
           <div>
             <span className="text-slate-500 dark:text-slate-400 block mb-1 font-medium">Immutable Statutory Reason:</span>
             <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-medium leading-relaxed">
-              {entry.bump_reason || 'Priority lot intake authorized per assayer inspection.'}
+              {entry.bump_reason || entry.sos_reason || 'Priority lot intake authorized per assayer inspection.'}
             </div>
           </div>
         </div>
@@ -1296,22 +1298,33 @@ export default function OperatorApp() {
                 <div key={entry.id} className={`flex items-center justify-between py-2.5 px-3 rounded-xl transition-colors ${
                   entry.is_bumped
                     ? 'bg-amber-50/70 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/30'
+                    : entry.sos_status === 'PENDING'
+                    ? 'bg-amber-50/40 dark:bg-amber-500/5 border border-amber-300/40'
                     : 'hover:bg-slate-50 dark:hover:bg-white/5'
                 }`}>
                   <div className="flex items-center gap-3">
                     <span className="text-slate-400 dark:text-slate-500 text-xs w-4 font-mono">{i + 1}</span>
                     <span className="token-display font-bold text-slate-800 dark:text-slate-200">{entry.token}</span>
                     <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{entry.farmer_name}</span>
-                    {entry.is_bumped && (
+                    {entry.is_bumped ? (
                       <button
                         type="button"
                         onClick={() => setAuditModal(entry)}
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors shrink-0 cursor-pointer"
-                        title={`Bumped by ${entry.bumped_by_name || 'Gate Assayer'}: ${entry.bump_reason}. Click to view immutable audit seal.`}
+                        title={`SOS Priority Approved (${entry.sos_approved_by_name || 'District Admin'}): ${entry.bump_reason}. Click to view immutable audit seal.`}
                       >
-                        <span>⚡ BUMPED</span>
+                        <span>⚡ SOS PRIORITY</span>
                       </button>
-                    )}
+                    ) : entry.sos_status === 'PENDING' ? (
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-400/50 shrink-0" title={`SOS Request dispatched by ${entry.sos_requested_by_name || 'Assayer'}. Awaiting District Admin discretion.`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        <span>⏳ SOS PENDING</span>
+                      </div>
+                    ) : entry.sos_status === 'REJECTED' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 shrink-0" title={`SOS Declined by Admin: ${entry.sos_rejection_reason || 'Declined'}`}>
+                        <span>✕ SOS Declined</span>
+                      </span>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded-lg">{entry.crop}</span>
@@ -1330,15 +1343,23 @@ export default function OperatorApp() {
                           'Call'
                         )}
                       </button>
+                    ) : entry.sos_status === 'PENDING' ? (
+                      <button
+                        disabled
+                        title="SOS priority authorization request is currently pending with District Administration"
+                        className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg font-medium cursor-not-allowed"
+                      >
+                        Awaiting Admin
+                      </button>
                     ) : (
                       <button
                         type="button"
                         id={`btn-bump-call-${entry.id}`}
                         onClick={() => setBumpModal(entry)}
-                        title="Authorize statutory priority bump & call to counter"
+                        title="Request statutory SOS priority queueing & pleading authorization"
                         className="text-xs bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-300/80 dark:border-amber-500/30 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
                       >
-                        Bump & Call
+                        ⚡ SOS
                       </button>
                     )}
                     <button

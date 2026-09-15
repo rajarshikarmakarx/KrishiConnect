@@ -70,8 +70,12 @@ function CentreRow({ centre }) {
   )
 }
 
-function PriorityBumpModal({ record, onClose }) {
+function SOSAuditModal({ record, onClose, onApprove, onReject, actionLoadingId }) {
   if (!record) return null
+  const isPending = record.sos_status === 'PENDING'
+  const isApproved = record.sos_status === 'APPROVED' || (record.is_bumped && record.sos_status !== 'REJECTED')
+  const isRejected = record.sos_status === 'REJECTED'
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
       <div className="bg-white dark:bg-[#0a101d] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]">
@@ -79,22 +83,26 @@ function PriorityBumpModal({ record, onClose }) {
         <div className="p-5 bg-gradient-to-r from-amber-500/15 via-amber-600/5 to-transparent border-b border-slate-100 dark:border-white/5 flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs">
-              <Zap className="w-5 h-5" />
+              <Zap className="w-5 h-5 fill-current" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-amber-500 text-white font-mono shadow-2xs">
                   Token {record.token}
                 </span>
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 font-mono">
                   Queue ID #{record.id}
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 uppercase">
-                  Priority {record.bump_priority || 1}
+                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase border ${
+                  isPending ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/40' :
+                  isApproved ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/40' :
+                  'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border-red-300 dark:border-red-500/40'
+                }`}>
+                  {isPending ? '⏳ SOS PENDING REVIEW' : isApproved ? '✓ SOS AUTHORIZED' : '✕ SOS DECLINED'}
                 </span>
               </div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white font-display mt-1">
-                Priority Queue Override & Statutory Intake Record
+                *SOS - Priority Queueing & Statutory Pleading Record
               </h3>
             </div>
           </div>
@@ -108,21 +116,38 @@ function PriorityBumpModal({ record, onClose }) {
 
         {/* Body */}
         <div className="p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
-          {/* Statutory Reason Box */}
-          <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-500/30 space-y-2">
+          {/* Statutory Pleading Justification */}
+          <div className={`p-4 rounded-2xl border space-y-2 ${
+            isPending ? 'bg-amber-50/90 dark:bg-amber-950/30 border-amber-300 dark:border-amber-500/40' :
+            isApproved ? 'bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-300/80 dark:border-emerald-500/30' :
+            'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10'
+          }`}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                Statutory Justification (Why Called Before Slot)
+                Statutory Pleading Justification (Assayer Plea)
               </span>
               <span className="text-[10px] font-mono bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-full font-bold">
                 Permanently Sealed
               </span>
             </div>
             <p className="text-sm font-semibold text-slate-900 dark:text-white leading-relaxed">
-              "{record.bump_reason || 'Priority intake authorized per assayer gate inspection.'}"
+              "{record.bump_reason || record.sos_reason || 'Priority intake requested per gate assayer emergency inspection.'}"
             </p>
           </div>
+
+          {/* Rejection Note if Rejected */}
+          {isRejected && record.sos_rejection_reason && (
+            <div className="p-4 rounded-2xl bg-red-50/90 dark:bg-red-950/30 border border-red-300 dark:border-red-500/30 space-y-1.5">
+              <span className="text-xs font-bold text-red-800 dark:text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                District Administration Denial Reason
+              </span>
+              <p className="text-xs text-red-900 dark:text-red-200 font-medium leading-relaxed">
+                "{record.sos_rejection_reason}"
+              </p>
+            </div>
+          )}
 
           {/* Details Grid */}
           <div className="grid grid-cols-2 gap-3 text-xs">
@@ -142,54 +167,159 @@ function PriorityBumpModal({ record, onClose }) {
           <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/70 dark:border-white/10 space-y-3">
             <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
-              Slot Timing vs Early Intake Offset
+              Slot Timing vs SOS Authorization Timeline
             </h4>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="p-2.5 bg-white dark:bg-[#0e1626] rounded-xl border border-slate-200/70 dark:border-white/10">
                 <span className="text-[10px] text-slate-400 block">Scheduled Slot</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{record.slot_time}</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{record.slot_time || record.slot_start || 'Standard Slot'}</span>
               </div>
               <div className="p-2.5 bg-white dark:bg-[#0e1626] rounded-xl border border-slate-200/70 dark:border-white/10">
-                <span className="text-[10px] text-slate-400 block">Bumped / Called</span>
+                <span className="text-[10px] text-slate-400 block">SOS Pleading Time</span>
                 <span className="font-bold text-amber-600 dark:text-amber-400 text-xs sm:text-sm">
-                  {record.bumped_at ? new Date(record.bumped_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Earlier'}
+                  {record.sos_requested_at ? new Date(record.sos_requested_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : (record.bumped_at ? new Date(record.bumped_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Earlier')}
                 </span>
               </div>
               <div className="p-2.5 bg-white dark:bg-[#0e1626] rounded-xl border border-slate-200/70 dark:border-white/10">
                 <span className="text-[10px] text-slate-400 block">Advance Intake Lead</span>
                 <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">
-                  {record.early_lead_minutes ? `${record.early_lead_minutes}m ahead of slot` : 'Called Ahead of Slot'}
+                  {record.early_lead_minutes ? `${record.early_lead_minutes}m ahead of slot` : 'Dispatched Ahead'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Authorizing Official */}
-          <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/70 dark:border-white/10 flex items-center justify-between">
-            <div>
-              <span className="text-[10px] text-slate-400 block uppercase font-bold">Authorizing Official</span>
-              <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">{record.bumped_by_name || 'Gate Assayer'}</span>
-              <span className="text-[11px] text-slate-500 block">Role: Certified Mandi Operator / Gate Assayer</span>
+          {/* Pleading & Authorization Attribution */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/70 dark:border-white/10">
+              <span className="text-[10px] text-slate-400 block uppercase font-bold">Gate Assayer Pleading</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">{record.sos_requested_by_name || record.bumped_by_name || 'Gate Assayer'}</span>
+              <span className="text-[11px] text-slate-500 block">Role: Certified Gate Assayer / Mandi Operator</span>
             </div>
-            <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-xs font-bold flex items-center gap-1 shadow-2xs">
-              <CheckCircle className="w-3.5 h-3.5" />
-              Verified Seal
-            </span>
+            <div className="p-3.5 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200/70 dark:border-white/10 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-slate-400 block uppercase font-bold">District Administrator Action</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                  {record.sos_approved_by_name || (isApproved ? 'District Administrator' : (isPending ? 'Pending Discretion' : 'District Administrator'))}
+                </span>
+                <span className="text-[11px] text-slate-500 block">Role: District Supervisory Authority</span>
+              </div>
+              {isApproved && (
+                <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 shadow-2xs">
+                  <CheckCircle className="w-3.5 h-3.5" /> Sealed
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Legal Notice */}
           <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-500/30 text-[11px] text-blue-800 dark:text-blue-300 leading-relaxed">
-            <span className="font-bold">Statutory Governance Note (Rule 14-B):</span> Priority bump overrides are strictly restricted to on-site assayers at the mandi gate. District Administration retains supervisory audit rights to verify compliance against spoilage risk, tractor blockages, and certified vulnerable farmer categories.
+            <span className="font-bold">Statutory Governance Note (Rule 14-B):</span> Mandi Gate Assayers submit SOS priority pleadings under contingency criteria. The District Administrator exercises sole discretionary review to approve or decline fast-track queue jumps to ensure statutory fairness and prevent malpractice.
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-100 dark:border-white/5 flex justify-end">
+        <div className="p-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between gap-3">
+          {isPending ? (
+            <div className="flex items-center gap-2 w-full justify-between">
+              <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+                District Administrator Discretion Required
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onReject(record)}
+                  disabled={actionLoadingId === record.id}
+                  className="px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/30 text-xs font-bold cursor-pointer transition-colors"
+                >
+                  ✕ Decline (Reject)
+                </button>
+                <button
+                  onClick={() => onApprove(record)}
+                  disabled={actionLoadingId === record.id}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  {actionLoadingId === record.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                  <span>✓ Allow SOS (Approve)</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-end w-full">
+              <button
+                onClick={onClose}
+                className="px-5 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer"
+              >
+                Close Audit Record
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RejectSOSModal({ entry, onClose, onConfirm, loading }) {
+  const [reason, setReason] = useState('')
+  if (!entry) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+      <div className="bg-white dark:bg-[#0a101d] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col p-6 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center border border-red-200 dark:border-red-500/30 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 dark:text-white text-base font-display">
+                Decline SOS Priority Pleading
+              </h3>
+              <p className="text-xs text-slate-500">
+                Token {entry.token} · {entry.farmer_name} ({entry.centre_name})
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-500/30 text-xs">
+          <span className="font-bold text-amber-800 dark:text-amber-300 block mb-0.5">Assayer Pleading Reason:</span>
+          <p className="text-slate-700 dark:text-slate-300 italic">"{entry.bump_reason || entry.sos_reason}"</p>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            District Administration Rejection Note (Optional)
+          </label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            placeholder="e.g., Adequate covered shed space available; standard queue slot order maintained."
+            className="w-full p-3 text-xs bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-hidden focus:border-red-500"
+          />
+        </div>
+
+        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-white/5">
           <button
+            type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer"
+            disabled={loading}
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
           >
-            Close Audit Record
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(entry, reason)}
+            disabled={loading}
+            className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-sm"
+          >
+            {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+            <span>Confirm Decline</span>
           </button>
         </div>
       </div>
@@ -279,6 +409,8 @@ export default function AdminApp() {
   const [selectedBumpCentre, setSelectedBumpCentre] = useState('all')
   const [bumpSearch, setBumpSearch] = useState('')
   const [selectedBumpRecord, setSelectedBumpRecord] = useState(null)
+  const [rejectModalEntry, setRejectModalEntry] = useState(null)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
   const [aiOverview, setAiOverview] = useState(null)
   const [loadingAiOverview, setLoadingAiOverview] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -333,6 +465,39 @@ export default function AdminApp() {
     }
   }, [])
 
+  const handleApproveSos = async (entry, callNow = false) => {
+    setActionLoadingId(entry.id)
+    try {
+      await api.approveSOSRequest(entry.id, { call_now: callNow })
+      toast.success(`✓ Authorized SOS Priority for Token ${entry.token}. Dispatched to #1 in queue!`, { duration: 4500 })
+      if (selectedBumpRecord?.id === entry.id) {
+        setSelectedBumpRecord(null)
+      }
+      loadAll()
+    } catch (err) {
+      toast.error(err.message || 'Failed to approve SOS priority')
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  const handleRejectSos = async (entry, rejectionReason = '') => {
+    setActionLoadingId(entry.id)
+    try {
+      await api.rejectSOSRequest(entry.id, { rejection_reason: rejectionReason })
+      toast.success(`Declined SOS priority request for Token ${entry.token}. Standard queue sequence preserved.`)
+      setRejectModalEntry(null)
+      if (selectedBumpRecord?.id === entry.id) {
+        setSelectedBumpRecord(null)
+      }
+      loadAll()
+    } catch (err) {
+      toast.error(err.message || 'Failed to decline SOS request')
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
   const debounceTimerRef = useRef(null)
   const debouncedLoadAll = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
@@ -341,7 +506,36 @@ export default function AdminApp() {
     }, 300)
   }, [loadAll])
 
-  const { connected } = useAdminQueue(debouncedLoadAll)
+  const handleWsEvent = useCallback((event) => {
+    if (event?.type === 'SOS_REQUESTED') {
+      toast((t) => (
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Zap className="w-4 h-4 fill-current" />
+          </div>
+          <div className="text-xs min-w-0">
+            <p className="font-bold text-slate-900 dark:text-white">⚡ Incoming SOS Priority Pleading</p>
+            <p className="text-slate-600 dark:text-slate-300 mt-0.5">
+              Token <strong>{event.token}</strong> ({event.farmer_name}) at <strong>{event.centre_name}</strong>
+            </p>
+            <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1 italic line-clamp-2">
+              "{event.reason}"
+            </p>
+          </div>
+        </div>
+      ), { duration: 8000, id: `sos-req-${event.queue_id}` })
+
+      addNotification({
+        title: `⚡ SOS Priority Pleading: Token ${event.token}`,
+        message: `${event.operator_name || 'Gate Assayer'} pleaded for ${event.farmer_name} at ${event.centre_name}. Reason: ${event.reason}`,
+        type: 'alert',
+        eventKey: `sos-req-${event.queue_id}-${Date.now()}`
+      })
+    }
+    debouncedLoadAll()
+  }, [addNotification, debouncedLoadAll])
+
+  const { connected } = useAdminQueue(handleWsEvent)
 
   useEffect(() => {
     loadAll()
@@ -421,7 +615,14 @@ export default function AdminApp() {
         {/* Navigation Tabs */}
         <div className="max-w-7xl mx-auto mt-3 sm:mt-4 flex border-b border-emerald-700/50 space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none -mx-3 px-3 sm:mx-0 sm:px-0 text-xs sm:text-sm font-semibold">
           {[
-            { id: 'operations', label: 'Live Operations', icon: TrendingUp, badge: priorityBumps.length > 0 ? `${priorityBumps.length} Priority Overrides` : null },
+            {
+              id: 'operations',
+              label: 'Live Operations',
+              icon: TrendingUp,
+              badge: priorityBumps.filter(b => b.sos_status === 'PENDING').length > 0
+                ? `${priorityBumps.filter(b => b.sos_status === 'PENDING').length} SOS Pending`
+                : (priorityBumps.length > 0 ? `${priorityBumps.length} SOS Records` : null)
+            },
             { id: 'impact', label: 'Impact & Scalability', icon: ShieldCheck, badge: `${impactData?.current_performance?.wait_reduction_percent || 70}% Faster` },
             { id: 'ai_data', label: 'AI & Data Transparency', icon: Cpu },
             { id: 'msp', label: 'MSP Reference Rates', icon: Scale },
@@ -442,7 +643,11 @@ export default function AdminApp() {
                 <Icon className="w-4 h-4" />
                 <span>{t.label}</span>
                 {t.badge && (
-                  <span className="text-[10px] bg-amber-400/20 text-amber-200 px-1.5 py-0.5 rounded-full border border-amber-400/30 font-bold">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold ${
+                    t.badge.includes('Pending')
+                      ? 'bg-amber-500 text-white border-amber-400 shadow-xs'
+                      : 'bg-amber-400/20 text-amber-200 border-amber-400/30'
+                  }`}>
                     {t.badge}
                   </span>
                 )}
@@ -468,12 +673,17 @@ export default function AdminApp() {
                   <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 uppercase tracking-wider">
                     {aiOverview?.engine || 'Krishi AI Engine'}
                   </span>
-                  {priorityBumps.length > 0 && (
+                  {priorityBumps.filter(b => b.sos_status === 'PENDING').length > 0 ? (
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500 text-white border border-amber-400 uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                      <Zap className="w-3 h-3 fill-current" />
+                      {priorityBumps.filter(b => b.sos_status === 'PENDING').length} SOS Pleading{priorityBumps.filter(b => b.sos_status === 'PENDING').length === 1 ? '' : 's'} Pending
+                    </span>
+                  ) : priorityBumps.length > 0 ? (
                     <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 uppercase tracking-wider flex items-center gap-1 shadow-2xs">
                       <Zap className="w-3 h-3 text-amber-500" />
-                      {priorityBumps.length} Priority Overrides
+                      {priorityBumps.length} SOS Records Sealed
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-auto">
                   <button
@@ -498,6 +708,145 @@ export default function AdminApp() {
                 <KpiCard icon={IndianRupee} label="Total Disbursed" value={`₹${((d?.total_procurement_amount || 0) / 1000).toFixed(1)}K`} sub={`${payPct}% paid`} color="amber" />
               </div>
             </div>
+
+            {/* ── LIVE SOS PRIORITY AUTHORIZATIONS (DISTRICT ADMIN DISCRETION) ── */}
+            {(() => {
+              const pendingSos = priorityBumps.filter(b => b.sos_status === 'PENDING')
+              return (
+                <div className={`rounded-3xl border p-5 sm:p-6 transition-all shadow-sm ${
+                  pendingSos.length > 0
+                    ? 'bg-gradient-to-br from-amber-50/90 via-orange-50/30 to-white dark:from-amber-950/30 dark:via-[#0e1626] dark:to-[#0a101d] border-amber-300 dark:border-amber-500/40 shadow-amber-500/5'
+                    : 'bg-white dark:bg-[#0a101d] border-slate-200 dark:border-white/10'
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200/80 dark:border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${
+                        pendingSos.length > 0
+                          ? 'bg-amber-500 text-white border-amber-400 shadow-md'
+                          : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
+                      }`}>
+                        <Zap className="w-5 h-5 fill-current" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold font-display text-slate-900 dark:text-white text-base sm:text-lg">
+                            ⚡ *SOS - Priority Queueing Authorizations (District Discretion)
+                          </h3>
+                          {pendingSos.length > 0 ? (
+                            <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500 text-white uppercase tracking-wider shadow-xs">
+                              {pendingSos.length} Pleading{pendingSos.length === 1 ? '' : 's'} Awaiting Review
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 uppercase">
+                              All Normal
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          Statutory Pleading Layer: Gate Assayers plead emergency contingencies; District Administrator holds sole discretionary power to allow or decline.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={loadAll}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors cursor-pointer self-start sm:self-auto shrink-0 shadow-2xs"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Refresh Requests</span>
+                    </button>
+                  </div>
+
+                  {/* Pending Requests Grid */}
+                  {pendingSos.length > 0 ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                      {pendingSos.map((req) => (
+                        <div
+                          key={req.id}
+                          className="p-4 rounded-2xl bg-white dark:bg-[#0e1626] border-2 border-amber-400/90 dark:border-amber-500/60 shadow-md flex flex-col justify-between space-y-3.5 transition-all relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 w-2 h-full bg-amber-500" />
+                          <div>
+                            {/* Token and Centre */}
+                            <div className="flex items-center justify-between gap-2 mb-2 pr-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-extrabold font-mono px-2.5 py-0.5 rounded-lg bg-amber-500 text-white shadow-xs">
+                                  {req.token}
+                                </span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 uppercase">
+                                  SOS Pleading
+                                </span>
+                              </div>
+                              <span className="text-[11px] font-mono text-slate-400">
+                                Queue #{req.id}
+                              </span>
+                            </div>
+
+                            {/* Farmer & Mandi info */}
+                            <div className="space-y-0.5">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{req.farmer_name}</p>
+                                <span className="text-[11px] text-slate-500 font-mono shrink-0">{req.farmer_mobile}</span>
+                              </div>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                                <strong className="text-slate-800 dark:text-slate-200">{req.centre_name}</strong> · {req.crop} ({req.expected_quantity_kg} kg)
+                              </p>
+                            </div>
+
+                            {/* Pleading Justification Highlight */}
+                            <div className="mt-3 p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 text-xs">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-1 mb-1">
+                                <ShieldCheck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                Gate Assayer Plea:
+                              </span>
+                              <p className="font-medium text-slate-900 dark:text-slate-100 leading-snug">
+                                "{req.bump_reason || req.sos_reason}"
+                              </p>
+                            </div>
+
+                            {/* Requester attribution */}
+                            <div className="mt-2 text-[11px] text-slate-500 flex items-center justify-between">
+                              <span>By: <strong className="text-slate-700 dark:text-slate-300">{req.sos_requested_by_name || req.bumped_by_name || 'Gate Assayer'}</strong></span>
+                              <span>{req.sos_requested_at ? new Date(req.sos_requested_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Just now'}</span>
+                            </div>
+                          </div>
+
+                          {/* Action Discretion Buttons */}
+                          <div className="pt-2 border-t border-slate-100 dark:border-white/10 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setRejectModalEntry(req)}
+                              disabled={actionLoadingId === req.id}
+                              className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-red-50 dark:bg-white/5 dark:hover:bg-red-950/30 text-slate-700 hover:text-red-700 dark:text-slate-300 dark:hover:text-red-400 border border-slate-200 dark:border-white/10 hover:border-red-300 dark:hover:border-red-500/30 text-xs font-bold transition-all cursor-pointer text-center"
+                            >
+                              ✕ Decline
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleApproveSos(req)}
+                              disabled={actionLoadingId === req.id}
+                              className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+                            >
+                              {actionLoadingId === req.id ? (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <CheckCircle className="w-3.5 h-3.5" />
+                              )}
+                              <span>✓ Allow SOS</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="pt-4 flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-white/[0.02] p-3.5 rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>All procurement centres operating strictly within standard scheduled sequences. No pending SOS priority requests awaiting district discretionary authorization.</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* AI Operational Benchmark & Impact Summary */}
             {aiOverview?.impact_overview && (
@@ -711,7 +1060,7 @@ export default function AdminApp() {
               </div>
             </div>
 
-            {/* ── PRIORITY QUEUE BUMP & ASSAYER AUTHORIZATION AUDIT TRAIL ───────── */}
+            {/* ── SOS PRIORITY QUEUEING & STATUTORY PLEADING AUDIT TRAIL ───────── */}
             <div id="priority-bumps-audit" className="bg-white dark:bg-[#0a101d] rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm p-5 space-y-4">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-white/5">
                 <div>
@@ -722,14 +1071,14 @@ export default function AdminApp() {
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold font-display text-slate-900 dark:text-white text-base sm:text-lg">
-                          Priority Queue Overrides & Statutory Early Intake Audit Trail
+                          *SOS - Priority Queueing & Statutory Pleading Audit Trail
                         </h3>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 uppercase tracking-wider">
-                          {priorityBumps.length} Sealed Override{priorityBumps.length === 1 ? '' : 's'}
+                          {priorityBumps.length} Sealed Record{priorityBumps.length === 1 ? '' : 's'}
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Statutory justification oversight for farmers called ahead of their scheduled slot by on-site Gate Assayers
+                        Statutory oversight for emergency fast-track pleadings submitted by on-site Assayers and decided under District Admin discretion
                       </p>
                     </div>
                   </div>
@@ -775,7 +1124,7 @@ export default function AdminApp() {
               <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/20 rounded-xl border border-amber-200/80 dark:border-amber-500/20 flex items-start gap-3 text-xs">
                 <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <div className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                  <strong className="text-slate-900 dark:text-white">Statutory Role Lock Directive (Rule 14-B):</strong> Mandi Gate Assayers possess exclusive on-site authority to bump farmers ahead of scheduled slots under verified emergency contingency criteria (perishable rain/spoilage risk, gate vehicle blockage, or certified vulnerable farmer accommodation). Every early intake requires a permanently sealed justification. District Administrators hold legal audit rights to review all entries below to prevent malpractice.
+                  <strong className="text-slate-900 dark:text-white">Statutory Governance & Pleading Directive (Rule 14-B):</strong> On-site Gate Assayers submit emergency SOS priority pleadings under contingency criteria (perishable produce at rain/spoilage risk, gate vehicle breakdown, certified vulnerable farmer). The District Administrator exercises sole discretionary authority to approve or decline fast-track queue jumps. Every request is permanently sealed in the district audit trail.
                 </div>
               </div>
 
@@ -787,8 +1136,8 @@ export default function AdminApp() {
                     const q = bumpSearch.toLowerCase()
                     const matchToken = b.token?.toLowerCase().includes(q)
                     const matchFarmer = b.farmer_name?.toLowerCase().includes(q)
-                    const matchReason = b.bump_reason?.toLowerCase().includes(q)
-                    const matchAssayer = b.bumped_by_name?.toLowerCase().includes(q)
+                    const matchReason = (b.bump_reason || b.sos_reason)?.toLowerCase().includes(q)
+                    const matchAssayer = (b.sos_requested_by_name || b.bumped_by_name)?.toLowerCase().includes(q)
                     const matchCrop = b.crop?.toLowerCase().includes(q)
                     const matchCentre = b.centre_name?.toLowerCase().includes(q)
                     if (!matchToken && !matchFarmer && !matchReason && !matchAssayer && !matchCrop && !matchCentre) return false
@@ -800,7 +1149,7 @@ export default function AdminApp() {
                   return (
                     <div className="text-center py-8 text-slate-400 bg-slate-50/50 dark:bg-white/[0.02] rounded-xl border border-dashed border-slate-200 dark:border-white/10">
                       <Zap className="w-7 h-7 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
-                      <p className="font-semibold text-xs text-slate-700 dark:text-slate-300">No priority overrides matching current filter</p>
+                      <p className="font-semibold text-xs text-slate-700 dark:text-slate-300">No SOS priority pleadings matching current filter</p>
                       <p className="text-[11px] text-slate-400 mt-0.5">All procurement centres operating strictly within scheduled slot sequences</p>
                     </div>
                   )
@@ -808,90 +1157,105 @@ export default function AdminApp() {
 
                 return (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                    {filtered.map((b) => (
-                      <div
-                        key={b.id}
-                        className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 hover:border-amber-400/60 dark:hover:border-amber-500/40 transition-all flex flex-col justify-between space-y-3 group shadow-2xs"
-                      >
-                        <div>
-                          {/* Token & Priority Badge */}
-                          <div className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-extrabold font-mono px-2.5 py-0.5 rounded-lg bg-amber-500 text-white shadow-2xs">
-                                {b.token}
-                              </span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 uppercase">
-                                Priority {b.bump_priority || 1}
+                    {filtered.map((b) => {
+                      const isPending = b.sos_status === 'PENDING'
+                      const isApproved = b.sos_status === 'APPROVED' || (b.is_bumped && b.sos_status !== 'REJECTED')
+                      const isRejected = b.sos_status === 'REJECTED'
+
+                      return (
+                        <div
+                          key={b.id}
+                          className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 hover:border-amber-400/60 dark:hover:border-amber-500/40 transition-all flex flex-col justify-between space-y-3 group shadow-2xs"
+                        >
+                          <div>
+                            {/* Token & Priority Badge */}
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-extrabold font-mono px-2.5 py-0.5 rounded-lg bg-amber-500 text-white shadow-2xs">
+                                  {b.token}
+                                </span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border ${
+                                  isPending ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/40' :
+                                  isApproved ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/40' :
+                                  'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border-red-300 dark:border-red-500/40'
+                                }`}>
+                                  {isPending ? '⏳ SOS Pending' : isApproved ? '✓ SOS Authorized' : '✕ SOS Declined'}
+                                </span>
+                              </div>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                b.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30' :
+                                b.status === 'PROCESSING' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30' :
+                                'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30'
+                              }`}>
+                                {b.status}
                               </span>
                             </div>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                              b.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30' :
-                              b.status === 'PROCESSING' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30' :
-                              'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30'
-                            }`}>
-                              {b.status}
+
+                            {/* Farmer & Centre info */}
+                            <div className="space-y-0.5">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{b.farmer_name}</p>
+                                <span className="text-[11px] text-slate-500 font-mono shrink-0">{b.farmer_mobile}</span>
+                              </div>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                                {b.centre_name} · <strong className="text-slate-700 dark:text-slate-300">{b.crop}</strong> ({b.expected_quantity_kg} kg)
+                              </p>
+                            </div>
+
+                            {/* Timing Comparison: Scheduled Slot vs Early Intake */}
+                            <div className="mt-2.5 p-2.5 rounded-xl bg-white dark:bg-[#0a101d] border border-slate-200/60 dark:border-white/5 space-y-1.5 text-xs">
+                              <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                                <span className="flex items-center gap-1 text-[11px]">
+                                  <Clock className="w-3 h-3 text-slate-400" /> Booked Slot:
+                                </span>
+                                <span className="font-semibold text-slate-800 dark:text-slate-200">{b.slot_time}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-amber-700 dark:text-amber-400">
+                                <span className="flex items-center gap-1 text-[11px]">
+                                  <Zap className="w-3 h-3 text-amber-500" /> SOS Action:
+                                </span>
+                                <span className="font-bold">
+                                  {isPending ? 'Awaiting District Admin' : (b.early_lead_minutes ? `Dispatched ${b.early_lead_minutes}m before slot` : 'Advance Intake')}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Sealed Statutory Reason Highlight */}
+                            <div className="mt-2.5 p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-500/30 text-xs">
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-1">
+                                  <ShieldCheck className="w-3 h-3 text-amber-600 dark:text-amber-400" /> Assayer Statutory Plea:
+                                </span>
+                                <span className="text-[9px] font-mono text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded font-semibold">
+                                  Sealed
+                                </span>
+                              </div>
+                              <p className="font-semibold text-slate-900 dark:text-slate-100 leading-snug">
+                                "{b.bump_reason || b.sos_reason || 'Priority intake pleading submitted per gate inspection.'}"
+                              </p>
+                              {isRejected && b.sos_rejection_reason && (
+                                <p className="text-[11px] text-red-700 dark:text-red-300 font-medium mt-1.5 pt-1.5 border-t border-red-200 dark:border-red-500/20">
+                                  <strong>Admin Denial:</strong> {b.sos_rejection_reason}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Authorizing Official & Modal Trigger */}
+                          <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500 dark:text-slate-400 truncate">
+                              Plea by: <strong className="text-slate-700 dark:text-slate-300">{b.sos_requested_by_name || b.bumped_by_name || 'Gate Assayer'}</strong>
                             </span>
-                          </div>
-
-                          {/* Farmer & Centre info */}
-                          <div className="space-y-0.5">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{b.farmer_name}</p>
-                              <span className="text-[11px] text-slate-500 font-mono shrink-0">{b.farmer_mobile}</span>
-                            </div>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
-                              {b.centre_name} · <strong className="text-slate-700 dark:text-slate-300">{b.crop}</strong> ({b.expected_quantity_kg} kg)
-                            </p>
-                          </div>
-
-                          {/* Timing Comparison: Scheduled Slot vs Early Intake */}
-                          <div className="mt-2.5 p-2.5 rounded-xl bg-white dark:bg-[#0a101d] border border-slate-200/60 dark:border-white/5 space-y-1.5 text-xs">
-                            <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
-                              <span className="flex items-center gap-1 text-[11px]">
-                                <Clock className="w-3 h-3 text-slate-400" /> Booked Slot:
-                              </span>
-                              <span className="font-semibold text-slate-800 dark:text-slate-200">{b.slot_time}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-amber-700 dark:text-amber-400">
-                              <span className="flex items-center gap-1 text-[11px]">
-                                <Zap className="w-3 h-3 text-amber-500" /> Early Intake Call:
-                              </span>
-                              <span className="font-bold">
-                                {b.early_lead_minutes ? `Called ${b.early_lead_minutes}m before slot` : 'Called Ahead of Slot'}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Sealed Statutory Reason Highlight */}
-                          <div className="mt-2.5 p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-500/30 text-xs">
-                            <div className="flex items-center justify-between gap-1 mb-1">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-1">
-                                <ShieldCheck className="w-3 h-3 text-amber-600 dark:text-amber-400" /> Statutory Reason for Early Call:
-                              </span>
-                              <span className="text-[9px] font-mono text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded font-semibold">
-                                Sealed
-                              </span>
-                            </div>
-                            <p className="font-semibold text-slate-900 dark:text-slate-100 leading-snug">
-                              "{b.bump_reason || 'Priority intake authorized per assayer gate inspection.'}"
-                            </p>
+                            <button
+                              onClick={() => setSelectedBumpRecord(b)}
+                              className="text-amber-700 dark:text-amber-400 font-bold hover:underline cursor-pointer shrink-0 ml-2"
+                            >
+                              Inspect Audit Record →
+                            </button>
                           </div>
                         </div>
-
-                        {/* Authorizing Official & Modal Trigger */}
-                        <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-[11px]">
-                          <span className="text-slate-500 dark:text-slate-400 truncate">
-                            Assayer: <strong className="text-slate-700 dark:text-slate-300">{b.bumped_by_name || 'Gate Assayer'}</strong>
-                          </span>
-                          <button
-                            onClick={() => setSelectedBumpRecord(b)}
-                            className="text-amber-700 dark:text-amber-400 font-bold hover:underline cursor-pointer shrink-0 ml-2"
-                          >
-                            Inspect Audit Record →
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )
               })()}
@@ -1169,10 +1533,24 @@ export default function AdminApp() {
         )}
       </div>
 
-      {/* Priority Bump Statutory Audit Detail Modal */}
-      <PriorityBumpModal
+      {/* SOS Priority Queueing & Statutory Audit Detail Modal */}
+      <SOSAuditModal
         record={selectedBumpRecord}
         onClose={() => setSelectedBumpRecord(null)}
+        onApprove={handleApproveSos}
+        onReject={(entry) => {
+          setSelectedBumpRecord(null)
+          setRejectModalEntry(entry)
+        }}
+        actionLoadingId={actionLoadingId}
+      />
+
+      {/* Reject SOS Modal */}
+      <RejectSOSModal
+        entry={rejectModalEntry}
+        onClose={() => setRejectModalEntry(null)}
+        onConfirm={handleRejectSos}
+        loading={actionLoadingId === rejectModalEntry?.id}
       />
     </div>
   )

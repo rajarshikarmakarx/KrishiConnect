@@ -172,6 +172,22 @@ class BumpQueueRequest(BaseModel):
     call_now: Optional[bool] = False
 
 
+class SOSRequestCreate(BaseModel):
+    reason: str
+    preset: Optional[str] = None
+    remarks: Optional[str] = None
+    priority_level: Optional[int] = 1
+    call_now: Optional[bool] = False
+
+
+class SOSApproveRequest(BaseModel):
+    call_now: Optional[bool] = False
+
+
+class SOSRejectRequest(BaseModel):
+    rejection_reason: Optional[str] = None
+
+
 class QueueEntryOut(SchemaModel):
     id: int
     token: str
@@ -195,6 +211,16 @@ class QueueEntryOut(SchemaModel):
     bumped_at: Optional[datetime] = None
     bumped_by_id: Optional[int] = None
     bumped_by_name: Optional[str] = None
+    # SOS Priority Pleading Attributes
+    sos_status: Optional[str] = "NONE"
+    sos_reason: Optional[str] = None
+    sos_requested_at: Optional[datetime] = None
+    sos_requested_by_id: Optional[int] = None
+    sos_requested_by_name: Optional[str] = None
+    sos_approved_by_id: Optional[int] = None
+    sos_approved_by_name: Optional[str] = None
+    sos_rejection_reason: Optional[str] = None
+    sos_action_at: Optional[datetime] = None
     booked_at: datetime
     called_at: Optional[datetime] = None
     processing_started_at: Optional[datetime] = None
@@ -226,6 +252,16 @@ class PriorityBumpAuditOut(BaseModel):
     bumped_at: Optional[datetime] = None
     bumped_by_id: Optional[int] = None
     bumped_by_name: Optional[str] = None
+    # SOS Pleading attributes
+    sos_status: Optional[str] = "NONE"
+    sos_reason: Optional[str] = None
+    sos_requested_at: Optional[datetime] = None
+    sos_requested_by_id: Optional[int] = None
+    sos_requested_by_name: Optional[str] = None
+    sos_approved_by_id: Optional[int] = None
+    sos_approved_by_name: Optional[str] = None
+    sos_rejection_reason: Optional[str] = None
+    sos_action_at: Optional[datetime] = None
     slot_id: Optional[int] = None
     slot_date: Optional[str] = None
     slot_time: Optional[str] = None

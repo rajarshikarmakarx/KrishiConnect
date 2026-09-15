@@ -121,6 +121,9 @@ export const api = {
   // Queue operations (operator & assayer)
   cancelBooking: (queueId) => request('POST', `/queue/${queueId}/cancel`),
   bumpQueueEntry: (queueId, data) => request('POST', `/queue/${queueId}/bump`, data),
+  requestSOSPriority: (queueId, data) => request('POST', `/queue/${queueId}/sos-request`, data),
+  approveSOSRequest: (queueId, data = {}) => request('POST', `/queue/${queueId}/sos-approve`, data),
+  rejectSOSRequest: (queueId, data = {}) => request('POST', `/queue/${queueId}/sos-reject`, data),
   callNext: (centreId) => request('POST', `/queue/centre/${centreId}/call-next`),
   callSpecific: (queueId) => request('POST', `/queue/${queueId}/call`),
   startProcessing: (queueId) => request('POST', `/queue/${queueId}/start`),
@@ -137,6 +140,7 @@ export const api = {
   getCentreAnalytics: (centreId) => request('GET', `/analytics/centre/${centreId}`),
   getDistrictAnalytics: () => request('GET', '/analytics/district'),
   getPriorityBumps: (centreId) => request('GET', `/analytics/priority-bumps${centreId ? `?centre_id=${centreId}` : ''}`),
+  getSOSRequests: (centreId) => request('GET', `/analytics/sos-requests${centreId ? `?centre_id=${centreId}` : ''}`),
   getSystemHealth: () => request('GET', '/analytics/system-health'),
   getImpactMetrics: () => request('GET', '/analytics/impact'),
 

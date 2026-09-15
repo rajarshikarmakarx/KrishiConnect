@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, text, and_, case
+from sqlalchemy import select, func, text, and_, or_, case
 from sqlalchemy.orm import aliased
 from app.database import get_db
 from app.models import (
@@ -332,7 +332,7 @@ async def district_analytics(db: AsyncSession = Depends(get_db)):
     return response_data
 
 
-# ── Priority Bump Audit Trail (Statutory Override Oversight) ──────────────────
+# ── Priority Bump & SOS Audit Trail (Statutory Override Oversight) ──────────
 
 @analytics_router.get("/priority-bumps", response_model=List[PriorityBumpAuditOut])
 async def get_priority_bumps(
@@ -341,11 +341,13 @@ async def get_priority_bumps(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Priority Queue Bump & Assayer Authorization Audit Trail for District Administration.
-    Displays statutory justifications for why farmers were called/bumped before their scheduled slot,
+    Priority Queue Bump & SOS Assayer Pleading Audit Trail for District Administration.
+    Displays statutory justifications for why farmers were called/bumped or requested for priority,
     along with authorizing official attribution, timestamp, slot window, and produce lot details.
     """
     UserBump = aliased(User)
+    UserReq = aliased(User)
+    UserApp = aliased(User)
     query = (
         select(
             QueueEntry,
@@ -356,14 +358,23 @@ async def get_priority_bumps(
             TimeSlot.start_time.label("slot_start"),
             TimeSlot.end_time.label("slot_end"),
             TimeSlot.date.label("slot_date"),
-            UserBump.full_name.label("bumped_by_name")
+            UserBump.full_name.label("bumped_by_name"),
+            UserReq.full_name.label("sos_requested_by_name"),
+            UserApp.full_name.label("sos_approved_by_name")
         )
         .join(User, QueueEntry.farmer_id == User.id)
         .join(ProcurementCentre, QueueEntry.centre_id == ProcurementCentre.id)
         .outerjoin(TimeSlot, QueueEntry.slot_id == TimeSlot.id)
         .outerjoin(UserBump, QueueEntry.bumped_by_id == UserBump.id)
-        .where(QueueEntry.is_bumped == True)
-        .order_by(QueueEntry.bumped_at.desc(), QueueEntry.id.desc())
+        .outerjoin(UserReq, QueueEntry.sos_requested_by_id == UserReq.id)
+        .outerjoin(UserApp, QueueEntry.sos_approved_by_id == UserApp.id)
+        .where(or_(QueueEntry.is_bumped == True, QueueEntry.sos_status.in_(["PENDING", "APPROVED", "REJECTED"])))
+        .order_by(
+            case((QueueEntry.sos_status == "PENDING", 1), else_=2),
+            QueueEntry.bumped_at.desc(),
+            QueueEntry.sos_requested_at.desc(),
+            QueueEntry.id.desc()
+        )
         .limit(limit)
     )
     if centre_id:
@@ -373,16 +384,17 @@ async def get_priority_bumps(
     rows = result.all()
 
     items = []
-    for entry, f_name, f_mobile, f_village, c_name, slot_start, slot_end, slot_date, bumped_by_name in rows:
+    for entry, f_name, f_mobile, f_village, c_name, slot_start, slot_end, slot_date, bumped_by_name, req_by_name, app_by_name in rows:
         slot_label = f"{slot_start} - {slot_end}" if slot_start and slot_end else "Standard Slot"
 
         lead_minutes = None
-        if slot_date and slot_start and entry.bumped_at:
+        ref_time = entry.bumped_at or entry.sos_requested_at
+        if slot_date and slot_start and ref_time:
             try:
                 h, m = [int(x) for x in slot_start.split(":")]
                 slot_start_dt = datetime(slot_date.year, slot_date.month, slot_date.day, h, m, 0, tzinfo=KOLKATA_TZ)
-                bump_dt_ist = entry.bumped_at.astimezone(KOLKATA_TZ) if entry.bumped_at.tzinfo else entry.bumped_at.replace(tzinfo=timezone.utc).astimezone(KOLKATA_TZ)
-                lead_sec = (slot_start_dt - bump_dt_ist).total_seconds()
+                ref_dt_ist = ref_time.astimezone(KOLKATA_TZ) if ref_time.tzinfo else ref_time.replace(tzinfo=timezone.utc).astimezone(KOLKATA_TZ)
+                lead_sec = (slot_start_dt - ref_dt_ist).total_seconds()
                 if lead_sec > 0:
                     lead_minutes = int(lead_sec // 60)
             except Exception:
@@ -402,10 +414,19 @@ async def get_priority_bumps(
             status=entry.status.value if hasattr(entry.status, "value") else str(entry.status),
             is_bumped=entry.is_bumped,
             bump_priority=entry.bump_priority,
-            bump_reason=entry.bump_reason,
+            bump_reason=entry.bump_reason or entry.sos_reason,
             bumped_at=entry.bumped_at,
             bumped_by_id=entry.bumped_by_id,
-            bumped_by_name=bumped_by_name or "Mandi Gate Assayer",
+            bumped_by_name=bumped_by_name or req_by_name or "Mandi Gate Assayer",
+            sos_status=entry.sos_status or ("APPROVED" if entry.is_bumped else "NONE"),
+            sos_reason=entry.sos_reason or entry.bump_reason,
+            sos_requested_at=entry.sos_requested_at,
+            sos_requested_by_id=entry.sos_requested_by_id,
+            sos_requested_by_name=req_by_name or bumped_by_name,
+            sos_approved_by_id=entry.sos_approved_by_id,
+            sos_approved_by_name=app_by_name,
+            sos_rejection_reason=entry.sos_rejection_reason,
+            sos_action_at=entry.sos_action_at,
             slot_id=entry.slot_id,
             slot_date=str(slot_date) if slot_date else None,
             slot_time=slot_label,
@@ -416,6 +437,19 @@ async def get_priority_bumps(
         ))
 
     return items
+
+
+@analytics_router.get("/sos-requests", response_model=List[PriorityBumpAuditOut])
+async def get_sos_requests(
+    centre_id: Optional[int] = None,
+    status_filter: Optional[str] = None,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Dedicated endpoint for District Administration to monitor SOS priority pleading requests.
+    """
+    return await get_priority_bumps(centre_id=centre_id, limit=limit, db=db)
 
 
 # ── System Health ─────────────────────────────────────────────────────────────

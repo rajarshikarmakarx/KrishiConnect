@@ -17,8 +17,8 @@ from app.models import (
     QueueStatus, PaymentStatus, UserRole
 )
 from app.schemas import (
-    BookSlotRequest, BumpQueueRequest, QueueEntryOut, QueueStatusOut,
-    MyQueueStatus, CompleteQueueRequest, QualityActionRequest,
+    BookSlotRequest, BumpQueueRequest, SOSRequestCreate, SOSApproveRequest, SOSRejectRequest,
+    QueueEntryOut, QueueStatusOut, MyQueueStatus, CompleteQueueRequest, QualityActionRequest,
     ProcurementOut, PaymentOut, AssayRecordOut
 )
 from app.auth import decode_token
@@ -223,6 +223,19 @@ async def enrich_entry(entry: QueueEntry, db: AsyncSession, centre_name: str = N
         r_bumped = await db.execute(select(User.full_name).where(User.id == bumped_by_id))
         bumped_by_name = r_bumped.scalar_one_or_none()
 
+    # Resolve SOS requested_by_name and approved_by_name
+    sos_requested_by_name = None
+    sos_requested_by_id = getattr(entry, "sos_requested_by_id", None)
+    if sos_requested_by_id:
+        r_req = await db.execute(select(User.full_name).where(User.id == sos_requested_by_id))
+        sos_requested_by_name = r_req.scalar_one_or_none()
+
+    sos_approved_by_name = None
+    sos_approved_by_id = getattr(entry, "sos_approved_by_id", None)
+    if sos_approved_by_id:
+        r_app = await db.execute(select(User.full_name).where(User.id == sos_approved_by_id))
+        sos_approved_by_name = r_app.scalar_one_or_none()
+
     return QueueEntryOut(
         id=entry.id,
         token=entry.token,
@@ -246,6 +259,15 @@ async def enrich_entry(entry: QueueEntry, db: AsyncSession, centre_name: str = N
         bumped_at=getattr(entry, "bumped_at", None),
         bumped_by_id=bumped_by_id,
         bumped_by_name=bumped_by_name,
+        sos_status=getattr(entry, "sos_status", "NONE") or "NONE",
+        sos_reason=getattr(entry, "sos_reason", None),
+        sos_requested_at=getattr(entry, "sos_requested_at", None),
+        sos_requested_by_id=sos_requested_by_id,
+        sos_requested_by_name=sos_requested_by_name,
+        sos_approved_by_id=sos_approved_by_id,
+        sos_approved_by_name=sos_approved_by_name,
+        sos_rejection_reason=getattr(entry, "sos_rejection_reason", None),
+        sos_action_at=getattr(entry, "sos_action_at", None),
         booked_at=entry.booked_at,
         called_at=entry.called_at,
         processing_started_at=entry.processing_started_at,
@@ -793,6 +815,282 @@ async def bump_queue_entry(
 
     enriched = await enrich_entry(entry, db)
     return enriched
+
+
+@router.post("/{queue_id}/sos-request", response_model=QueueEntryOut)
+async def request_sos_priority(
+    queue_id: int,
+    body: SOSRequestCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Submit an SOS Priority Authorization Request (Pleading Layer).
+    - Permitted: Gate Assayer / Mandi Operator (OPERATOR, ASSAYER) and Admin.
+    - Sends real-time SOS notification to District Admin for review and discretionary approval.
+    """
+    if current_user.role not in [UserRole.OPERATOR, UserRole.ASSAYER, UserRole.ADMIN]:
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied: Only Mandi Operators or Gate Assayers can request SOS priority authorization."
+        )
+
+    result = await db.execute(select(QueueEntry).where(QueueEntry.id == queue_id))
+    entry = result.scalar_one_or_none()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Queue entry not found")
+
+    if entry.status != QueueStatus.WAITING:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot request SOS for token {entry.token} with status {entry.status}. Only WAITING farmers can be prioritized."
+        )
+
+    if entry.is_bumped:
+        raise HTTPException(
+            status_code=400,
+            detail="This token is already priority-bumped and authorized."
+        )
+
+    if entry.sos_status == "PENDING":
+        raise HTTPException(
+            status_code=400,
+            detail="An SOS priority request for this token is already pending review by District Administration."
+        )
+
+    reason_text = (body.reason or "").strip()
+    if len(reason_text) < 5:
+        raise HTTPException(
+            status_code=400,
+            detail="A valid statutory pleading justification (minimum 5 characters) is required for SOS authorization request."
+        )
+
+    # Resolve farmer name
+    r_farmer = await db.execute(select(User).where(User.id == entry.farmer_id))
+    farmer_user = r_farmer.scalar_one_or_none()
+    farmer_name = farmer_user.full_name if farmer_user else "Farmer"
+
+    # Resolve centre name
+    r_centre = await db.execute(select(ProcurementCentre.name).where(ProcurementCentre.id == entry.centre_id))
+    centre_name = r_centre.scalar_one_or_none() or "Procurement Centre"
+
+    entry.sos_status = "PENDING"
+    entry.sos_reason = reason_text
+    entry.sos_requested_at = datetime.now(timezone.utc)
+    entry.sos_requested_by_id = current_user.id
+    entry.sos_rejection_reason = None
+    entry.sos_action_at = None
+
+    await db.commit()
+    await db.refresh(entry)
+
+    # Real-time WebSockets to Admin & Centre
+    event_payload = {
+        "type": "SOS_REQUESTED",
+        "queue_id": entry.id,
+        "token": entry.token,
+        "centre_id": entry.centre_id,
+        "centre_name": centre_name,
+        "farmer_name": farmer_name,
+        "crop": entry.crop,
+        "expected_quantity_kg": entry.expected_quantity_kg,
+        "reason": reason_text,
+        "operator_name": current_user.full_name,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    await manager.broadcast_admin_update(event_payload)
+    await manager.broadcast_centre_update(entry.centre_id, event_payload)
+    await manager.broadcast_queue_changed(entry.centre_id, "sos_request")
+
+    return await enrich_entry(entry, db)
+
+
+@router.post("/{queue_id}/sos-approve", response_model=QueueEntryOut)
+async def approve_sos_priority(
+    queue_id: int,
+    body: SOSApproveRequest = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    District Admin approves an SOS Priority Request.
+    - Sets entry to is_bumped=True with statutory bump reason.
+    - Prioritizes the farmer to position #1 in queue (and calls if requested/free).
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied: Only District Administrators hold discretionary authority to approve SOS priority requests."
+        )
+
+    result = await db.execute(select(QueueEntry).where(QueueEntry.id == queue_id))
+    entry = result.scalar_one_or_none()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Queue entry not found")
+
+    if entry.status != QueueStatus.WAITING:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot prioritize token {entry.token} with status {entry.status}. Only WAITING farmers can be prioritized."
+        )
+
+    if entry.is_bumped:
+        raise HTTPException(
+            status_code=400,
+            detail="This token has already been prioritized and approved."
+        )
+
+    now = datetime.now(timezone.utc)
+    entry.is_bumped = True
+    entry.bump_priority = 1
+    entry.bump_reason = entry.sos_reason or "District Admin statutory priority approval"
+    entry.bumped_at = now
+    entry.bumped_by_id = entry.sos_requested_by_id or current_user.id
+    entry.sos_status = "APPROVED"
+    entry.sos_approved_by_id = current_user.id
+    entry.sos_action_at = now
+
+    await db.commit()
+    await db.refresh(entry)
+
+    # Real-time WebSocket broadcasts
+    await manager.broadcast_queue_changed(entry.centre_id, "sos_approve")
+    await manager.broadcast_centre_update(entry.centre_id, {
+        "type": "SOS_APPROVED",
+        "queue_id": entry.id,
+        "token": entry.token,
+        "reason": entry.bump_reason,
+        "admin_name": current_user.full_name,
+        "timestamp": now.isoformat()
+    })
+    await manager.broadcast_admin_update({
+        "type": "SOS_APPROVED",
+        "queue_id": entry.id,
+        "token": entry.token,
+        "timestamp": now.isoformat()
+    })
+    await manager.broadcast_farmer_update(entry.farmer_id, {
+        "type": "BUMPED",
+        "token": entry.token,
+        "reason": entry.bump_reason,
+        "message": f"⚡ SOS Priority Queueing Approved by District Admin! Reason: {entry.bump_reason}"
+    })
+
+    # SMS dispatch in farmer's preferred language
+    r_farmer = await db.execute(select(User).where(User.id == entry.farmer_id))
+    farmer_user = r_farmer.scalar_one_or_none()
+    if farmer_user and farmer_user.mobile:
+        farmer_lang = get_farmer_language(farmer_user.mobile)
+        asyncio.create_task(
+            send_multilingual_sms(
+                mobile=farmer_user.mobile,
+                msg_type="PRIORITY_BUMPED",
+                params={"token": entry.token, "reason": entry.bump_reason},
+                lang=farmer_lang
+            )
+        )
+
+    # Immediate call to free counter if requested
+    if body and getattr(body, "call_now", False):
+        r_cnt = await db.execute(
+            select(CentreCounter).where(
+                CentreCounter.centre_id == entry.centre_id,
+                CentreCounter.is_active == True
+            )
+        )
+        counters = r_cnt.scalars().all()
+        free_counter = None
+        for counter in counters:
+            r2 = await db.execute(
+                select(QueueEntry.id).where(
+                    QueueEntry.counter_id == counter.id,
+                    QueueEntry.status.in_([QueueStatus.CALLED, QueueStatus.PROCESSING])
+                ).limit(1)
+            )
+            if not r2.scalar():
+                free_counter = counter
+                break
+
+        if free_counter:
+            entry.counter_id = free_counter.id
+            entry.status = QueueStatus.CALLED
+            entry.called_at = datetime.now(timezone.utc)
+            await db.commit()
+            await db.refresh(entry)
+
+            counter_label = free_counter.label or "the counter"
+            if farmer_user and farmer_user.mobile:
+                asyncio.create_task(
+                    send_multilingual_sms(
+                        mobile=farmer_user.mobile,
+                        msg_type="TURN_CALLED",
+                        params={"token": entry.token, "counter": counter_label},
+                        lang=farmer_lang
+                    )
+                )
+
+            await manager.broadcast_farmer_update(entry.farmer_id, {
+                "type": "CALLED",
+                "token": entry.token,
+                "counter": counter_label,
+                "message": f"🔔 Priority Call! Token {entry.token}. Please proceed to {counter_label}."
+            })
+            await manager.broadcast_queue_changed(entry.centre_id, "call")
+
+    return await enrich_entry(entry, db)
+
+
+@router.post("/{queue_id}/sos-reject", response_model=QueueEntryOut)
+async def reject_sos_priority(
+    queue_id: int,
+    body: SOSRejectRequest = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    District Admin declines an SOS Priority Request.
+    - Sets entry sos_status='REJECTED' with statutory admin note.
+    - Entry remains in standard queue order.
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied: Only District Administrators hold discretionary authority to reject SOS priority requests."
+        )
+
+    result = await db.execute(select(QueueEntry).where(QueueEntry.id == queue_id))
+    entry = result.scalar_one_or_none()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Queue entry not found")
+
+    rejection_note = (body.rejection_reason if body else "") or "Declined per District Admin queue oversight."
+    now = datetime.now(timezone.utc)
+    entry.sos_status = "REJECTED"
+    entry.sos_rejection_reason = rejection_note.strip()
+    entry.sos_approved_by_id = current_user.id
+    entry.sos_action_at = now
+
+    await db.commit()
+    await db.refresh(entry)
+
+    # Real-time WebSocket broadcasts
+    await manager.broadcast_queue_changed(entry.centre_id, "sos_reject")
+    await manager.broadcast_centre_update(entry.centre_id, {
+        "type": "SOS_REJECTED",
+        "queue_id": entry.id,
+        "token": entry.token,
+        "rejection_reason": entry.sos_rejection_reason,
+        "admin_name": current_user.full_name,
+        "timestamp": now.isoformat()
+    })
+    await manager.broadcast_admin_update({
+        "type": "SOS_REJECTED",
+        "queue_id": entry.id,
+        "token": entry.token,
+        "timestamp": now.isoformat()
+    })
+
+    return await enrich_entry(entry, db)
 
 
 @router.post("/centre/{centre_id}/call-next")
